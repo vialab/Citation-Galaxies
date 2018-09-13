@@ -144,9 +144,9 @@
                                     View By
                                 </button>
                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                    <a class="dropdown-item" id="changeLabelItem1" href="#" onclick="changeLabel(1);">Amount
+                                    <a class="dropdown-item active" id="changeLabelItem0" href="#" onclick="changeLabel(0);">Amount
                                         of hits</a>
-                                    <a class="dropdown-item" id="changeLabelItem2" href="#" onclick="changeLabel(2)">Amount
+                                    <a class="dropdown-item" id="changeLabelItem1" href="#" onclick="changeLabel(1)">Amount
                                         of papers</a>
                                 </div>
                             </div>
@@ -276,7 +276,7 @@
         //Get the year data
         getYears();
         //Filter the main screen by the amount of hits
-        changeLabel(1);
+        //changeLabel(0);
     });
 
     //Get the input field

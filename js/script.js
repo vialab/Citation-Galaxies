@@ -10,8 +10,6 @@ var seperations;
 var seperationLabels;
 
 var miniSquares = []; //All the mini, heatmapped, square's ids
-var miniSquarePaperAmountLabels = []; //All the mini square's labels for paper amount
-var miniSquareHitAmountLabels = []; //All the mini square's labels for hit amount
 
 var selections = []; //Current user selections
 var selectionObjects = []; //Current objects highlighted
@@ -24,7 +22,7 @@ var paperGlyphLines = []; //The lines on the paper to the left
 var paperRequests = []; //The collection of server requests
 
 var maxLabels = 2; //The max amount of labels per box
-var currentLabel; //The current label choice to display on the squares
+var currentLabel = 0; //The current label choice to display on the squares
 
 var possibleSeperations = [1, 10, 25, 50]; //The possible seperations allowed
 
@@ -44,8 +42,9 @@ var paperText = {}; //Holds the raw paper text
 var paperData = {}; //Holds the paper data - mainly where words, references and sentences are and their locations
 var paperRow; //The row that holds all the papers
 
-var filteredYearHitCounts = {}; //Holds the amount of results in each year
-var filteredYearPaperCounts = {}; //Holds the amount of papers in each year
+var filteredYearCounts = {}; //Holds amount of X in each year 
+//var filteredYearHitCounts = {}; //Holds the amount of results in each year
+//var filteredYearPaperCounts = {}; //Holds the amount of papers in each year
 var filteredYearPercents = {}; //Holds the percents calculated from the results / total for each year - used in the colors 
 
 var svgContainers = []; //Used to hold all the containers used 
@@ -101,8 +100,8 @@ function clearAll() {
     seperations = [];
     seperationLabels = [];
     miniSquares = [];
-    miniSquarePaperAmountLabels = [];
-    miniSquareHitAmountLabels = [];
+    filteredYearCounts = [];
+    filteredYearPercents = [];
     //selections = [];
     selectionObjects = [];
     lineColors = [];
@@ -138,32 +137,22 @@ function updateTextInput(field, before, after, articleid, sendToDefault) {
 function changeLabel(choice) {
     //Based on a int in the label's id, make one label white (or grey) and make the other transparent
     //Change the old label to be invisible, show the new one
-    if (choice == 1) {
-        for (var i = 0; i < miniSquarePaperAmountLabels.length; i++) {
-            d3.select("#" + miniSquarePaperAmountLabels[i]).style("fill", "rgba(0,0,0,0)");
+    currentLabel = choice;
 
-            var percentLabelColor = d3.rgb(69, 74, 80);
-            if (parseInt(miniSquareHitAmountLabels[i].substring(miniSquareHitAmountLabels[i].indexOf("_") + 1, miniSquareHitAmountLabels[i].indexOf("-"))) == 1) {
-                percentLabelColor = "#FFFFFF";
-            }
-            d3.select("#" + miniSquareHitAmountLabels[i]).style("fill", percentLabelColor);
+    //prepContainers(currIncrement);
+    $(svgContainers[0].node()).empty();
+    paperGlyphLines = [];
+    lineColors = [];
+    drawFirstColumn(110, (100 / currIncrement) * 16, 80, svgContainers[0], 100 / currIncrement);
+    for (var i = 0; i < years.length; i++) {
+        if (filteredYearCounts[years[i]['articleyear']] != undefined) {
+            $(svgContainers[i + 1].node()).empty();
+            drawColumn(years[i]['articleyear'], 80, svgContainers[i + 1], filteredYearPercents[years[i]['articleyear']][currentLabel], filteredYearCounts[years[i]['articleyear']][currentLabel]);
         }
-        currentLabel = 1;
-    } else if (choice == 2) {
-        for (var i = 0; i < miniSquarePaperAmountLabels.length; i++) {
-            d3.select("#" + miniSquareHitAmountLabels[i]).style("fill", "rgba(0,0,0,0)");
-
-            var percentLabelColor = d3.rgb(69, 74, 80);
-            if (parseInt(miniSquarePaperAmountLabels[i].substring(miniSquarePaperAmountLabels[i].indexOf("_") + 1, miniSquarePaperAmountLabels[i].indexOf("-"))) == 1) {
-                percentLabelColor = "#FFFFFF";
-            }
-            d3.select("#" + miniSquarePaperAmountLabels[i]).style("fill", percentLabelColor);
-        }
-        currentLabel = 2;
     }
 
     //Change the active label
-    for (var i = 1; i < maxLabels + 1; i++) {
+    for (var i = 0; i < maxLabels; i++) {
         if (i != currentLabel) {
             d3.select("#changeLabelItem" + i.toString()).classed('active', false);
         } else {
@@ -1095,7 +1084,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
 }
 
 //Draw the column on the main screen
-function drawColumn(label, size, svgContainer, sectionPercents, sectionAmounts, sectionPaperAmounts) {
+function drawColumn(label, size, svgContainer, currentPrecents, currentData) {
     //Filter for dropshadows
     var filter = svgContainer.append("defs").append("filter")
         .attr("id", "dropshadowSquare")
@@ -1130,7 +1119,7 @@ function drawColumn(label, size, svgContainer, sectionPercents, sectionAmounts, 
         .style("fill", d3.rgb(248, 249, 250));
 
     //Label on the year container
-    var squareLabel = svgContainer.append("text")
+    svgContainer.append("text")
         .attr("x", (size / 2) + 3)
         .attr("y", 21)
         .attr("text-anchor", "middle")
@@ -1160,10 +1149,10 @@ function drawColumn(label, size, svgContainer, sectionPercents, sectionAmounts, 
     //Draw the mini squares with padding needed
     var locationX = 3 + miniSquarePadding;
     var locationY = 30;
-    for (var i = 0; i < sectionPercents.length; i++) {
-        //Percent used for box color 
-        //TODO, change the color if the amount of papers are selected
-        var percent = sectionPercents[i];
+
+    for (var i = 0; i < currentPrecents.length; i++) {
+        //Percent used for box color
+        var percent = currentPrecents[i];
         var miniSquareColor = colors(percent);
 
         //Get the color of the box, and update the line colors on the papre glyph
@@ -1189,112 +1178,11 @@ function drawColumn(label, size, svgContainer, sectionPercents, sectionAmounts, 
             paperGlyphLines[i][0][j].style('stroke', lineColor);
         }
 
-        //Draw square
-        svgContainer.append("rect")
-            .attr("x", locationX)
-            .attr("y", locationY)
-            .attr("width", miniSquareSizeX)
-            .attr("height", miniSquareSizeX)
-            .style("fill", miniSquareColor);
-
-        //Used to change the text color if the background is too dark
-        var percentLabelColor = "#FFFFFF";
-        if (tinycolor(miniSquareColor).isLight()) {
-            percentLabelColor = d3.rgb(69, 74, 80);
-        }
-
-        //Draw the result amount label, with its id representing if the box's color is light or dark for the other label to properly show
-        var hitAmountLabelID = "htAmntLbl" + label + "_";
-        if (percentLabelColor == "#FFFFFF") {
-            hitAmountLabelID += "1";
-        } else {
-            hitAmountLabelID += "0";
-        }
-        hitAmountLabelID += "-" + i.toString();
-        //Add the label to the array so that it can be changed later
-        miniSquareHitAmountLabels.push(hitAmountLabelID);
-
-        //Only show the label that the user selected to see and make the other label invisible
-        var temp = "";
-        if (currentLabel == 1) {
-            temp = percentLabelColor;
-        } else {
-            temp = "rgba(0,0,0,0)";
-        }
-
-        //Draw the hit amount label
-        svgContainer.append("text")
-            .attr("x", locationX + (miniSquareSizeX / 2))
-            .attr("y", locationY + (miniSquareSizeX * 0.5) + 6)
-            .attr("text-anchor", "middle")
-            .attr("id", hitAmountLabelID)
-            .style("fill", temp)
-            .style("font-size", "13px")
-            .text(shortenVal(sectionAmounts[i]));
-
-
-
-        //Draw the paper amount label, with its id representing if the box's color is light or dark for the other label to properly show
-        var PaperAmountLabelID = "PprAmntLbl" + label + "_";
-        if (percentLabelColor == "#FFFFFF") {
-            PaperAmountLabelID += "1";
-        } else {
-            PaperAmountLabelID += "0";
-        }
-        PaperAmountLabelID += "-" + i.toString();
-        //Add the label to the array so that it can be changed later
-        miniSquarePaperAmountLabels.push(PaperAmountLabelID);
-
-        //Only show the label that the user selected to see and make the other label invisible
-        temp = "";
-        if (currentLabel == 2) {
-            temp = percentLabelColor;
-        } else {
-            temp = "rgba(0,0,0,0)";
-        }
-
-        //Draw the paper amount label
-        svgContainer.append("text")
-            .attr("x", locationX + (miniSquareSizeX / 2))
-            .attr("y", locationY + (miniSquareSizeX * 0.5) + 6)
-            .attr("text-anchor", "middle")
-            .attr("id", PaperAmountLabelID)
-            .style("fill", temp)
-            .style("font-size", "13px")
-            .text(shortenVal(sectionPaperAmounts[i]));
-
-
-        //The mini square's hitbox to select it 
+        //Create the ID for the miniSquare's hitbox
         var miniSquareHitboxID = "minSqrHB_" + label + "_" + i.toString();
         miniSquares.push(miniSquareHitboxID); //Store the minisquare's id
-        var miniSquareHitbox = svgContainer.append("rect")
-            .attr("x", locationX)
-            .attr("y", locationY)
-            .attr("width", miniSquareSizeX)
-            .attr("height", miniSquareSizeX)
-            .style("fill", "rgba(0,0,0,0)")
-            .attr("id", miniSquareHitboxID);
-
-        //Allow the mini squares to call the main squares function since they cover it
-        miniSquareHitbox.on("click", function () {
-            d3.event.stopPropagation();
-
-            //If shift is pressed, dont process the selection - else do
-            var shiftPressed = false;
-            if (d3.event.shiftKey) {
-                shiftPressed = true;
-            }
-
-            //Prune the id string of the clicked item (minSqrHB_YEAR_NUM) to get NUM
-            var tmp = (d3.event.target.id.substring(d3.event.target.id.indexOf("_") + 1, d3.event.target.id.length))
-            //MultipleSelection() deals with having a variety of selections, and when to process them
-            multipleSelection(squareLabel.text() + ": " + seperationLabels[parseInt(tmp.substring(tmp.indexOf("_") + 1, d3.event.target.id.length))].text(), false, shiftPressed, d3.select("#" + d3.event.target.id));
-
-            //Switch to the papers if shift is not pressed
-            if (shiftPressed == false) {
-                switchToPapers(selections);
-            }
-        });
+        //Draw the miniSquare
+        drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeX, miniSquareColor, currentData[i], miniSquareHitboxID);
 
         //Increment the box's location
         var tmp = locationX + miniSquareSizeX + miniSquarePadding;
@@ -1335,6 +1223,68 @@ function drawColumn(label, size, svgContainer, sectionPercents, sectionAmounts, 
             switchToPapers(selections);
         }
     });
+}
+
+//Draws the indiviual squares on the main screen
+//Requires the container, location, size, color, text to put on, and the id for the box
+//ID must be in the format xxx_year_numOfBox for selection to work 
+function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, miniSquareColor, labelData, miniSquareID) {
+    //Draw square
+    svgContainer.append("rect")
+        .attr("x", locationX)
+        .attr("y", locationY)
+        .attr("width", sizeX)
+        .attr("height", sizeY)
+        .style("fill", miniSquareColor);
+
+
+    //Used to change the text color if the background is too dark
+    var percentLabelColor = "#FFFFFF";
+    if (tinycolor(miniSquareColor).isLight()) {
+        percentLabelColor = d3.rgb(69, 74, 80);
+    }
+
+    //Draw the hit amount label
+    svgContainer.append("text")
+        .attr("x", locationX + (sizeX / 2))
+        .attr("y", locationY + (sizeY * 0.5) + 6)
+        .attr("text-anchor", "middle")
+        .attr("id", labelData)
+        .style("fill", percentLabelColor)
+        .style("font-size", "13px")
+        .text(shortenVal(labelData));
+
+    //The mini square's hitbox to select it
+    var miniSquareHitbox = svgContainer.append("rect")
+        .attr("x", locationX)
+        .attr("y", locationY)
+        .attr("width", sizeX)
+        .attr("height", sizeY)
+        .style("fill", "rgba(0,0,0,0)")
+        .attr("id", miniSquareID);
+
+    //Allow the mini squares to call the main squares function since they cover it
+    miniSquareHitbox.on("click", function () {
+        d3.event.stopPropagation();
+
+        //If shift is pressed, dont process the selection - else do
+        var shiftPressed = false;
+        if (d3.event.shiftKey) {
+            shiftPressed = true;
+        }
+
+        //Prune the id string of the clicked item (minSqrHB_YEAR_NUM) to get NUM
+        var tmp = (d3.event.target.id.substring(d3.event.target.id.indexOf("_") + 1, d3.event.target.id.length))
+        //MultipleSelection() deals with having a variety of selections, and when to process them
+        multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + seperationLabels[parseInt(tmp.substring(tmp.indexOf("_") + 1, d3.event.target.id.length))].text(), false, shiftPressed, d3.select("#" + d3.event.target.id));
+
+        //Switch to the papers if shift is not pressed
+        if (shiftPressed == false) {
+            switchToPapers(selections);
+        }
+    });
+
+
 }
 
 //Draws or removes a border around a objectr
@@ -1561,6 +1511,7 @@ function prepContainers(increment) {
     }
 }
 
+//Get the list of years from the database
 function getYears() {
     $.ajax({
         type: 'GET',
@@ -1572,59 +1523,63 @@ function getYears() {
     });
 }
 
+//Filter the results for use in the home screen
 function filterYearResults(increment, year) {
     //Clear the arrays
-    filteredYearHitCounts[year] = [];
+    filteredYearCounts[year] = []; //0 is for reference count, 1 is for paper count
     filteredYearPercents[year] = [];
-    filteredYearPaperCounts[year] = [];
+    var currentArticle = [];
 
-    //Push empty values in the arrays
-    var tempCurrentArticle = [];
-    for (var i = 0; i < 100 / increment; i++) {
-        filteredYearHitCounts[year].push(0);
-        filteredYearPercents[year].push(0);
-        filteredYearPaperCounts[year].push(0);
-        tempCurrentArticle.push("");
+    for (var i = 0; i < 2; i++) {
+        filteredYearCounts[year].push([]);
+        filteredYearPercents[year].push([]);
+        for (var j = 0; j < 100 / increment; j++) {
+            currentArticle.push([""]);
+
+            filteredYearCounts[year][i].push(0);
+            filteredYearPercents[year][i].push(0);
+        }
     }
 
     //Loop through the results, update the count of papers and the paper reference count
     for (var i = 0; i < yearResults[year].length; i++) {
         for (var j = 0; j < 100; j += increment) {
             if (yearResults[year][i][0]['percent'] * 100 <= (j + increment)) {
-                if (yearResults[year][i][0]['articleid'] != tempCurrentArticle[((j + increment) / increment) - 1]) {
-                    filteredYearPaperCounts[year][((j + increment) / increment) - 1] += 1;
-                    tempCurrentArticle[((j + increment) / increment) - 1] = yearResults[year][i][0]['articleid'];
+                filteredYearCounts[year][0][((j + increment) / increment) - 1] += 1;
+
+                if (!currentArticle[((j + increment) / increment) - 1].includes(yearResults[year][i][0]['articleid'])) {
+                    filteredYearCounts[year][1][((j + increment) / increment) - 1] += 1;
+                    currentArticle[((j + increment) / increment) - 1].push(yearResults[year][i][0]['articleid']);
                 }
-                filteredYearHitCounts[year][((j + increment) / increment) - 1] += 1;
                 break;
             }
         }
     }
 
     //Get the percent counts using the max hitcounts
-    var max = filteredYearHitCounts[year][0];
-    var min = 0;
-    for (var i = 0; i < filteredYearHitCounts[year].length; i++) {
-        if (filteredYearHitCounts[year][i] > max) {
-            max = filteredYearHitCounts[year][i];
+    for (var i = 0; i < 2; i++) {
+        var max = filteredYearCounts[year][i][0];
+        var min = 0;
+        for (var j = 0; j < filteredYearCounts[year][i].length; j++) {
+            if (filteredYearCounts[year][i][j] > max) {
+                max = filteredYearCounts[year][i][j];
+            }
+            if (filteredYearCounts[year][i][j] < min) {
+                min = filteredYearCounts[year][i][j];
+            }
         }
-        if (filteredYearHitCounts[year][i] < min) {
-            min = filteredYearHitCounts[year][i];
-        }
-    }
 
-    //Used incase the column is empty - just set the values to 0
-    if (max == 0) {
-        for (var i = 0; i < filteredYearHitCounts[year].length; i++) {
-            filteredYearPercents[year][i] = 0;
-        }
-    } else {
-        for (var i = 0; i < filteredYearHitCounts[year].length; i++) {
-            filteredYearPercents[year][i] = (filteredYearHitCounts[year][i] - min) / (max - min);
+        for (var j = 0; j < filteredYearCounts[year][i].length; j++) {
+            if (max != 0) {
+                filteredYearPercents[year][i][j] = (filteredYearCounts[year][i][j] - min) / (max - min);
+            } else {
+                filteredYearPercents[year][i][j] = 0;
+            }
         }
     }
 }
 
+//Get the results for a search query
 function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
     yearResultsRequests.push($.ajax({
         type: 'POST',
@@ -1671,7 +1626,7 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
             filterYearResults(increment, year);
 
             //Draw the column
-            drawColumn(year, 80, svgContainers[index], filteredYearPercents[year], filteredYearHitCounts[year], filteredYearPaperCounts[year]);
+            drawColumn(year, 80, svgContainers[index], filteredYearPercents[year][currentLabel], filteredYearCounts[year][currentLabel]);
             //Adapt the selection from the previous query
             adaptSelection(year);
         },
