@@ -1,0 +1,143 @@
+.dropdown-item.active {
+    background-color: #6E757D !important;
+}
+
+.modal-backdrop {
+    z-index: 100000 !important;
+}
+
+.modal {
+    z-index: 100001 !important;
+}
+
+.popover {
+    margin: 50px 0 0 0;
+    max-width: 550px !important;
+    width: 100% !important;
+    box-shadow: 1px 1px 7px grey;
+    background: rgb(248, 249, 250);
+}
+
+.popoverGalaxy {
+    margin: 50px 0 0 0;
+    max-width: 550px !important;
+    max-height: 300px !important;
+    width: 100% !important;
+    box-shadow: 1px 1px 7px grey;
+    background: rgb(248, 249, 250);
+}
+
+.popover-body {
+    height: 440px;
+    vertical-align: top;
+}
+
+.list-inline>li {
+    margin-right: 10px;
+}
+
+.list-inline {
+    margin: 7px 0 0 0;
+}
+
+.nopadding {
+    padding: 0 0 0 0 !important;
+    float: none;
+    margin: 0 auto;
+}
+
+.partialpadding {
+    padding: 5px 5px 5px 5px !important;
+    float: none;
+    margin: 0 auto;
+}
+
+#rangeBefore,
+#rangeAfter {
+    width: 70px;
+}
+
+#rangeBeforePopover,
+#rangeAfterPopover {
+    width: 70px;
+
+}
+
+#container {
+    padding-right: 50px;
+    padding-left: 50px;
+    margin: 0 auto;
+    justify-content: space-evenly;
+}
+
+#searchButtonContainer {
+    margin-right: 8px;
+}
+
+#searchBox {
+    width: 275px;
+}
+
+#mainNav {
+    box-shadow: 1px 1px 5px grey;
+    z-index: 1061;
+}
+
+body {
+    padding-top: 75px;
+}
+
+.dropdown-toggle {
+    cursor: default;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+svg text {
+    cursor: default;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.dropdown-item:active {
+    color: #000000;
+    background-color: #f8f9fa;
+    border-color: #4cae4c;
+    cursor: default;
+}
+
+.slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 5px;
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+
+    /* Selection circle */
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #6C757D;
+    cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #6C757D;
+    cursor: pointer;
+}
