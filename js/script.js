@@ -9,7 +9,9 @@ var colors = d3.interpolateBlues;
 var seperations;
 var seperationLabels;
 
-var miniSquares = []; //All the mini, heatmapped, square's ids
+var miniSquares = []; //All the mini, heatmapped, square's ids (hitbox)
+var miniSquaresObjects = []; //All the mini, heatmapped, sqaure's (box)
+var miniSquareText = []; //All the mini, heatmapped, sqaure's text
 
 var selections = []; //Current user selections
 var selectionObjects = []; //Current objects highlighted
@@ -104,6 +106,7 @@ function clearAll() {
     filteredYearPercents = [];
     //selections = [];
     selectionObjects = [];
+    miniSquaresObjects = [];
     lineColors = [];
     paperGlyphLines = [];
     clearRequests(true, true);
@@ -1152,6 +1155,7 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
         .attr("height", containerSizeW)
         .style("fill", "rgba(0,0,0,0)"); // <-- used to make transparent
 
+    //Total on the year container
     var totalText = svgContainer.append("text")
         .attr("x", (containerSizeW / 2) + 3)
         .attr("y", 21)
@@ -1204,7 +1208,8 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
         }
         drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeY, miniSquareColor, currentData[i], miniSquareHitboxID);
         total += currentData[i];
-        console.log(currentData);
+
+
 
         //Increment the main box's location
         locationY += miniSquareSizeY + currBoxPadding;
@@ -1213,8 +1218,8 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
 
     verticalContainer.attr("height", locationY); //Change the height to be the max allowed
     verticalContainerHitbox.attr("height", locationY); //Change the height to be the max allowed
-    totalText.attr("y", locationY + 20);
-    totalText.text(shortenVal(total));
+    totalText.attr("y", locationY + 20); //Change the location of the total label
+    totalText.text(shortenVal(total)); //Change the total label data
     svgContainer.attr("height", locationY + 25); //Change the height of the container for the svg objects so no clipping occurs
 
     //On click select the year
@@ -1250,12 +1255,13 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
 //ID must be in the format xxx_year_numOfBox for selection to work 
 function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, miniSquareColor, labelData, miniSquareID) {
     //Draw square
-    svgContainer.append("rect")
+    miniSquaresObjects.push(svgContainer.append("rect")
         .attr("x", locationX)
         .attr("y", locationY)
         .attr("width", sizeX)
         .attr("height", sizeY)
-        .style("fill", miniSquareColor);
+        .attr("id", miniSquareID)
+        .style("fill", miniSquareColor));
 
 
     //Used to change the text color if the background is too dark
@@ -1266,14 +1272,14 @@ function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, mini
 
     if (currBoxHeight >= 15) {
         //Draw the hit amount label
-        svgContainer.append("text")
+        miniSquareText.push(svgContainer.append("text")
             .attr("x", locationX + (sizeX / 2))
             .attr("y", locationY + (sizeY * 0.5) + 6)
             .attr("text-anchor", "middle")
             .attr("id", labelData)
             .style("fill", percentLabelColor)
             .style("font-size", "13px")
-            .text(shortenVal(labelData));
+            .text(shortenVal(labelData)));
     }
 
 
@@ -1579,7 +1585,7 @@ function filterYearResults(increment, year) {
     filteredYearPercents[year] = [];
     var currentArticle = [];
 
-    for (var i = 0; i < 2; i++) {
+    for (var i = 0; i < maxLabels; i++) {
         filteredYearCounts[year].push([]);
         filteredYearPercents[year].push([]);
         for (var j = 0; j < 100 / increment; j++) {
@@ -1605,8 +1611,46 @@ function filterYearResults(increment, year) {
         }
     }
 
+
+
     //Get the percent counts using the max hitcounts
-    for (var i = 0; i < 2; i++) {
+    for (var i = 0; i < maxLabels; i++) {
+        var max = filteredYearCounts[years[0]['articleyear']][i][0];
+        var min = 0;
+
+        for (var j = 0; j < years.length; j++) {
+            if (filteredYearCounts[years[j]['articleyear']] != undefined) {
+                for (var k = 0; k < filteredYearCounts[years[j]['articleyear']][i].length; k++) {
+                    if (filteredYearCounts[years[j]['articleyear']][i][k] > max) {
+                        max = filteredYearCounts[years[j]['articleyear']][i][k];
+                    }
+                    if (filteredYearCounts[years[j]['articleyear']][i][k] < min) {
+                        min = filteredYearCounts[years[j]['articleyear']][i][k];
+                    }
+                }
+            }
+        }
+
+        for (var j = 0; j < years.length; j++) {
+            if (filteredYearCounts[years[j]['articleyear']] != undefined) {
+                for (var k = 0; k < filteredYearCounts[years[j]['articleyear']][i].length; k++) {
+                    if (max != 0) {
+                        filteredYearPercents[years[j]['articleyear']][i][k] = (filteredYearCounts[years[j]['articleyear']][i][k] - min) / (max - min);
+                    } else {
+                        filteredYearPercents[year][i][k] = 0;
+                    }
+                }
+            }
+
+        }
+    }
+
+
+
+
+
+    /*///Get the percent counts using the max hitcounts
+    for (var i = 0; i < maxLabels; i++) {
         var max = filteredYearCounts[year][i][0];
         var min = 0;
         for (var j = 0; j < filteredYearCounts[year][i].length; j++) {
@@ -1617,7 +1661,6 @@ function filterYearResults(increment, year) {
                 min = filteredYearCounts[year][i][j];
             }
         }
-
         for (var j = 0; j < filteredYearCounts[year][i].length; j++) {
             if (max != 0) {
                 filteredYearPercents[year][i][j] = (filteredYearCounts[year][i][j] - min) / (max - min);
@@ -1625,9 +1668,43 @@ function filterYearResults(increment, year) {
                 filteredYearPercents[year][i][j] = 0;
             }
         }
-    }
+    }*/
+
+
+
+
+
 }
 
+//Used to change the color of an already drawn minisquare with a new, normalized value
+function changeSquaresColors() {
+    var j = 0;
+
+    //Loop through the results again and apply the new color
+    for (var i = 0; i < miniSquaresObjects.length; i++) {
+        //Get the year from the current object
+        var temp = miniSquaresObjects[i].attr("id").substring(miniSquaresObjects[i].attr("id").indexOf('_') + 1, miniSquaresObjects[i].attr("id").length);
+        year = temp.substring(0, temp.indexOf("_"));
+
+        //Change the color of the current minisquare with the new color
+        if (filteredYearPercents[year] != undefined) {
+            miniSquaresObjects[i].style("fill", colors(filteredYearPercents[year][currentLabel][j]));
+            if (miniSquareText[i] != undefined) {
+                //Used to change the text color if the background is too dark
+                var percentLabelColor = "#FFFFFF";
+                if (tinycolor(colors(filteredYearPercents[year][currentLabel][j])).isLight()) {
+                    percentLabelColor = d3.rgb(69, 74, 80);
+                }
+                miniSquareText[i].style("fill", percentLabelColor);
+            }
+        }
+
+        j += 1;
+        if (j >= (100 / currIncrement)) {
+            j = 0;
+        }
+    }
+}
 
 //TODO: IMPLEMENT LEFT PAPER % CHANGE AND THE BOX SIZE CHANGE - A SIZE OF 7PX FOR THE BOX AND 1PX FOR THE BOUNDARY SEEMS TO WORK WELL
 //Get the results for a search query
@@ -1677,6 +1754,7 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
             filterYearResults(increment, year);
 
             //Draw the column
+            changeSquaresColors();
             drawColumn(year, 80, 64, currBoxHeight, svgContainers[index], filteredYearPercents[year][currentLabel], filteredYearCounts[year][currentLabel]);
             //Adapt the selection from the previous query
             adaptSelection(year);
