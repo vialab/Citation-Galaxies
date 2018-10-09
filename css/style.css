@@ -85,6 +85,7 @@
 
 body {
     padding-top: 75px;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .dropdown-toggle {
@@ -140,4 +141,18 @@ svg text {
     border-radius: 50%;
     background: #6C757D;
     cursor: pointer;
+}
+
+
+div.tooltip {	
+    position: absolute;			
+    text-align: center;			
+    width: 60px;					
+    height: 28px;					
+    padding: 2px;				
+    font: 20px sans-serif;		
+    background: #f8f9fa;	
+    border: 0px;		
+    border-radius: 8px;			
+    pointer-events: none;			
 }

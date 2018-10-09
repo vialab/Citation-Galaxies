@@ -15,6 +15,8 @@ var selections = []; //Current user selections
 var selectionObjects = []; //Current objects highlighted
 
 var currIncrement = 10; //The current homescreen increment
+var currBoxHeight = 64;
+var currBoxPadding = 10;
 
 var lineColors = []; //The colors of the lines on the left
 var paperGlyphLines = []; //The lines on the paper to the left
@@ -43,8 +45,6 @@ var paperData = {}; //Holds the paper data - mainly where words, references and 
 var paperRow; //The row that holds all the papers
 
 var filteredYearCounts = {}; //Holds amount of X in each year 
-//var filteredYearHitCounts = {}; //Holds the amount of results in each year
-//var filteredYearPaperCounts = {}; //Holds the amount of papers in each year
 var filteredYearPercents = {}; //Holds the percents calculated from the results / total for each year - used in the colors 
 
 var svgContainers = []; //Used to hold all the containers used 
@@ -147,7 +147,7 @@ function changeLabel(choice) {
     for (var i = 0; i < years.length; i++) {
         if (filteredYearCounts[years[i]['articleyear']] != undefined) {
             $(svgContainers[i + 1].node()).empty();
-            drawColumn(years[i]['articleyear'], 80, svgContainers[i + 1], filteredYearPercents[years[i]['articleyear']][currentLabel], filteredYearCounts[years[i]['articleyear']][currentLabel]);
+            drawColumn(years[i]['articleyear'], 80, 64, currBoxHeight, svgContainers[i + 1], filteredYearPercents[years[i]['articleyear']][currentLabel], filteredYearCounts[years[i]['articleyear']][currentLabel]);
         }
     }
 
@@ -833,7 +833,6 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
         }
 
         tempText += '"';
-
         //Loop through the locations
         //Works by getting text before word/citation, then adding the word/citation
         //Loops until all data is in
@@ -982,7 +981,21 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
         .attr("mode", "normal");
 
 
-    var locationY = (28.92466 * numOfLines) + 32.43487; //Used to determine where the paper should go (middle of all the y values)
+    //Values are used to determine padding of the lines in the paper
+    var lineSizeY = 3;
+    var minLinePadding = 12;
+
+    var increment = 1;
+    if (numOfLines > 10) {
+        numOfLines = 11;
+        increment = 9.9;
+    }
+
+    sizey = (lineSizeY + minLinePadding) * numOfLines + minLinePadding;
+    //var locationY = (28.92466 * numOfLines) + 32.43487; //Used to determine where the paper should go (middle of all the y values)
+    //var locationY = 30 + (((100 / currIncrement) / 2) * currBoxHeight) - (sizey / 2);
+    var locationY = 30 + (((100 / currIncrement) * (currBoxHeight + currBoxPadding)) / 2) - (sizey / 2);
+
     //Draw the paper
     svgContainer.append("rect")
         .attr("x", 3)
@@ -994,17 +1007,15 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
         .attr("filter", "url(#dropshadowInitial)")
         .style("fill", d3.rgb(248, 249, 250));
 
-    //Values are used to determine padding of the lines in the paper
-    var lineSizeY = 3;
-    var minLinePadding = (sizey - (numOfLines * lineSizeY)) / (numOfLines + 1);
 
     //Draw the lines with padding needed
     var locationXStart = 3 + sizex * 0.1;
     var locationXEnd = (sizex * 0.9) + 3;
-    var lineLocationEnd = 67;
+    var lineLocationEnd = 30 + (currBoxHeight / 2);
     locationY += minLinePadding;
 
-    for (var i = 0; i < numOfLines; i++) {
+    var j = 0;
+    for (var i = 0; i < (100 / currIncrement); i += increment) {
         //Change color if they should be selected
         var color = "rgb(204,206,209)";
         var line = svgContainer.append("line") // attach a line
@@ -1017,7 +1028,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
         var line2 = svgContainer.append("line") // attach a line
             .style("stroke", color) // colour the line
             .attr("x1", locationXEnd - 0.7) // x position of the first end of the line
-            .attr("y1", locationY) // y position of the first end of the line
+            .attr("y1", locationY) // y position of the first end of the  line
             .attr("x2", locationXEnd + 70) // x position of the second end of the line
             .attr("y2", lineLocationEnd)
             .attr('stroke-width', lineSizeY);
@@ -1033,14 +1044,14 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
         var sepLabel = svgContainer.append("text")
             .attr("x", locationXEnd + 120)
             .attr("y", lineLocationEnd + 4)
-            .attr("id", "sepLabel_" + i.toString())
+            .attr("id", "sepLabel_" + (Math.floor(i)).toString())
             .style("font-size", "13px")
             .style("text-anchor", "middle")
             .style("fill", d3.rgb(108, 117, 125))
-            .text(seperations[i]);
+            .text(seperations[Math.floor(i)]);
 
         //If the seperation label is shown, process the selection
-        d3.select("#" + "sepLabel_" + i.toString()).on("click", function () {
+        d3.select("#" + "sepLabel_" + (Math.floor(i)).toString()).on("click", function () {
             d3.event.stopPropagation();
 
             //If shift was pressed, then dont process the selection and keep the previous selections
@@ -1052,7 +1063,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
                 removeAllSelections();
             }
 
-            //Go through all minisquares, if they're on the same line get their year and run it throught the selection function
+            //Go through all minisquares, if they're on the same line get their year and run it through the selection function
             for (var j = 0; j < miniSquares.length; j++) {
                 if (d3.event.target.id.substring(d3.event.target.id.indexOf("_") + 1, d3.event.target.id.length) == miniSquares[j].substring(miniSquares[j].substring(9, miniSquares[j].length - 1).indexOf("_") + 10, miniSquares[j].length)) {
                     var currSelection = miniSquares[j].substring(9, miniSquares[j].substring(9, miniSquares[j].length - 1).indexOf("_") + 9) + ": " + d3.select("#" + d3.event.target.id).text();
@@ -1069,13 +1080,18 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
 
         //Increment the location for the lines on the paper
         locationY += minLinePadding + lineSizeY;
-        lineLocationEnd = (74 * (i + 2)) - 7;
+
+        //TODO: The lines on the paper glpyh are very close, but not exactly lined up with the row it represents
+        lineLocationEnd += ((currBoxPadding + currBoxHeight) * increment);
 
         //Push the lines used in the glpyh so that the color can be dynamically updated when other columns load
         paperGlyphLines.push([]);
-        paperGlyphLines[i].push([line, line2, line3]);
+        paperGlyphLines[j].push([line, line2, line3]);
         seperationLabels.push(sepLabel);
+        j += 1;
     }
+
+
     //Push the array for the line colors
     for (var i = 0; i < numOfLines; i++) {
         lineColors.push([]);
@@ -1084,7 +1100,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
 }
 
 //Draw the column on the main screen
-function drawColumn(label, size, svgContainer, currentPrecents, currentData) {
+function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svgContainer, currentPrecents, currentData) {
     //Filter for dropshadows
     var filter = svgContainer.append("defs").append("filter")
         .attr("id", "dropshadowSquare")
@@ -1114,13 +1130,13 @@ function drawColumn(label, size, svgContainer, currentPrecents, currentData) {
         .attr("y", 3)
         .attr("rx", 3)
         .attr("xy", 3)
-        .attr("width", size)
+        .attr("width", containerSizeW)
         .attr("filter", "url(#dropshadowSquare)")
         .style("fill", d3.rgb(248, 249, 250));
 
     //Label on the year container
     svgContainer.append("text")
-        .attr("x", (size / 2) + 3)
+        .attr("x", (containerSizeW / 2) + 3)
         .attr("y", 21)
         .attr("text-anchor", "middle")
         .style("fill", d3.rgb(108, 117, 125))
@@ -1132,24 +1148,24 @@ function drawColumn(label, size, svgContainer, currentPrecents, currentData) {
         .attr("y", 3)
         .attr("rx", 3)
         .attr("xy", 3)
-        .attr("width", size)
-        .attr("height", size)
+        .attr("width", containerSizeW)
+        .attr("height", containerSizeW)
         .style("fill", "rgba(0,0,0,0)"); // <-- used to make transparent
 
-    //Code used to find the amount of blocks that can fit on a row and to calculate the padding
-    var miniSquareSizeX = size * 0.8;
-    var maxPerRow = (size) / (miniSquareSizeX);
-    if (maxPerRow % 1 == 0) {
-        maxPerRow -= 1;
-    } else {
-        maxPerRow = Math.floor(maxPerRow);
-    }
-    var miniSquarePadding = (size - (maxPerRow * miniSquareSizeX)) / (maxPerRow + 1);
+    var totalText = svgContainer.append("text")
+        .attr("x", (containerSizeW / 2) + 3)
+        .attr("y", 21)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .style("fill", d3.rgb(108, 117, 125))
+        .text(0);
 
     //Draw the mini squares with padding needed
-    var locationX = 3 + miniSquarePadding;
+    var locationX = 3 + containerSizeW * 0.1;
     var locationY = 30;
 
+    var lineColorIndex = 0;
+    var total = 0;
     for (var i = 0; i < currentPrecents.length; i++) {
         //Percent used for box color
         var percent = currentPrecents[i];
@@ -1157,45 +1173,49 @@ function drawColumn(label, size, svgContainer, currentPrecents, currentData) {
 
         //Get the color of the box, and update the line colors on the papre glyph
         var rgb = miniSquareColor.split(",");
-        lineColors[i][0].push(parseInt(rgb[0].substring(4, rgb[0].length)));
-        lineColors[i][1].push(parseInt(rgb[1]));
-        lineColors[i][2].push(parseInt(rgb[2].substring(0, rgb[2].length - 1)));
+        lineColors[Math.floor(lineColorIndex)][0].push(parseInt(rgb[0].substring(4, rgb[0].length)));
+        lineColors[Math.floor(lineColorIndex)][1].push(parseInt(rgb[1]));
+        lineColors[Math.floor(lineColorIndex)][2].push(parseInt(rgb[2].substring(0, rgb[2].length - 1)));
 
         var redNew = 0;
         var greenNew = 0;
         var blueNew = 0;
-        for (var j = 0; j < lineColors[i][0].length; j++) {
-            redNew += lineColors[i][0][j];
-            greenNew += lineColors[i][1][j];
-            blueNew += lineColors[i][2][j];
+        for (var j = 0; j < lineColors[Math.floor(lineColorIndex)][0].length; j++) {
+            redNew += lineColors[Math.floor(lineColorIndex)][0][j];
+            greenNew += lineColors[Math.floor(lineColorIndex)][1][j];
+            blueNew += lineColors[Math.floor(lineColorIndex)][2][j];
         }
-        redNew /= lineColors[i][0].length;
-        greenNew /= lineColors[i][0].length;
-        blueNew /= lineColors[i][0].length;
+        redNew /= lineColors[Math.floor(lineColorIndex)][0].length;
+        greenNew /= lineColors[Math.floor(lineColorIndex)][0].length;
+        blueNew /= lineColors[Math.floor(lineColorIndex)][0].length;
 
         var lineColor = "rgb(" + redNew + "," + greenNew + "," + blueNew + ")"
-        for (var j = 0; j < paperGlyphLines[i][0].length; j++) {
-            paperGlyphLines[i][0][j].style('stroke', lineColor);
+        for (var j = 0; j < paperGlyphLines[Math.floor(lineColorIndex)][0].length; j++) {
+            paperGlyphLines[Math.floor(lineColorIndex)][0][j].style('stroke', lineColor);
         }
 
         //Create the ID for the miniSquare's hitbox
         var miniSquareHitboxID = "minSqrHB_" + label + "_" + i.toString();
         miniSquares.push(miniSquareHitboxID); //Store the minisquare's id
-        //Draw the miniSquare
-        drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeX, miniSquareColor, currentData[i], miniSquareHitboxID);
 
-        //Increment the box's location
-        var tmp = locationX + miniSquareSizeX + miniSquarePadding;
-        if (tmp > size) {
-            locationY += miniSquareSizeX + 10;
-            tmp = 3 + miniSquarePadding;
+        //Draw the miniSquare
+        if (currBoxHeight < 15) {
+            boxText = "";
         }
-        locationX = tmp;
+        drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeY, miniSquareColor, currentData[i], miniSquareHitboxID);
+        total += currentData[i];
+        console.log(currentData);
+
+        //Increment the main box's location
+        locationY += miniSquareSizeY + currBoxPadding;
+        lineColorIndex += (lineColors.length / currentPrecents.length);
     }
 
     verticalContainer.attr("height", locationY); //Change the height to be the max allowed
     verticalContainerHitbox.attr("height", locationY); //Change the height to be the max allowed
-    svgContainer.attr("height", locationY + 15); //Change the height of the container for the svg objects so no clipping occurs
+    totalText.attr("y", locationY + 20);
+    totalText.text(shortenVal(total));
+    svgContainer.attr("height", locationY + 25); //Change the height of the container for the svg objects so no clipping occurs
 
     //On click select the year
     verticalContainerHitbox.on("click", function () {
@@ -1244,15 +1264,18 @@ function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, mini
         percentLabelColor = d3.rgb(69, 74, 80);
     }
 
-    //Draw the hit amount label
-    svgContainer.append("text")
-        .attr("x", locationX + (sizeX / 2))
-        .attr("y", locationY + (sizeY * 0.5) + 6)
-        .attr("text-anchor", "middle")
-        .attr("id", labelData)
-        .style("fill", percentLabelColor)
-        .style("font-size", "13px")
-        .text(shortenVal(labelData));
+    if (currBoxHeight >= 15) {
+        //Draw the hit amount label
+        svgContainer.append("text")
+            .attr("x", locationX + (sizeX / 2))
+            .attr("y", locationY + (sizeY * 0.5) + 6)
+            .attr("text-anchor", "middle")
+            .attr("id", labelData)
+            .style("fill", percentLabelColor)
+            .style("font-size", "13px")
+            .text(shortenVal(labelData));
+    }
+
 
     //The mini square's hitbox to select it
     var miniSquareHitbox = svgContainer.append("rect")
@@ -1262,6 +1285,27 @@ function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, mini
         .attr("height", sizeY)
         .style("fill", "rgba(0,0,0,0)")
         .attr("id", miniSquareID);
+
+    d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
+
+    miniSquareHitbox.on("mouseover", function () {
+
+        d3.select("#tooltip").transition()
+            .duration(300)
+            .style("opacity", .9);
+        d3.select("#tooltip").html(shortenVal(labelData))
+            .style("left", (d3.event.pageX) + "px")
+            .style("top", (d3.event.pageY - 28) + "px");
+    }).on("mouseout", function () {
+        d3.select("#tooltip").transition()
+            .duration(500)
+            .style("opacity", 0);
+    });
+
+
 
     //Allow the mini squares to call the main squares function since they cover it
     miniSquareHitbox.on("click", function () {
@@ -1276,7 +1320,8 @@ function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, mini
         //Prune the id string of the clicked item (minSqrHB_YEAR_NUM) to get NUM
         var tmp = (d3.event.target.id.substring(d3.event.target.id.indexOf("_") + 1, d3.event.target.id.length))
         //MultipleSelection() deals with having a variety of selections, and when to process them
-        multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + seperationLabels[parseInt(tmp.substring(tmp.indexOf("_") + 1, d3.event.target.id.length))].text(), false, shiftPressed, d3.select("#" + d3.event.target.id));
+        //multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + seperationLabels[parseInt(tmp.substring(tmp.indexOf("_") + 1, d3.event.target.id.length))].text(), false, shiftPressed, d3.select("#" + d3.event.target.id));
+        multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + (tmp.substring(tmp.indexOf("_") + 1, tmp.length) * currIncrement).toString() + "%-" + ((parseInt(tmp.substring(tmp.indexOf("_") + 1, tmp.length)) + 1) * currIncrement).toString() + "%", false, shiftPressed, d3.select("#" + d3.event.target.id));
 
         //Switch to the papers if shift is not pressed
         if (shiftPressed == false) {
@@ -1504,7 +1549,11 @@ function prepContainers(increment) {
     var homeRow = d3.select("#pills-home").append("div").attr("class", "row").attr("id", "homeRow");
     for (var i = 0; i < years.length; i++) {
         if (i == 0) {
-            svgContainers.push(homeRow.append("div").attr("class", "col-xs-* nopadding").append("svg").attr("width", 257).attr("height", (100 / increment) * 75));
+            var maxFirstContainerSize = 100 / increment;
+            if (maxFirstContainerSize > 10) {
+                maxFirstContainerSize = 11;
+            }
+            svgContainers.push(homeRow.append("div").attr("class", "col-xs-* nopadding").append("svg").attr("width", 257).attr("height", maxFirstContainerSize * 75));
         }
         svgContainers.push(homeRow.append("div").attr("class", "col-xs-* nopadding").attr("height", 785).append("svg").attr("width", 87));
 
@@ -1579,11 +1628,13 @@ function filterYearResults(increment, year) {
     }
 }
 
+
+//TODO: IMPLEMENT LEFT PAPER % CHANGE AND THE BOX SIZE CHANGE - A SIZE OF 7PX FOR THE BOX AND 1PX FOR THE BOUNDARY SEEMS TO WORK WELL
 //Get the results for a search query
 function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
     yearResultsRequests.push($.ajax({
         type: 'POST',
-        url: currentURL + "queryCounts",
+        url: currentURL + "queryCountsTEST",
         data: { 'query': JSON.stringify(query), 'year': year, 'rangeLeft': rangeLeft, 'rangeRight': rangeRight },
         success: function (data) {
             //Clear the results for the year
@@ -1626,7 +1677,7 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
             filterYearResults(increment, year);
 
             //Draw the column
-            drawColumn(year, 80, svgContainers[index], filteredYearPercents[year][currentLabel], filteredYearCounts[year][currentLabel]);
+            drawColumn(year, 80, 64, currBoxHeight, svgContainers[index], filteredYearPercents[year][currentLabel], filteredYearCounts[year][currentLabel]);
             //Adapt the selection from the previous query
             adaptSelection(year);
         },
@@ -1643,6 +1694,14 @@ function drawHome(increment) {
     d3.select("#incrementButton").classed('disabled', false);
     d3.select("#viewByButton").classed('disabled', false);
 
+    if ((100 / increment) * (64 + 10) > 740) {
+        currBoxPadding = 100 / (100 / increment);
+        currBoxHeight = 640 / (100 / increment);
+    } else {
+        currBoxHeight = 64;
+        currBoxPadding = 10;
+    }
+
     //If the search went through
     if (years.length != 0 && years != 0) {
         //Clear all selections, prep the containers
@@ -1651,7 +1710,11 @@ function drawHome(increment) {
         prepContainers(increment);
 
         //Draw the paper on the left on the main screen
-        drawFirstColumn(110, (100 / increment) * 16, 80, svgContainers[0], 100 / increment);
+        var numOfLines = 100 / increment;
+        if (numOfLines > 10) {
+            //numOfLines = 10;
+        }
+        drawFirstColumn(110, (100 / increment) * 16, 80, svgContainers[0], numOfLines);
 
         //Search for the query in each year
         for (var i = 0; i < years.length; i++) {
@@ -1676,6 +1739,7 @@ function searchForQuery(query) {
     if (query.toString() != currSearchQuery.toString()) {
         removeAllSelections();
         currSearchQuery = query; //Remeber to filter input to prevent sql injects
+        d3.select("#searchQueryLabel").html(currSearchQuery.toString());
     }
 
     for (var key in boundariesByPaper) {

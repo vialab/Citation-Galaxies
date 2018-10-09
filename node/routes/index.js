@@ -6,7 +6,6 @@ router.use(cors({origin: '*'}));
 const { Pool } = require('pg');
 
 //Create a pool for the inbound queries
-
 const pool = new Pool({
   user: process.env.USER,
   host: process.env.HOST,
@@ -33,6 +32,49 @@ router.get('/years', function(req, res, next) {
     query.on('row', (row) => {
       results.push(row);
     });
+    // After all data is returned, close connection and return results
+    query.on('end', () => {
+      done();
+      return res.json(results);
+    });
+  });
+});
+
+//Return the hits for a specific query in a specific year
+router.post('/queryCountsTEST', function(req, res, next) {
+  pool.connect((err, client, done) => {
+    // Handle connection errors
+    if(err) {
+      done();
+      console.log(err);
+      return res.status(500).json({success: false, data: err});
+    }
+
+    //Variables to be used in the query
+    var searchQuery = JSON.parse(req.body.query);
+    var year = req.body.year;
+    var rangeLeft = req.body.rangeLeft;
+    var rangeRight = req.body.rangeRight;
+
+    var tmp = "select * from (select wordSearch.lemma, wordSearch.startlocationpaper as wordStart, wordSearch.endlocationpaper as wordEnd, citationSearch.sentencenum as citationSentence, wordSearch.sentencenum as wordSentence, citationSearch.startlocationpaper as citationStart, citationSearch.endlocationpaper as citationEnd, citationSearch.citationauthors as citationAuthors, citationSearch.citationyear as citationYear, citationSearch.citationarticletitle as citationArticleTitle , wordSearch.articleid as articleID,  ((( CAST(wordSearch.startlocationpaper as float)+wordSearch.endlocationpaper)/2)/wordSearch.articleCharCount) as percent from wordsearch, citationsearch where wordsearch.articleid = citationsearch.articleid and wordsearch.sentencenum = citationsearch.sentencenum and wordsearch.articleyear = " + year + "and (";
+    for(var i = 0; i < searchQuery.length; i++){
+        tmp += "wordSearch.lemma = '" + searchQuery[i] + "'";
+        if(i < searchQuery.length - 1){
+          tmp += " or ";
+        }
+    }
+    tmp += ") limit 10000) as wordCitationJoin order by wordCitationJoin.articleid";
+    const query = client.query(tmp);
+   
+    
+    // Array to store results
+    var results = [];
+    // Stream results back one row at a time
+    query.on('row', (row) => {
+      results.push(row);
+    });
+    
+    
     // After all data is returned, close connection and return results
     query.on('end', () => {
       done();

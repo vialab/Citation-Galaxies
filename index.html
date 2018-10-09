@@ -118,10 +118,13 @@
     <div id="container" class="d-flex flex-column">
         <div class="tab-content" id="pills-tabContent">
             <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
+                <div id="tooltip" class="tooltip" style="opacity: 0"></div>
                 <!-- Buttons on home pane -->
                 <div class="container-fluid justify-content-end">
                     <div class="row" style="padding: 0 0 10px 0;">
-                        <div class="col-sm-12 btn-row">
+                        
+                        <div id="searchQueryLabel" class="col-sm" style="color: #6C757D; opacity: 0.9; font: 33px Roboto;"></div>
+                        <div class="col-sm-6 btn-row">
                             <button class="btn btn-outline-secondary float-right disabled" id="clearAllButton"
                                 data-toggle="modal" data-target="#clearAllModal" type="button" style="margin-left: 10px;">Clear
                                 all</button>
