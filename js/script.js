@@ -28,6 +28,8 @@ var paperRequests = []; //The collection of server requests
 var maxLabels = 2; //The max amount of labels per box
 var currentLabel = 0; //The current label choice to display on the squares
 
+var currentNorm = 0; //The current normalization, 0 normalizes between years and 1 normalizes within years
+
 var possibleSeperations = [1, 10, 25, 50]; //The possible seperations allowed
 
 var inTextSelection = []; //The selection inside the paper
@@ -81,14 +83,30 @@ function seperationChange(increment) {
     currIncrement = increment;
 }
 
+//Change the normalization, update the colors and display them
+//Could use some optimization however
+function normalizationChange(value) {
+    if (value != currentNorm) {
+        d3.select("#normByItem" + currentNorm.toString()).classed('active', false);
+        currentNorm = value;
+        for (var i = 0; i < years.length; i++) {
+            filterYearResults(currIncrement, years[i]['articleyear']);
+        }
+        changeSquaresColors();
+        d3.select("#normByItem" + currentNorm.toString()).classed('active', true);
+    }
+}
+
 //Remove all database requests
 function clearRequests(yearRequests, paperRequest) {
+    //If a paper request was made, clear all the previous paper requests
     if (paperRequest == true) {
         for (var i = 0; i < paperRequests.length; i++) {
             paperRequests[i].abort();
         }
         paperRequests = [];
     }
+    // If a year request was made, clear all the year requests
     if (yearRequests == true) {
         for (var i = 0; i < yearResultsRequests.length; i++) {
             yearResultsRequests[i].abort();
@@ -126,7 +144,7 @@ function updateTextInput(field, before, after, articleid, sendToDefault) {
     }
     after = parseInt(after);
 
-    //Either send to the global ranges, or change boundaries for a specific paper
+    //Either change the global boundary, or change it on a per paper basis
     if (sendToDefault == 1) {
         sentenceRangeAbove = before;
         sentenceRangeBelow = after;
@@ -136,13 +154,14 @@ function updateTextInput(field, before, after, articleid, sendToDefault) {
     field.innerHTML = "[ " + before.toString() + " <- Citation -> " + after.toString() + " ]";
 }
 
-//Used to change the label's on the square boxes on the main screen
+//Used to change the labels on the square boxes on the main screen (can display how many results or how many papers)
 function changeLabel(choice) {
     //Based on a int in the label's id, make one label white (or grey) and make the other transparent
+
     //Change the old label to be invisible, show the new one
     currentLabel = choice;
 
-    //prepContainers(currIncrement);
+    //Clear the paper glyph and recalculate the lines     
     $(svgContainers[0].node()).empty();
     paperGlyphLines = [];
     lineColors = [];
@@ -175,6 +194,7 @@ function selectPaperViewBoundary(object) {
         inTextSelection.splice(inTextSelection.indexOf(object), 1);
     }
 
+    //Add a red circle to a paper that has been editied 
     currentPaperIndicator.attr("display", null);
     currentPaperIndicator.style("fill", "red");
 }
@@ -182,6 +202,7 @@ function selectPaperViewBoundary(object) {
 //Add the refernce to the current list of references selected
 function updateReferencesSelected(object) {
     var found = false;
+    //If the reference selected is already in the array do not add another copy
     for (var i = 0; i < referencesSelected.length; i++) {
         if (referencesSelected[i][0] == object[0] && referencesSelected[i][1] == object[1]) {
             referencesSelected.splice(i, 1);
@@ -219,7 +240,7 @@ function changeGroup(newGroup) {
 
     }
 
-    //Call the grouping function, remove all old galaxies and draw 
+    //Call the grouping function, remove all old galaxies and draw new ones
     var keys = Object.keys(galaxyData);
     for (var j = 0; j < keys.length; j++) {
         var key = keys[j];
@@ -239,14 +260,18 @@ function changeGroup(newGroup) {
 function groupGalaxyData(indexToGroupOn, selectionString, selection) {
     var temp = {};
 
-    //Group data on particular index
+    //Group data on particular piece of data (indexToGroupOn)
     for (var i = 0; i < galaxyData[selectionString][selection].length; i++) {
         if (temp[galaxyData[selectionString][selection][i][indexToGroupOn]] == null) {
             temp[galaxyData[selectionString][selection][i][indexToGroupOn]] = [];
         }
+        //Push the current reference information onto the temp array
         temp[galaxyData[selectionString][selection][i][indexToGroupOn]].push(galaxyData[selectionString][selection][i]);
     }
+    //Clear the galaxy data array
     galaxyData[selectionString][selection] = [];
+
+    //Group the data
     for (var key in temp) {
         for (var i = 0; i < temp[key].length; i++) {
             galaxyData[selectionString][selection].push(temp[key][i]);
@@ -260,7 +285,7 @@ function addDataToGalaxy(selection) {
         document.getElementById("pills-galaxies-tab").classList.remove("disabled");
     }
 
-    var selectionString = ""; //Build the search array into a string
+    var selectionString = ""; //Build the search query (in a array format) into a string
     for (var i = 0; i < currSearchQuery.length; i++) {
         selectionString += currSearchQuery[i];
         if (i != currSearchQuery.length - 1) {
@@ -287,7 +312,7 @@ function addDataToGalaxy(selection) {
             }
         }
         if (found == false) {
-            galaxyData[selectionString][selection].push(referencesSelected[i]); //TBD - perhaps not allow same reference in positive/negative/neutral
+            galaxyData[selectionString][selection].push(referencesSelected[i]); //TBD - perhaps make it such that you cant select same references in positive/negative/neutral
         }
     }
 
@@ -303,11 +328,13 @@ function addDataToGalaxy(selection) {
         }
     }
 
+    //Group the data by the current global grouping variable, the search query, and the reference to be selected 
     groupGalaxyData(galaxyGroupBy, selectionString, selection);
 
     //Draw the galaxy
     drawGalaxy(selectionString);
 
+    //Remove the selected references from the paper screen
     referencesSelected = [];
 }
 
@@ -320,7 +347,7 @@ function changePaperTextBoundary(articleid, year) {
     currPaper.selectAll("*").remove();
 
 
-    //Remove old year results for that article
+    //Remove old results from the year screen's data
     var indexToInsert = -1;
     for (var i = 0; i < yearResults[year].length; i++) {
         if (yearResults[year][i][0]['articleid'] == articleid) {
@@ -331,20 +358,23 @@ function changePaperTextBoundary(articleid, year) {
         }
     }
 
-    //Get new data
+    //Get new data from the server for the one person
     paperRequests.push($.ajax({
         type: 'POST',
         url: currentURL + "queryCountsPaper",
         data: { 'query': JSON.stringify(currSearchQuery), 'year': year, 'rangeLeft': boundariesByPaper[articleid][0], 'rangeRight': boundariesByPaper[articleid][1], 'paperid': articleid },
         success: function (data) {
-            //Filter data for ngram
+            //Filter data for ngram - similar to how the filtering is done on the main screen
             var tmpResults = [];
             var loopOffset = currSearchQuery.length;
             if (currSearchQuery.length == 1) {
                 loopOffset = 0;
             }
+
+            
+            // Offset the loop to catch ngrams
             for (var i = 0; i < data.length - loopOffset; i++) {
-                var valid = false;
+                var valid = false; // Used to determine whether to add the result
                 var temp = [];
 
                 if (currSearchQuery.length == 1) {
@@ -365,6 +395,7 @@ function changePaperTextBoundary(articleid, year) {
                 }
 
                 if (valid == true) {
+                     // Add the result to the new list
                     tmpResults.push(temp);
                     yearResults[year].splice(indexToInsert, 0, temp);
                     indexToInsert += 1;
@@ -434,7 +465,7 @@ function changePaperTextBoundary(articleid, year) {
 
 }
 
-//Gets the paper text for a paper if its not needed - then call getPaperBoundary()
+//Gets the paper text for a paper if its needed - then call getPaperBoundary() to set the boundaries for the papers (start and end location)
 function prepPaperText(articleid, neededBoundaries, container, display) {
     paperRequests.push($.ajax({
         type: 'POST',
@@ -550,6 +581,7 @@ function sortPapers(indexToSortOn, sortedArray) {
         sortedArray.push([paper, paperData[paper]]);
     }
 
+    //Sort the papers on a particular index 
     for (var i = 0; i < sortedArray.length - 1; i++) {
         for (var j = i; j < sortedArray.length; j++) {
             if (indexToSortOn == -1) {
@@ -1338,7 +1370,7 @@ function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, mini
 
 }
 
-//Draws or removes a border around a objectr
+//Draws or removes a border around a object
 function drawBorder(object, remove) {
     if (remove == true) {
         object.style('stroke', "none");
@@ -1409,7 +1441,6 @@ function adaptSelection(year) {
         }
     }
 }
-
 
 //Used to remove all user selections and remove their stroke / highlight
 function removeAllSelections() {
@@ -1597,47 +1628,56 @@ function filterYearResults(increment, year) {
     }
 
     //Loop through the results, update the count of papers and the paper reference count
-    for (var i = 0; i < yearResults[year].length; i++) {
-        for (var j = 0; j < 100; j += increment) {
-            if (yearResults[year][i][0]['percent'] * 100 <= (j + increment)) {
-                filteredYearCounts[year][0][((j + increment) / increment) - 1] += 1;
+    if (yearResults[year] != undefined) {
+        for (var i = 0; i < yearResults[year].length; i++) {
+            for (var j = 0; j < 100; j += increment) {
+                if (yearResults[year][i][0]['percent'] * 100 <= (j + increment)) {
+                    filteredYearCounts[year][0][((j + increment) / increment) - 1] += 1;
 
-                if (!currentArticle[((j + increment) / increment) - 1].includes(yearResults[year][i][0]['articleid'])) {
-                    filteredYearCounts[year][1][((j + increment) / increment) - 1] += 1;
-                    currentArticle[((j + increment) / increment) - 1].push(yearResults[year][i][0]['articleid']);
+                    if (!currentArticle[((j + increment) / increment) - 1].includes(yearResults[year][i][0]['articleid'])) {
+                        filteredYearCounts[year][1][((j + increment) / increment) - 1] += 1;
+                        currentArticle[((j + increment) / increment) - 1].push(yearResults[year][i][0]['articleid']);
+                    }
+                    break;
                 }
-                break;
             }
         }
     }
 
 
 
+    //Change whether to normalize to all the years, or just to one year
+    var yearsToChange = years;
+    if (currentNorm == 1) {
+        yearsToChange = [{}];
+        yearsToChange[0]['articleyear'] = year;
+    }
+
     //Get the percent counts using the max hitcounts
     for (var i = 0; i < maxLabels; i++) {
         var max = filteredYearCounts[years[0]['articleyear']][i][0];
         var min = 0;
 
-        for (var j = 0; j < years.length; j++) {
-            if (filteredYearCounts[years[j]['articleyear']] != undefined) {
-                for (var k = 0; k < filteredYearCounts[years[j]['articleyear']][i].length; k++) {
-                    if (filteredYearCounts[years[j]['articleyear']][i][k] > max) {
-                        max = filteredYearCounts[years[j]['articleyear']][i][k];
+        for (var j = 0; j < yearsToChange.length; j++) {
+            if (filteredYearCounts[yearsToChange[j]['articleyear']] != undefined) {
+                for (var k = 0; k < filteredYearCounts[yearsToChange[j]['articleyear']][i].length; k++) {
+                    if (filteredYearCounts[yearsToChange[j]['articleyear']][i][k] > max) {
+                        max = filteredYearCounts[yearsToChange[j]['articleyear']][i][k];
                     }
-                    if (filteredYearCounts[years[j]['articleyear']][i][k] < min) {
-                        min = filteredYearCounts[years[j]['articleyear']][i][k];
+                    if (filteredYearCounts[yearsToChange[j]['articleyear']][i][k] < min) {
+                        min = filteredYearCounts[yearsToChange[j]['articleyear']][i][k];
                     }
                 }
             }
         }
 
-        for (var j = 0; j < years.length; j++) {
-            if (filteredYearCounts[years[j]['articleyear']] != undefined) {
-                for (var k = 0; k < filteredYearCounts[years[j]['articleyear']][i].length; k++) {
+        for (var j = 0; j < yearsToChange.length; j++) {
+            if (filteredYearCounts[yearsToChange[j]['articleyear']] != undefined) {
+                for (var k = 0; k < filteredYearCounts[yearsToChange[j]['articleyear']][i].length; k++) {
                     if (max != 0) {
-                        filteredYearPercents[years[j]['articleyear']][i][k] = (filteredYearCounts[years[j]['articleyear']][i][k] - min) / (max - min);
+                        filteredYearPercents[yearsToChange[j]['articleyear']][i][k] = (filteredYearCounts[yearsToChange[j]['articleyear']][i][k] - min) / (max - min);
                     } else {
-                        filteredYearPercents[year][i][k] = 0;
+                        filteredYearPercents[yearsToChange[j]['articleyear']][i][k] = 0;
                     }
                 }
             }
@@ -1695,7 +1735,10 @@ function changeSquaresColors() {
                 if (tinycolor(colors(filteredYearPercents[year][currentLabel][j])).isLight()) {
                     percentLabelColor = d3.rgb(69, 74, 80);
                 }
+                //console.log(percentLabelColor);
                 miniSquareText[i].style("fill", percentLabelColor);
+            } else {
+                console.log("undefined")
             }
         }
 
@@ -1771,6 +1814,7 @@ function drawHome(increment) {
     d3.select("#clearAllButton").classed('disabled', false);
     d3.select("#incrementButton").classed('disabled', false);
     d3.select("#viewByButton").classed('disabled', false);
+    d3.select("#normByButton").classed('disabled', false);
 
     if ((100 / increment) * (64 + 10) > 740) {
         currBoxPadding = 100 / (100 / increment);

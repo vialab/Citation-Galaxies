@@ -122,7 +122,7 @@
                 <!-- Buttons on home pane -->
                 <div class="container-fluid justify-content-end">
                     <div class="row" style="padding: 0 0 10px 0;">
-                        
+
                         <div id="searchQueryLabel" class="col-sm" style="color: #6C757D; opacity: 0.9; font: 33px Roboto;"></div>
                         <div class="col-sm-6 btn-row">
                             <button class="btn btn-outline-secondary float-right disabled" id="clearAllButton"
@@ -149,8 +149,19 @@
                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                                     <a class="dropdown-item active" id="changeLabelItem0" href="#" onclick="changeLabel(0);">Amount
                                         of hits</a>
-                                    <a class="dropdown-item" id="changeLabelItem1" href="#" onclick="changeLabel(1)">Amount
+                                    <a class="dropdown-item" id="changeLabelItem1" href="#" onclick="changeLabel(1);">Amount
                                         of papers</a>
+                                </div>
+                            </div>
+                            <div class="dropdown float-right">
+                                <button class="btn btn-outline-secondary dropdown-toggle disabled" id="normByButton"
+                                    style="margin-right: 10px" type="button" data-toggle="dropdown" aria-haspopup="true"
+                                    aria-expanded="false">
+                                    Normalize
+                                </button>
+                                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                    <a class="dropdown-item active" id="normByItem0" href="#" onclick="normalizationChange(0);">Between years</a>
+                                    <a class="dropdown-item" id="normByItem1" href="#" onclick="normalizationChange(1);">Within years</a>
                                 </div>
                             </div>
                         </div>
