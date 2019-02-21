@@ -144,15 +144,30 @@ svg text {
 }
 
 
-div.tooltip {	
-    position: absolute;			
-    text-align: center;			
-    width: 60px;					
-    height: 28px;					
-    padding: 2px;				
-    font: 20px sans-serif;		
-    background: #f8f9fa;	
-    border: 0px;		
-    border-radius: 8px;			
-    pointer-events: none;			
+div.tooltip {
+    position: absolute;
+    text-align: center;
+    width: 60px;
+    height: 28px;
+    padding: 2px;
+    font: 20px sans-serif;
+    background: #f8f9fa;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+#homeRow {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+#distChart {
+  flex: 1 1 auto;
+}
+
+#years {
+  flex: 4 4 auto;
+  display: flex;
+  overflow-x: scroll;
 }

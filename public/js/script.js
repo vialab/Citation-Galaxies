@@ -48,10 +48,10 @@ var paperText = {}; //Holds the raw paper text
 var paperData = {}; //Holds the paper data - mainly where words, references and sentences are and their locations
 var paperRow; //The row that holds all the papers
 
-var filteredYearCounts = {}; //Holds amount of X in each year 
-var filteredYearPercents = {}; //Holds the percents calculated from the results / total for each year - used in the colors 
+var filteredYearCounts = {}; //Holds amount of X in each year
+var filteredYearPercents = {}; //Holds the percents calculated from the results / total for each year - used in the colors
 
-var svgContainers = []; //Used to hold all the containers used 
+var svgContainers = []; //Used to hold all the containers used
 
 var years = []; //Used to hold all the years from the server
 
@@ -62,7 +62,7 @@ var galaxyData = {}; //The dict to hold all the info for the galaxies
 
 var currentURL = "http://localhost:5432/"; //The url to access the backend
 
-//Used to change the increment on the main screen 
+//Used to change the increment on the main screen
 function seperationChange(increment) {
     //Generate new seperation screen
     for (var i = 0; i < 100; i += increment) {
@@ -115,7 +115,7 @@ function clearRequests(yearRequests, paperRequest) {
     }
 }
 
-//Clear all data 
+//Clear all data
 function clearAll() {
     seperations = [];
     seperationLabels = [];
@@ -130,12 +130,12 @@ function clearAll() {
     clearRequests(true, true);
 }
 
-//Used to shorten integers when they go past 1000, 1000 would go to 1.0k and so on 
+//Used to shorten integers when they go past 1000, 1000 would go to 1.0k and so on
 function shortenVal(value) {
     return value > 999 ? (value / 1000).toFixed(1) + 'k' : value //Not my function
 }
 
-//Updates the range text dynamically 
+//Updates the range text dynamically
 function updateTextInput(field, before, after, articleid, sendToDefault) {
     //Get the values to update
     before = parseInt(before);
@@ -161,7 +161,7 @@ function changeLabel(choice) {
     //Change the old label to be invisible, show the new one
     currentLabel = choice;
 
-    //Clear the paper glyph and recalculate the lines     
+    //Clear the paper glyph and recalculate the lines
     $(svgContainers[0].node()).empty();
     paperGlyphLines = [];
     lineColors = [];
@@ -194,7 +194,7 @@ function selectPaperViewBoundary(object) {
         inTextSelection.splice(inTextSelection.indexOf(object), 1);
     }
 
-    //Add a red circle to a paper that has been editied 
+    //Add a red circle to a paper that has been editied
     currentPaperIndicator.attr("display", null);
     currentPaperIndicator.style("fill", "red");
 }
@@ -323,12 +323,12 @@ function addDataToGalaxy(selection) {
                 var temp = galaxyData[selectionString][selection][i];
                 galaxyData[selectionString][selection][i] = galaxyData[selectionString][selection][j];
                 galaxyData[selectionString][selection][j] = temp;
-                //break; 
+                //break;
             }
         }
     }
 
-    //Group the data by the current global grouping variable, the search query, and the reference to be selected 
+    //Group the data by the current global grouping variable, the search query, and the reference to be selected
     groupGalaxyData(galaxyGroupBy, selectionString, selection);
 
     //Draw the galaxy
@@ -371,7 +371,7 @@ function changePaperTextBoundary(articleid, year) {
                 loopOffset = 0;
             }
 
-            
+
             // Offset the loop to catch ngrams
             for (var i = 0; i < data.length - loopOffset; i++) {
                 var valid = false; // Used to determine whether to add the result
@@ -453,7 +453,7 @@ function changePaperTextBoundary(articleid, year) {
             for (var i = 0; i < paperData[articleid].length; i++) {
                 var startNeededBoundary = paperData[articleid][i][0][paperData[articleid][i][0].length - 2];
                 var endNeededBoundary = paperData[articleid][i][0][paperData[articleid][i][0].length - 1];
-                if (!neededBoundaries.includes([startNeededBoundary, endNeededBoundary])) { //Fix - still allows copies in 
+                if (!neededBoundaries.includes([startNeededBoundary, endNeededBoundary])) { //Fix - still allows copies in
                     neededBoundaries.push([startNeededBoundary, endNeededBoundary]);
                 }
             }
@@ -540,7 +540,7 @@ function getPaperBoundary(articleid, neededBoundaries, container, display) {
     }));
 }
 
-//Changes the sorting used by the paper view 
+//Changes the sorting used by the paper view
 function changePaperSort(indexToSortOn) {
     var sortItems = ["#sortByJournal", "#sortByRef", "#sortByYear"];
 
@@ -581,7 +581,7 @@ function sortPapers(indexToSortOn, sortedArray) {
         sortedArray.push([paper, paperData[paper]]);
     }
 
-    //Sort the papers on a particular index 
+    //Sort the papers on a particular index
     for (var i = 0; i < sortedArray.length - 1; i++) {
         for (var j = i; j < sortedArray.length; j++) {
             if (indexToSortOn == -1) {
@@ -636,7 +636,7 @@ function drawPapers(titles) {
                     startSentence = 0;
                 }
 
-                //Iffy fix for the sentence below being a string 
+                //Iffy fix for the sentence below being a string
                 if ((typeof sentenceRangeBelow) == "string") {
                     sentenceRangeBelow = parseInt(sentenceRangeBelow);
                 }
@@ -682,7 +682,7 @@ function drawPapers(titles) {
         for (var i = 0; i < temp[paper][1].length; i++) {
             var startNeededBoundary = temp[paper][1][i][0][temp[paper][1][i][0].length - 2];
             var endNeededBoundary = temp[paper][1][i][0][temp[paper][1][i][0].length - 1];
-            if (!neededBoundaries.includes([startNeededBoundary, endNeededBoundary])) { //Fix - still allows copies in 
+            if (!neededBoundaries.includes([startNeededBoundary, endNeededBoundary])) { //Fix - still allows copies in
                 neededBoundaries.push([startNeededBoundary, endNeededBoundary]);
             }
         }
@@ -807,7 +807,7 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
         .attr("in2", "blurOut")
         .attr("mode", "normal");
 
-    //Draw the notification circle but don't show it 
+    //Draw the notification circle but don't show it
     svgContainer.append("rect")
         .attr("x", sizex * 0.86)
         .attr("y", sizey * 0.90)
@@ -919,7 +919,7 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
         tempText += "</i>";
         //Set the popover's text to the data just made
         listEntry.html(tempText);
-        //Append "br" for padding 
+        //Append "br" for padding
         popover.append("br");
     }
 
@@ -1284,7 +1284,7 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
 
 //Draws the indiviual squares on the main screen
 //Requires the container, location, size, color, text to put on, and the id for the box
-//ID must be in the format xxx_year_numOfBox for selection to work 
+//ID must be in the format xxx_year_numOfBox for selection to work
 function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, miniSquareColor, labelData, miniSquareID) {
     //Draw square
     miniSquaresObjects.push(svgContainer.append("rect")
@@ -1524,7 +1524,7 @@ function cycleVisibility(item) {
         if (temp.style("display") == "none") {
             temp.style("display", null); //unhide
         } else {
-            temp.style("display", "none");  // hide   
+            temp.style("display", "none");  // hide
         }
     }
 }
@@ -1583,16 +1583,18 @@ function switchToGalaxies() {
 function prepContainers(increment) {
     svgContainers = [];
     d3.select("#homeRow").remove();
-    var homeRow = d3.select("#pills-home").append("div").attr("class", "row").attr("id", "homeRow");
+    var homeRow = d3.select("#pills-home").append("div").attr("id", "homeRow");
+    let distChart = homeRow.append("div").attr("id", "distChart").attr("class", "nopadding");
+    let yearCols = homeRow.append("div").attr("id", "years").attr("class", "nopadding");
     for (var i = 0; i < years.length; i++) {
         if (i == 0) {
             var maxFirstContainerSize = 100 / increment;
             if (maxFirstContainerSize > 10) {
                 maxFirstContainerSize = 11;
             }
-            svgContainers.push(homeRow.append("div").attr("class", "col-xs-* nopadding").append("svg").attr("width", 257).attr("height", maxFirstContainerSize * 75));
+            svgContainers.push(distChart.append("svg").attr("width", 257).attr("height", maxFirstContainerSize * 75));
         }
-        svgContainers.push(homeRow.append("div").attr("class", "col-xs-* nopadding").attr("height", 785).append("svg").attr("width", 87));
+        svgContainers.push(yearCols.append("div").attr("class", "col-xs-* nopadding").attr("height", 785).append("svg").attr("width", 87));
 
     }
 }
@@ -1974,7 +1976,7 @@ function circleFormulaY(angle, height, width, radius) {
 }
 
 function drawGalaxy(ngram) {
-    //Get the maximum size of references for the galaxy, then define the container size using it 
+    //Get the maximum size of references for the galaxy, then define the container size using it
     var max = 0;
     for (var i = 0; i < galaxyData[ngram].length; i++) {
         if (galaxyData[ngram][i].length > max) {
@@ -2037,7 +2039,7 @@ function drawGalaxy(ngram) {
 
         var currentItem = 0; //Used group similar references together
         for (var j = 0; j < galaxyData[ngram][i].length; j++) {
-            currentItem = galaxyData[ngram][i][j][0]; //Get the current item, eg. paper id 
+            currentItem = galaxyData[ngram][i][j][0]; //Get the current item, eg. paper id
 
             var htmlContent = "<h2>" + galaxyData[ngram][i][j][2] + " (" + galaxyData[ngram][i][j][3] + ") (" + galaxyData[ngram][i][j][0] + ") (" + galaxyData[ngram][i][j][4] + ")" + "</h2><div id='referenceData'>" + galaxyData[ngram][i][j][1] + "</div>";
             drawGalaxyCircle(svgContainer, locations[i][0][index], 10, locations[i][1], circleSize, htmlContent); //Draw the paper at the current index
@@ -2089,6 +2091,6 @@ function drawGalaxy(ngram) {
                 drawBorder(d3.select(temp[i]), true);
             }
         }
-        
+
     });*/
 }
