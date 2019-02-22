@@ -1,0 +1,799 @@
+var inTextSelection = []; //The selection inside the paper
+var currentPaperIndicator; //The paper's cirlce indicator (used to show if the paper hasnt been completed or if it has been completed)
+var currentPaperSelected;
+
+var buttonsSelected = {}; //Used to count the current amount of buttons selected (used to determine if to show the paper indicator)
+
+var boundariesByPaper = {}; //Used to hold the sentence boundaries for each paper
+var indexToSortPapersOn = -1; //The value to sort the papers with
+
+var referencesSelected = []; //The current boundary selections for the current paper
+
+var paperText = {}; //Holds the raw paper text
+var paperData = {}; //Holds the paper data - mainly where words, references and sentences are and their locations
+
+var currentURL = "http://localhost:5432/"; //The url to access the backend
+
+//Used to highlight the references selected
+function selectPaperViewBoundary(object) {
+    //Select the reference if it hasnt been already, and display the active article icon
+    if (!d3.select(object).classed('border-primary')) {
+        d3.select(object).classed('border-primary', true);
+        inTextSelection.push(object);
+    } else {
+        d3.select(object).classed('border-primary', false);
+        inTextSelection.splice(inTextSelection.indexOf(object), 1);
+    }
+
+    //Add a red circle to a paper that has been editied
+    currentPaperIndicator.attr("display", null);
+    currentPaperIndicator.style("fill", "red");
+}
+
+//Add the refernce to the current list of references selected
+function updateReferencesSelected(object) {
+    var found = false;
+    //If the reference selected is already in the array do not add another copy
+    for (var i = 0; i < referencesSelected.length; i++) {
+        if (referencesSelected[i][0] == object[0] && referencesSelected[i][1] == object[1]) {
+            referencesSelected.splice(i, 1);
+            found = true;
+            break;
+        }
+    }
+    if (found == false) {
+        referencesSelected.push(object);
+    }
+}
+
+//Changes the grouping the paper view
+function changeGroup(newGroup) {
+    galaxyGroupBy = newGroup; //Change the current group
+    $('[data-toggle=popover]').popover('hide'); //Hide all popups active
+
+    //Change the active button
+    switch (newGroup) {
+        case (3):
+            d3.select("#groupByButton1").classed('active', true);
+            d3.select("#groupByButton2").classed('active', false);
+            d3.select("#groupByButton3").classed('active', false);
+            break;
+        case (4):
+            d3.select("#groupByButton1").classed('active', false);
+            d3.select("#groupByButton2").classed('active', true);
+            d3.select("#groupByButton3").classed('active', false);
+            break;
+        case (5):
+            d3.select("#groupByButton1").classed('active', false);
+            d3.select("#groupByButton2").classed('active', false);
+            d3.select("#groupByButton3").classed('active', true);
+            break;
+
+    }
+
+    //Call the grouping function, remove all old galaxies and draw new ones
+    var keys = Object.keys(galaxyData);
+    for (var j = 0; j < keys.length; j++) {
+        var key = keys[j];
+        var tmp = galaxyData[key].length;
+        for (var i = 0; i < tmp; i++) {
+            groupGalaxyData(galaxyGroupBy, key, i);
+        }
+
+        var element = document.getElementById("galaxyColumn-" + key);
+        element.parentNode.removeChild(element);
+        //$("#galaxyColumn-" + key).remove();
+        drawGalaxy(key);
+    }
+}
+
+//Changes the paper boundary and requeries the database
+function changePaperTextBoundary(articleid, year) {
+    //Hide the popover and remove the glpyh
+    var currPaper = currentPaperSelected;
+    changingPaper = true;
+    $('[data-toggle="popover"]').popover('hide');
+    currPaper.selectAll("*").remove();
+
+
+    //Remove old results from the year screen's data
+    var indexToInsert = -1;
+    for (var i = 0; i < yearResults[year].length; i++) {
+        if (yearResults[year][i][0]['articleid'] == articleid) {
+            if (indexToInsert == -1) {
+                indexToInsert = i;
+            }
+            yearResults[year].splice(i, 1);
+        }
+    }
+
+    //Get new data from the server for the one person
+    paperRequests.push($.ajax({
+        type: 'POST',
+        url: currentURL + "queryCountsPaper",
+        data: { 'query': JSON.stringify(currSearchQuery), 'year': year, 'rangeLeft': boundariesByPaper[articleid][0], 'rangeRight': boundariesByPaper[articleid][1], 'paperid': articleid },
+        success: function (data) {
+            //Filter data for ngram - similar to how the filtering is done on the main screen
+            var tmpResults = [];
+            var loopOffset = currSearchQuery.length;
+            if (currSearchQuery.length == 1) {
+                loopOffset = 0;
+            }
+
+
+            // Offset the loop to catch ngrams
+            for (var i = 0; i < data.length - loopOffset; i++) {
+                var valid = false; // Used to determine whether to add the result
+                var temp = [];
+
+                if (currSearchQuery.length == 1) {
+                    valid = true;
+                    temp.push(data[i]);
+                } else {
+                    for (var j = 0; j < currSearchQuery.length; j++) {
+                        if (data[i + j]['lemma'] == currSearchQuery[j]
+                            && data[i + j]['wordsentence'] == data[i + j + 1]['wordsentence']
+                            && data[i + j]['citationStart'] == data[i + j + 1]['citationStart']) {
+                            valid = true;
+                            temp.push(data[i + j]);
+                        } else {
+                            valid = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (valid == true) {
+                     // Add the result to the new list
+                    tmpResults.push(temp);
+                    yearResults[year].splice(indexToInsert, 0, temp);
+                    indexToInsert += 1;
+                }
+            }
+
+
+            //Prep data for single paper to be drawn, similar to drawPapers()
+            data = tmpResults;
+            paperData[articleid] = [];
+            for (var i = 0; i < selections.length; i++) {
+                var selectionSplit = selections[i].split(":");
+                var selectionYear = selectionSplit[0].substring(0, selectionSplit[0].length);
+
+                selectionSplit = selectionSplit[1].trim().split("-");
+                var leftBoundary = selectionSplit[0].substring(0, selectionSplit[0].indexOf("%"));
+                var rightBoundary = selectionSplit[1].substring(0, selectionSplit[1].indexOf("%"));
+
+                if (selectionYear == year) {
+                    for (var j = 0; j < data.length; j++) {
+                        if (data[j][0]['percent'] * 100 >= leftBoundary && data[j][0]['percent'] * 100 <= rightBoundary) {
+
+                            if (paperData[data[j][0]['articleid']] == undefined) {
+                                paperData[data[j][0]['articleid']] = [];
+                            }
+
+                            var startSentence = data[j][0]['citationsentence'] - boundariesByPaper[articleid][0]; //Fix - stop from going to 0 or max sentence num for paper
+
+                            if ((typeof boundariesByPaper[articleid][1]) == "string") {
+                                boundariesByPaper[articleid][1] = parseInt(rightBoundary);
+                            }
+                            var endSentence = data[j][0]['citationsentence'] + boundariesByPaper[articleid][1];
+
+                            paperData[data[j][0]['articleid']].push([]);
+                            for (var k = 0; k < data[j].length; k++) {
+                                paperData[data[j][0]['articleid']][paperData[data[j][0]['articleid']].length - 1].push(
+                                    [data[j][k]['percent'],
+                                    data[j][k]['wordstart'],
+                                    data[j][k]['wordend'],
+                                    data[j][k]['citationstart'],
+                                    data[j][k]['citationend'],
+                                    data[j][k]['citationarticletitle'],
+                                    data[j][k]['citationauthors'],
+                                    data[j][k]['citationyear'],
+                                        startSentence,
+                                        endSentence]);
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            var neededBoundaries = [];
+            for (var i = 0; i < paperData[articleid].length; i++) {
+                var startNeededBoundary = paperData[articleid][i][0][paperData[articleid][i][0].length - 2];
+                var endNeededBoundary = paperData[articleid][i][0][paperData[articleid][i][0].length - 1];
+                if (!neededBoundaries.includes([startNeededBoundary, endNeededBoundary])) { //Fix - still allows copies in
+                    neededBoundaries.push([startNeededBoundary, endNeededBoundary]);
+                }
+            }
+            getPaperBoundary(articleid, neededBoundaries, currPaper, true);
+            changingPaper = false;
+        }
+    }));
+
+
+}
+
+//Gets the paper text for a paper if its needed - then call getPaperBoundary() to set the boundaries for the papers (start and end location)
+function prepPaperText(articleid, neededBoundaries, container, display) {
+    paperRequests.push($.ajax({
+        type: 'POST',
+        url: currentURL + "paperText",
+        data: { 'articleid': articleid },
+        success: function (data) {
+            //console.log(paperText);
+            paperText[articleid] = data;
+            getPaperBoundary(articleid, neededBoundaries, container, display);
+        },
+        async: true,
+        timeout: 600000
+    }));
+}
+
+//Gets the location of the beginning and the last sentence for the reference, then draws the paper
+function getPaperBoundary(articleid, neededBoundaries, container, display) {
+    paperRequests.push($.ajax({
+        type: 'POST',
+        url: currentURL + "sectionBoundary",
+        data: { 'articleid': articleid, 'neededBoundaries': JSON.stringify(neededBoundaries) },
+        success: function (data) {
+            //Matches the sentencenum to the location
+            for (var i = 0; i < paperData[articleid].length; i++) {
+                for (var k = 0; k < paperData[articleid][i].length; k++) {
+                    for (var j = 0; j < data.length; j++) {
+                        if (data[j]['sentencenum'] == paperData[articleid][i][k][paperData[articleid][i][k].length - 2]) {
+                            paperData[articleid][i][k][paperData[articleid][i][k].length - 2] = [data[j]['startlocationpaper'], data[j]['endlocationpaper']];
+                        }
+                        if (data[j]['sentencenum'] == paperData[articleid][i][k][paperData[articleid][i][k].length - 1]) {
+                            paperData[articleid][i][k][paperData[articleid][i][k].length - 1] = [data[j]['startlocationpaper'], data[j]['endlocationpaper']];
+                        }
+
+                    }
+                }
+            }
+
+            //Calculate the colors for each line in the glyph
+            var paperDist = []; //Used for the line color on the paper
+            var paperColor = new Array(10); //Array to hold each color for each line
+            for (var i = 0; i < 10; i++) {
+                paperDist.push(false);
+                paperColor[i] = 0;
+            }
+
+            //Find where in the paper the lines should appear, and increment their occurance
+            for (var j = 0; j < paperData[articleid].length; j++) {
+                for (var i = 1; i < 11; i++) {
+                    if (paperData[articleid][j][0][0] <= (i / 10)) {
+                        if (paperDist[i - 1] == false) {
+                            paperDist[i - 1] = true;
+                        }
+                        paperColor[i - 1] += 1;
+                        break;
+                    }
+
+                }
+            }
+
+            //Divide the color by 10 to get percents
+            for (var i = 0; i < paperColor.length; i++) {
+                //If the value is above 10 references per line just set to 10 as max (so that it will divide to 1 and will be set as the dark color)
+                if (paperColor[i] > 10) {
+                    paperColor[i] = 10;
+                }
+                paperColor[i] = paperColor[i] / 10;
+            }
+            drawPaper(110, 160, paperDist, paperColor, container, articleid, display);
+        },
+        async: true,
+        timeout: 600000
+    }));
+}
+
+//Changes the sorting used by the paper view
+function changePaperSort(indexToSortOn) {
+    var sortItems = ["#sortByJournal", "#sortByRef", "#sortByYear"];
+
+    //Change the buttons active
+    switch (indexToSortOn) {
+        case (-1):
+            d3.select(sortItems[1]).classed('active', true);
+            d3.select(sortItems[0]).classed('active', false);
+            d3.select(sortItems[2]).classed('active', false);
+            break;
+        case ('journaltitle'):
+            d3.select(sortItems[0]).classed('active', true);
+            d3.select(sortItems[1]).classed('active', false);
+            d3.select(sortItems[2]).classed('active', false);
+            break;
+        case ('articleyear'):
+            d3.select(sortItems[2]).classed('active', true);
+            d3.select(sortItems[0]).classed('active', false);
+            d3.select(sortItems[1]).classed('active', false);
+            break;
+    }
+
+    //Hide all popovers
+    $('[data-toggle=popover]').popover('hide');
+    //Clear the screen
+    paperRow.remove();
+    //Clear all database requests
+    clearRequests();
+    //Change sorting index
+    indexToSortPapersOn = indexToSortOn;
+    //Draw new papers
+    drawPapers(selections);
+}
+
+//Sorts the papers using the global value to sort on for the papers
+function sortPapers(indexToSortOn, sortedArray) {
+    for (var paper in paperData) {
+        sortedArray.push([paper, paperData[paper]]);
+    }
+
+    //Sort the papers on a particular index
+    for (var i = 0; i < sortedArray.length - 1; i++) {
+        for (var j = i; j < sortedArray.length; j++) {
+            if (indexToSortOn == -1) {
+                if (sortedArray[i][1].length < sortedArray[j][1].length) {
+                    var temp = sortedArray[i];
+                    sortedArray[i] = sortedArray[j];
+                    sortedArray[j] = temp;
+                }
+            } else {
+                if (paperText[sortedArray[i][0]][0][indexToSortOn] < paperText[sortedArray[j][0]][0][indexToSortOn]) {
+                    var temp = sortedArray[i];
+                    sortedArray[i] = sortedArray[j];
+                    sortedArray[j] = temp;
+                }
+            }
+
+        }
+    }
+}
+
+//Draws all the papers
+function drawPapers(titles) {
+    //Remove old row
+    d3.select("#paperRow").remove();
+    //Append a row for all the papers
+    paperRow = d3.select("#pills-papers").append("div").attr("class", "row");
+
+    paperData = {};
+    //Loop through all selections
+    for (var i = 0; i < titles.length; i++) {
+        //Split the selection into: Left Bounds, Right Bounds and Year
+        var titlesSplit = titles[i].split(":");
+        var year = titlesSplit[0].substring(0, titlesSplit[0].length);
+
+        titlesSplit = titlesSplit[1].trim().split("-");
+        var leftBoundary = titlesSplit[0].substring(0, titlesSplit[0].indexOf("%"));
+        var rightBoundary = titlesSplit[1].substring(0, titlesSplit[1].indexOf("%"));
+
+        //Loop through all results for the year
+        for (var j = 0; j < yearResults[year].length; j++) {
+            //If a result from that year falls under the boundaries
+            if (yearResults[year][j][0]['percent'] * 100 >= leftBoundary && yearResults[year][j][0]['percent'] * 100 <= rightBoundary) {
+
+                //If array for the paper doesnt exist, create it
+                if (paperData[yearResults[year][j][0]['articleid']] == undefined) {
+                    paperData[yearResults[year][j][0]['articleid']] = [];
+                }
+
+                //The start sentence for the reference context
+                var startSentence = yearResults[year][j][0]['citationsentence'] - sentenceRangeAbove;
+                if (startSentence < 0) {
+                    startSentence = 0;
+                }
+
+                //Iffy fix for the sentence below being a string
+                if ((typeof sentenceRangeBelow) == "string") {
+                    sentenceRangeBelow = parseInt(sentenceRangeBelow);
+                }
+
+                //The end sentence for the reference context
+                var endSentence = yearResults[year][j][0]['citationsentence'] + sentenceRangeBelow;
+
+
+                /*if (boundariesByPaper[yearResults[year][j][0]['articleid']] != undefined) {
+                    startSentence = yearResults[year][j][0]['citationsentence'] - boundariesByPaper[yearResults[year][j][0]['articleid']][0];
+                    endSentence = yearResults[year][j][0]['citationsentence'] + boundariesByPaper[yearResults[year][j][0]['articleid']][1];
+                    console.log(startSentence + " " + endSentence);
+                }*/ //CHECK - REMOVING FIXED BOUNDARY ISSUES, BUT MIGHT CAUSE ISSUES WITH PAPER BOUNDARIES
+
+
+                //Push all relevant data about the reference to the array for the article
+                paperData[yearResults[year][j][0]['articleid']].push([]);
+                for (var k = 0; k < yearResults[year][j].length; k++) {
+                    paperData[yearResults[year][j][0]['articleid']][paperData[yearResults[year][j][0]['articleid']].length - 1].push(
+                        [yearResults[year][j][k]['percent'],
+                        yearResults[year][j][k]['wordstart'],
+                        yearResults[year][j][k]['wordend'],
+                        yearResults[year][j][k]['citationstart'],
+                        yearResults[year][j][k]['citationend'],
+                        yearResults[year][j][k]['citationarticletitle'],
+                        yearResults[year][j][k]['citationauthors'],
+                        yearResults[year][j][k]['citationyear'],
+                            startSentence,
+                            endSentence]);
+                }
+            }
+        }
+    }
+
+
+    //Sort the papers
+    var temp = [];
+    sortPapers(indexToSortPapersOn, temp);
+
+    //Get the needed sentences for each citation context, and place them in their appropriate spot in the array
+    for (var paper in temp) {
+        var neededBoundaries = [];
+        for (var i = 0; i < temp[paper][1].length; i++) {
+            var startNeededBoundary = temp[paper][1][i][0][temp[paper][1][i][0].length - 2];
+            var endNeededBoundary = temp[paper][1][i][0][temp[paper][1][i][0].length - 1];
+            if (!neededBoundaries.includes([startNeededBoundary, endNeededBoundary])) { //Fix - still allows copies in
+                neededBoundaries.push([startNeededBoundary, endNeededBoundary]);
+            }
+        }
+
+        var divContainer = paperRow.append("div").attr("class", "col-xs-* partialpadding"); //Append a column for each paper
+        var svgContainer = divContainer.append("svg").attr("width", 115).attr("height", 168); //Container for paper to go into
+
+        boundariesByPaper[temp[paper][0]] = [sentenceRangeAbove, sentenceRangeBelow]; //Used so that each paper has a reference of their boundaries, so that they can change seperate of the rest
+
+        //If the paper text hasnt been downloaded already, download it
+        if (paperText[temp[paper][0]] == undefined) {
+            prepPaperText(temp[paper][0], neededBoundaries, svgContainer, false);
+        } else {
+            console.log("using exisiting paper data");
+            getPaperBoundary(temp[paper][0], neededBoundaries, svgContainer, false);
+        }
+
+    }
+
+    //Hide the popover if a click is made outside any papers
+    $('html').on('click', function (e) {
+        //Did not click a popover toggle or popover
+        if ($(e.target).data('toggle') !== 'popover' && $(e.target).parents('.popover').length === 0) {
+            $('[data-toggle="popover"]').popover('hide');
+            inTextSelection = [];
+            referencesSelected = [];
+
+            var temp = $('[data-toggle=popover]');
+            for (var i = 0; i < temp.length; i++) {
+                drawBorder(d3.select(temp[i].parentNode).select("#paperRect"), true);
+            }
+        }
+
+    });
+
+}
+
+//Draws a specific paper and adds popover content (references)
+function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer, articleid, display) {
+    //Filter for dropshadows
+    var filter = svgContainer.append("defs").append("filter")
+        .attr("id", "dropshadowPaper")
+        .attr("height", "130%");
+    filter.append("feOffset")
+        .attr("result", "offOut")
+        .attr("in", "SourceGraphic")
+        .attr("dx", 0)
+        .attr("dy", 2);
+    filter.append("feColorMatrix")
+        .attr("result", "matrixOut")
+        .attr("in", "offOut")
+        .attr("type", "matrix")
+        .attr("values", "0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0");
+    filter.append("feGaussianBlur")
+        .attr("result", "blurOut")
+        .attr("in", "matrixOut")
+        .attr("stdDeviation", 2);
+    filter.append("feBlend")
+        .attr("in", "SourceGraphic")
+        .attr("in2", "blurOut")
+        .attr("mode", "normal");
+
+    //Rectangle for the paper
+    var paperRect = svgContainer.append("rect")
+        .attr("x", 3)
+        .attr("y", 3)
+        .attr("rx", 3)
+        .attr("xy", 3)
+        .attr("width", sizex)
+        .attr("height", sizey)
+        .attr("id", "paperRect")
+        .attr("filter", "url(#dropshadowPaper)")
+        .style("fill", d3.rgb(248, 249, 250));
+
+    //Calculation to figure out the max lines possible and padding needed (messy - rewrite if can)
+    var lineSizeY = 3;
+    var numOfLines = activeLines.length;
+    var minLinePadding = (sizey - (numOfLines * lineSizeY)) / (numOfLines + 1);
+
+    //Draw the lines with padding needed
+    var locationXStart = 3 + sizex * 0.1;
+    var locationXEnd = (sizex * 0.9) + 3;
+    var locationY = 4 + minLinePadding;
+
+    for (var i = 0; i < activeLines.length; i++) {
+        //Change color if they should be selected
+        var color = d3.rgb(248, 249, 250);
+        if (activeLines[i] == true) {
+            color = colors(activeLinesPercents[i]);
+        }
+
+        var line = svgContainer.append("line") // attach a line
+            .style("stroke", color) // colour the line
+            .attr("x1", locationXStart) // x position of the first end of the line
+            .attr("y1", locationY) // y position of the first end of the line
+            .attr("x2", locationXEnd) // x position of the second end of the line
+            .attr("y2", locationY)
+            .attr('stroke-width', lineSizeY);
+        locationY += minLinePadding + lineSizeY;
+    }
+
+    //Creates a filter for the little notification circle applied to the papers
+    filter = svgContainer.append("defs").append("filter")
+        .attr("id", "dropshadowCircle")
+        .attr("height", "130%");
+    filter.append("feOffset")
+        .attr("result", "offOut")
+        .attr("in", "SourceGraphic")
+        .attr("dx", 0)
+        .attr("dy", 1);
+    filter.append("feColorMatrix")
+        .attr("result", "matrixOut")
+        .attr("in", "offOut")
+        .attr("type", "matrix")
+        .attr("values", "0.1 0 0 0 0 0 0.1 0 0 0 0 0 0.1 0 0 0 0 0 1 0");
+    filter.append("feGaussianBlur")
+        .attr("result", "blurOut")
+        .attr("in", "matrixOut")
+        .attr("stdDeviation", 0.5);
+    filter.append("feBlend")
+        .attr("in", "SourceGraphic")
+        .attr("in2", "blurOut")
+        .attr("mode", "normal");
+
+    //Draw the notification circle but don't show it
+    svgContainer.append("rect")
+        .attr("x", sizex * 0.86)
+        .attr("y", sizey * 0.90)
+        .attr("rx", 15)
+        .attr("xy", 15)
+        .attr("width", 10)
+        .attr("height", 10)
+        .attr("filter", "url(#dropshadowCircle)")
+        .attr("id", "unfinishedCircle")
+        .attr("display", "none");
+
+
+    //Append the relevant paper data in the popover
+    var popover = d3.select("#popover_text");
+    popover.html("");
+    popover.append("h2").text(paperText[articleid][0]['articletitle'] + " (" + paperText[articleid][0]['articleyear'] + ") (" + articleid + ") (" + paperText[articleid][0]['journaltitle'] + ")");
+    popover.append("h6").text("Boundaries are: " + boundariesByPaper[articleid][0] + " above and " + boundariesByPaper[articleid][1] + " below");
+
+    //Append each reference context
+    for (var i = 0; i < paperData[articleid].length; i++) {
+        var tempText = "";
+
+        //Append a container
+        var listEntry = popover.append("ul").attr("class", "list-group");
+        listEntry = listEntry.append("li").attr("class", "list-group-item").attr("id", articleid); //Not standard, but works
+        //Onclick code to keep track of selected references incase they are added
+        listEntry.attr("onclick", "selectPaperViewBoundary(this); updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
+
+        var lastSplitIndex = paperData[articleid][i][0][8][0]; //Index used to figure out where the paper text was last split on
+        //If the context has a space at the beginning, skip it
+        if (paperText[articleid][0]['papertext'].charAt(lastSplitIndex) == ' ') {
+            lastSplitIndex += 1;
+        }
+        var endTextIndex = paperData[articleid][i][0][9][1]; //Index for the end of the context
+
+
+        var tempLocations = []; //Holds the citation and word(s) locations
+        //Pushes the citation
+        tempLocations.push([paperData[articleid][i][0][3] - 1,
+        paperData[articleid][i][0][4],
+            true]);
+        //and the word(s) location(s)
+        for (var j = 0; j < paperData[articleid][i].length; j++) { //Loops length of query times
+            tempLocations.push([paperData[articleid][i][j][1],
+            paperData[articleid][i][j][2],
+                false]);
+        }
+
+        //Sorts the locations so that the item occuring first in the text is highlighted first, as not to go backward in the text
+        for (var j = 0; j < tempLocations.length; j++) {
+            for (var k = j + 1; k < tempLocations.length; k++) {
+                if (tempLocations[j][0] > tempLocations[k][0]) {
+                    var temp = tempLocations[j];
+                    tempLocations[j] = tempLocations[k];
+                    tempLocations[k] = temp;
+                }
+            }
+        }
+
+        tempText += '"';
+        //Loop through the locations
+        //Works by getting text before word/citation, then adding the word/citation
+        //Loops until all data is in
+        for (var j = 0; j < tempLocations.length; j++) {
+            if (tempLocations[j][0] != lastSplitIndex) {
+                //End location of the item
+                var tempEndIndex = tempLocations[j][0];
+                //A fix if the word starts at a space
+                if (paperText[articleid][0]['papertext'][tempEndIndex] == ' ') {
+                    tempEndIndex += 1;
+                }
+
+                //Get all the text before the item
+                tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, tempEndIndex);
+            }
+
+            //If the value is true, it is a citation, and span it a different color
+            //else, just use mark for yellow
+            if (tempLocations[j][2] == true) {
+                tempText += "<span style='background-color: #9DC4DF'>";
+            } else {
+                tempText += "<mark>";
+            }
+            //Get the word/citation
+            tempText += paperText[articleid][0]['papertext'].substring(tempLocations[j][0], tempLocations[j][1] + 1);
+            if (tempLocations[j][2] == true) {
+                tempText += "</span>";
+            } else {
+                tempText += "</mark>";
+            }
+            lastSplitIndex = tempLocations[j][1] + 1;
+        }
+        //Add the rest of the context's data
+        tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, endTextIndex + 1);
+        //End the text and pad it a little
+        tempText += '"';
+        tempText += "<br><br><i>";
+
+        //Add the citation information at the end in italics
+        if (paperData[articleid][i][0][6] != "") {
+            tempText += paperData[articleid][i][0][6] + ". "; //Author
+        }
+        if (paperData[articleid][i][0][5] != "") {
+            tempText += paperData[articleid][i][0][5] + ". "; //Referenced Paper Name
+        }
+        if (paperData[articleid][i][0][7] != "") {
+            tempText += paperData[articleid][i][0][7] + ". "; // Year
+        }
+        tempText += "</i>";
+        //Set the popover's text to the data just made
+        listEntry.html(tempText);
+        //Append "br" for padding
+        popover.append("br");
+    }
+
+    //The hitbox used to detect clicks on the entire glyph
+    var squareHitBox = svgContainer.append("rect")
+        .attr("x", 3)
+        .attr("y", 3)
+        .attr("rx", 3)
+        .attr("xy", 3)
+        .attr("width", sizex)
+        .attr("height", sizey)
+        .attr("data-toggle", "popover")
+        .attr("id", articleid + "_" + paperText[articleid][0]['articleyear'])
+        .attr("data-content", $('#popover_content_wrapper').html()) //Set the popover content to display custom html
+        .style("fill", "rgba(0,0,0,0)");
+
+    $(squareHitBox.node()).popover({ html: true, container: 'body' }); //This is the cause of the slowdown - enables popups on all papers
+    $(squareHitBox.node()).on('click', function (e) { //Allows only one popup at a time - if a popup other than the one clicked is active, it is hidden
+        //If the paper is clicked, hide all other papers open at the moment
+        $('[data-toggle=popover]').not(this).popover('hide');
+
+        //Reset selection data that was not added
+        inTextSelection = [];
+        referencesSelected = [];
+
+        //Still a work in progress - was used to change the notification circle's color from green to red but its not done yet
+        /*var id = d3.select(this).attr('id');
+        id = id.substring(0, id.indexOf('_'));
+        if(buttonsSelected[id] == null){
+            buttonsSelected[id] = [0,0,0];
+        }*/
+
+
+        var temp = $('[data-toggle=popover]').not(this);
+        //Remove a border on all the unselected objects
+        for (var i = 0; i < temp.length; i++) {
+            drawBorder(d3.select(temp[i].parentNode).select("#paperRect"), true);
+        }
+
+        //If the paper was recently selected (checked by looking at the stroke on the paper), then add a stroke
+        if (d3.select(this.parentNode).select("#paperRect").style("stroke") == "none") {
+            drawBorder(d3.select(this.parentNode).select("#paperRect"), false);
+            currentPaperIndicator = d3.select(this.parentNode).select("#unfinishedCircle");
+            currentPaperSelected = d3.select(this.parentNode);
+        } else { //Else remove the stroke - the paper is being unselected
+            drawBorder(d3.select(this.parentNode).select("#paperRect"), true);
+            currentPaperIndicator = null;
+            $(this).popover('hide');
+        }
+
+
+    });
+
+    //Used to tell if the specific paper's popover should be shown immediately after creation - used when changing boundaries
+    if (display == true) {
+        //Simulates mouse click on the paper
+        jQuery.fn.d3Click = function () { //Used to click the d3 object (svg)
+            this.each(function (i, e) {
+                var evt = new MouseEvent("click");
+                e.dispatchEvent(evt);
+            });
+        };
+
+        if (d3.select("#pills-papers-tab").classed('active')) {
+            $(squareHitBox.node()).d3Click();
+        }
+    }
+
+}
+
+//Used to change the height of the popover in the paper view when clicking the "change boundaries" button
+function cycleVisibility(item) {
+    var items = [item.parentElement.parentElement.childNodes[9].childNodes[1],
+    item.parentElement.parentElement.childNodes[11].childNodes[1],
+    item.parentElement.parentElement.childNodes[13].childNodes[1],
+    item.parentElement.parentElement.childNodes[15].childNodes[1]];
+
+    var mainPage = [item.parentElement.parentElement.parentElement.parentElement.parentElement.childNodes[1],
+    item.parentElement.parentElement.parentElement.parentElement.parentElement.childNodes[10]];
+
+    var id = currentPaperSelected.selectAll('rect').filter(function (d, i) { return i === 2; }).attr('id');
+
+    if (d3.select(items[0]).style("display") == "none") { //unhide
+        d3.select(mainPage[0]).style('height', '90px');
+        d3.select(mainPage[0]).style('margin-top', '5px');
+        d3.select(mainPage[1]).style('height', '335px');
+        d3.select(mainPage[1]).style('margin-top', '10px');
+
+    } else { //hide
+
+        d3.select(mainPage[0]).style('height', '60px');
+        d3.select(mainPage[0]).style('margin-top', '20px');
+        d3.select(mainPage[1]).style('height', '365px');
+        d3.select(mainPage[1]).style('margin-top', '-20px');
+    }
+
+    for (var item in items) {
+        var temp = d3.select(items[item]);
+        if (temp.style("display") == "none") {
+            temp.style("display", null); //unhide
+        } else {
+            temp.style("display", "none");  // hide
+        }
+    }
+}
+
+function switchToPapers(sections) {
+    //Clear the previous paper requests
+    clearRequests(false, true);
+
+    //Allows the user access to the papers page once they've selected an item
+    if (document.getElementById("pills-papers-tab").classList.contains('disabled')) {
+        document.getElementById("pills-papers-tab").classList.remove("disabled");
+    }
+    d3.select("#pills-papers").selectAll("*").remove(); //Remove all objects that might still be there
+
+    //Remove the paper row - append a message about the slow computation time, and run the search for the papers
+    d3.select("#paperRow").remove();
+    var paperRow = d3.select("#pills-papers").append("div").attr("class", "row justify-content-center").attr("id", "paperRow");
+    paperRow.append("div").attr("class", "alert alert-warning alert-dismissible fade show")
+        .attr("role", "alert").attr("id", "alert")
+        .html("<strong>Please Wait</strong> - the computation might take awhile. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>");
+
+    d3.select("#paperSortButton").style("display", null); //Unhide sort button for papers
+
+    $('#pills-papers-tab').tab('show');
+    executeAsync(function () { drawPapers(sections); }, 500);
+}
