@@ -985,7 +985,3 @@ function searchForQuery(query) {
     drawHome(currIncrement);
 
 }
-
-function getYearData(){
-    return yearResults
-}

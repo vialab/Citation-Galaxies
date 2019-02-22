@@ -12,8 +12,6 @@ var referencesSelected = []; //The current boundary selections for the current p
 var paperText = {}; //Holds the raw paper text
 var paperData = {}; //Holds the paper data - mainly where words, references and sentences are and their locations
 
-var paperResults = {};
-
 var currentURL = "http://localhost:5432/"; //The url to access the backend
 
 //Used to highlight the references selected
@@ -100,12 +98,12 @@ function changePaperTextBoundary(articleid, year) {
 
     //Remove old results from the year screen's data
     var indexToInsert = -1;
-    for (var i = 0; i < paperResults[year].length; i++) {
-        if (paperResults[year][i][0]['articleid'] == articleid) {
+    for (var i = 0; i < yearResults[year].length; i++) {
+        if (yearResults[year][i][0]['articleid'] == articleid) {
             if (indexToInsert == -1) {
                 indexToInsert = i;
             }
-            paperResults[year].splice(i, 1);
+            yearResults[year].splice(i, 1);
         }
     }
 
@@ -148,7 +146,7 @@ function changePaperTextBoundary(articleid, year) {
                 if (valid == true) {
                      // Add the result to the new list
                     tmpResults.push(temp);
-                    paperResults[year].splice(indexToInsert, 0, temp);
+                    yearResults[year].splice(indexToInsert, 0, temp);
                     indexToInsert += 1;
                 }
             }
@@ -372,17 +370,17 @@ function drawPapers(titles) {
         var rightBoundary = titlesSplit[1].substring(0, titlesSplit[1].indexOf("%"));
 
         //Loop through all results for the year
-        for (var j = 0; j < paperResults[year].length; j++) {
+        for (var j = 0; j < yearResults[year].length; j++) {
             //If a result from that year falls under the boundaries
-            if (paperResults[year][j][0]['percent'] * 100 >= leftBoundary && paperResults[year][j][0]['percent'] * 100 <= rightBoundary) {
+            if (yearResults[year][j][0]['percent'] * 100 >= leftBoundary && yearResults[year][j][0]['percent'] * 100 <= rightBoundary) {
 
                 //If array for the paper doesnt exist, create it
-                if (paperData[paperResults[year][j][0]['articleid']] == undefined) {
-                    paperData[paperResults[year][j][0]['articleid']] = [];
+                if (paperData[yearResults[year][j][0]['articleid']] == undefined) {
+                    paperData[yearResults[year][j][0]['articleid']] = [];
                 }
 
                 //The start sentence for the reference context
-                var startSentence = paperResults[year][j][0]['citationsentence'] - sentenceRangeAbove;
+                var startSentence = yearResults[year][j][0]['citationsentence'] - sentenceRangeAbove;
                 if (startSentence < 0) {
                     startSentence = 0;
                 }
@@ -393,28 +391,28 @@ function drawPapers(titles) {
                 }
 
                 //The end sentence for the reference context
-                var endSentence = paperResults[year][j][0]['citationsentence'] + sentenceRangeBelow;
+                var endSentence = yearResults[year][j][0]['citationsentence'] + sentenceRangeBelow;
 
 
-                /*if (boundariesByPaper[paperResults[year][j][0]['articleid']] != undefined) {
-                    startSentence = paperResults[year][j][0]['citationsentence'] - boundariesByPaper[paperResults[year][j][0]['articleid']][0];
-                    endSentence = paperResults[year][j][0]['citationsentence'] + boundariesByPaper[paperResults[year][j][0]['articleid']][1];
+                /*if (boundariesByPaper[yearResults[year][j][0]['articleid']] != undefined) {
+                    startSentence = yearResults[year][j][0]['citationsentence'] - boundariesByPaper[yearResults[year][j][0]['articleid']][0];
+                    endSentence = yearResults[year][j][0]['citationsentence'] + boundariesByPaper[yearResults[year][j][0]['articleid']][1];
                     console.log(startSentence + " " + endSentence);
                 }*/ //CHECK - REMOVING FIXED BOUNDARY ISSUES, BUT MIGHT CAUSE ISSUES WITH PAPER BOUNDARIES
 
 
                 //Push all relevant data about the reference to the array for the article
-                paperData[paperResults[year][j][0]['articleid']].push([]);
-                for (var k = 0; k < paperResults[year][j].length; k++) {
-                    paperData[paperResults[year][j][0]['articleid']][paperData[paperResults[year][j][0]['articleid']].length - 1].push(
-                        [paperResults[year][j][k]['percent'],
-                        paperResults[year][j][k]['wordstart'],
-                        paperResults[year][j][k]['wordend'],
-                        paperResults[year][j][k]['citationstart'],
-                        paperResults[year][j][k]['citationend'],
-                        paperResults[year][j][k]['citationarticletitle'],
-                        paperResults[year][j][k]['citationauthors'],
-                        paperResults[year][j][k]['citationyear'],
+                paperData[yearResults[year][j][0]['articleid']].push([]);
+                for (var k = 0; k < yearResults[year][j].length; k++) {
+                    paperData[yearResults[year][j][0]['articleid']][paperData[yearResults[year][j][0]['articleid']].length - 1].push(
+                        [yearResults[year][j][k]['percent'],
+                        yearResults[year][j][k]['wordstart'],
+                        yearResults[year][j][k]['wordend'],
+                        yearResults[year][j][k]['citationstart'],
+                        yearResults[year][j][k]['citationend'],
+                        yearResults[year][j][k]['citationarticletitle'],
+                        yearResults[year][j][k]['citationauthors'],
+                        yearResults[year][j][k]['citationyear'],
                             startSentence,
                             endSentence]);
                 }
@@ -780,9 +778,6 @@ function cycleVisibility(item) {
 function switchToPapers(sections) {
     //Clear the previous paper requests
     clearRequests(false, true);
-
-    //Get the paper data from the main screen (front.js)
-    paperResults = getYearData();
 
     //Allows the user access to the papers page once they've selected an item
     if (document.getElementById("pills-papers-tab").classList.contains('disabled')) {
