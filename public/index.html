@@ -288,10 +288,11 @@
         <div id="popover_galaxy_text" style="overflow-y: scroll; height: 360px; margin-top: -28px;"></div>
     </div>
     <ul class='custom-menu'>
-      <li data-action = "first">First thing</li>
-      <li data-action = "second">Second thing</li>
-      <li data-action = "third">Third thing</li>
+      <li class="menu-btn" onclick="addRule('positive');">Positive</li>
+      <li class="menu-btn" onclick="addRule('negative');">Negative</li>
+      <li class="menu-btn" onclick="addRule('neutral');">Neutral</li>
     </ul>
+    <input type="hidden" id="text-selection"/>
     <div class="tooltip" style="opacity: 0;"></div>
 </body>
 
