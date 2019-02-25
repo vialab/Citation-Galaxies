@@ -84,6 +84,8 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    min-width: 481px;
+    overflow-x: scroll;
 }
 
 .dropdown-toggle {
@@ -203,6 +205,10 @@ div.tooltip {
   z-index: 999;
 }
 
+.navbar-brand {
+  margin-right: 20px;
+}
+
 #filterQueryOptions  {
     display:flex;
     justify-content: flex-end;
@@ -226,8 +232,11 @@ div.tooltip {
   margin-bottom: 10px;
 }
 
-@media(max-width: 1200px) {
-  .navbar-brand {
+@media(max-width: 800px) {
+  #navOptions {
+    width: 100%;
+  }
+  #collapsingNavbar ul, #collapsingNavbar #navOptions {
     width: 100%;
     text-align: center;
   }
