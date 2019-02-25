@@ -64,8 +64,7 @@
 }
 
 #container {
-    padding-right: 50px;
-    padding-left: 50px;
+    padding: 15px 50px;
     margin: 0 auto;
     justify-content: space-evenly;
 }
@@ -84,7 +83,6 @@
 }
 
 body {
-    padding-top: 75px;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -170,4 +168,82 @@ div.tooltip {
   flex: 4 4 auto;
   display: flex;
   overflow-x: scroll;
+}
+
+.custom-menu {
+    display: none;
+    z-index: 1000;
+    position: absolute;
+    overflow: hidden;
+    border: 1px solid #CCC;
+    white-space: nowrap;
+    font-family: sans-serif;
+    background: #FFF;
+    color: #333;
+    border-radius: 5px;
+    list-style-type: none;
+    padding: 0;
+}
+
+.custom-menu li {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.custom-menu li:hover {
+    background-color: #DEF;
+}
+
+.popover {
+  z-index: 998;
+}
+
+.navbar {
+  width: 100%;
+  z-index: 999;
+}
+
+#filterQueryOptions  {
+    display:flex;
+    justify-content: flex-end;
+}
+
+#filterQueryOptions .filterOption {
+  margin: 5px 5px;
+  flex: 1;
+}
+
+#filterQueryOptions .filterOption button {
+  width: 100%;
+}
+
+#navOptions, #sortOptions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+#sortOptions {
+  margin-bottom: 10px;
+}
+
+@media(max-width: 1200px) {
+  .navbar-brand {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media(max-width: 636px) {
+  .nav {
+    justify-content: center;
+    margin-bottom: 15px;
+  }
+
+  .nav-item {
+    flex: 1;
+  }
+  #collapsingNavbar ul, #collapsingNavbar #navOptions {
+    width: 100%;
+    text-align: center;
+  }
 }

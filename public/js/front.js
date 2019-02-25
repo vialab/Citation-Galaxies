@@ -503,11 +503,6 @@ function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, mini
         .style("fill", "rgba(0,0,0,0)")
         .attr("id", miniSquareID);
 
-    d3.select("body").append("div")
-        .attr("class", "tooltip")
-        .style("opacity", 0);
-
-
     miniSquareHitbox.on("mouseover", function () {
 
         d3.select("#tooltip").transition()

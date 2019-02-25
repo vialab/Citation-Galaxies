@@ -4,7 +4,7 @@
 <head>
     <title>Citation Galaxies - Bootstrap Test</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!--External Resources-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
@@ -24,18 +24,16 @@
     <script src="js/front.js"></script>
     <script src="js/paper.js"></script>
     <script src="js/galaxy.js"></script>
+    <script src="js/sentiment.js"></script>
     <link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
 
 <body>
     <!-- Fixed Navbar -->
-    <nav class="navbar navbar-expand-xl fixed-top navbar-light bg-light" id="mainNav">
+    <nav class="navbar navbar-expand-xl navbar-light bg-light" id="mainNav">
         <a class="navbar-brand abs" href="#">Citation Galaxies</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsingNavbar">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="navbar-collapse collapse" id="collapsingNavbar">
-            <ul class="nav nav-pills">
+        <div class="navbar" id="collapsingNavbar">
+          <ul class="nav nav-pills">
                 <li class="nav-item">
                     <a class="nav-link active" id="pills-home-tab" data-toggle="pill" href="#pills-home" role="tab"
                         aria-controls="pills-home" aria-selected="true" onclick="$('.popover').popover('hide'); d3.select('#paperSortButton').style('display', 'none'); d3.select('#groupByButton').style('display', 'none'); d3.select('#exportButton').style('display', 'none');">Home</a>
@@ -49,21 +47,8 @@
                         aria-controls="pills-galaxies" aria-selected="false" onclick="d3.select('#paperSortButton').style('display', 'none'); d3.select('#groupByButton').style('display', null); d3.select('#exportButton').style('display', null);  //Unhide sort button for papers">Galaxies</a>
                 </li>
             </ul>
-            <br>
+          <div id="navOptions">
             <ul class="navbar-nav ml-auto">
-                <li class="nav-item">
-                    <div class="dropdown">
-                        <button class="btn btn-outline-secondary dropdown-toggle" id="paperSortButton" style="margin-right: 20px; display: none;"
-                            type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Sort By
-                        </button>
-                        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                            <a class="dropdown-item" id="sortByJournal" href="#" onclick="changePaperSort('journaltitle')">Journal</a>
-                            <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a>
-                            <a class="dropdown-item" id="sortByYear" href="#" onclick="changePaperSort('articleyear')">Year</a>
-                        </div>
-                    </div>
-                </li>
                 <li class="nav-item">
                     <button class="btn btn-outline-secondary" type="button" id="exportButton" style="margin-right: 20px; display: none;"
                         onclick="exportJSON();">
@@ -115,6 +100,7 @@
                   <p>&nbsp&nbsp</p>
                   </li> -->
             </ul>
+          </div>
         </div>
     </nav>
     <div id="container" class="d-flex flex-column">
@@ -122,55 +108,73 @@
             <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
                 <div id="tooltip" class="tooltip" style="opacity: 0"></div>
                 <!-- Buttons on home pane -->
-                <div class="container-fluid justify-content-end">
-                    <div class="row" style="padding: 0 0 10px 0;">
+                <div class="container-fluid">
+                  <div class="row" style="padding: 0 0 10px 0;">
 
-                        <div id="searchQueryLabel" class="col-sm" style="color: #6C757D; opacity: 0.9; font: 33px Roboto;"></div>
-                        <div class="col-sm-6 btn-row">
-                            <button class="btn btn-outline-secondary float-right disabled" id="clearAllButton"
-                                data-toggle="modal" data-target="#clearAllModal" type="button" style="margin-left: 10px;">Clear
-                                all</button>
-                            <div class="dropdown float-right">
-                                <button class="btn btn-outline-secondary dropdown-toggle disabled" id="incrementButton"
-                                    type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Increment By
-                                </button>
-                                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                    <a class="dropdown-item" id="changeIncrementItem1" href="#" onclick="drawHome(1);">1%</a>
-                                    <a class="dropdown-item" id="changeIncrementItem2" href="#" onclick="drawHome(10);">10%</a>
-                                    <a class="dropdown-item" id="changeIncrementItem3" href="#" onclick="drawHome(25);">25%</a>
-                                    <a class="dropdown-item" id="changeIncrementItem4" href="#" onclick="drawHome(50);">50%</a>
-                                </div>
-                            </div>
-                            <div class="dropdown float-right">
-                                <button class="btn btn-outline-secondary dropdown-toggle disabled" id="viewByButton"
-                                    style="margin-right: 10px;" type="button" data-toggle="dropdown" aria-haspopup="true"
-                                    aria-expanded="false">
-                                    View By
-                                </button>
-                                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                    <a class="dropdown-item active" id="changeLabelItem0" href="#" onclick="changeLabel(0);">Amount
-                                        of hits</a>
-                                    <a class="dropdown-item" id="changeLabelItem1" href="#" onclick="changeLabel(1);">Amount
-                                        of papers</a>
-                                </div>
-                            </div>
-                            <div class="dropdown float-right">
-                                <button class="btn btn-outline-secondary dropdown-toggle disabled" id="normByButton"
-                                    style="margin-right: 10px" type="button" data-toggle="dropdown" aria-haspopup="true"
-                                    aria-expanded="false">
-                                    Normalize
-                                </button>
-                                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                    <a class="dropdown-item active" id="normByItem0" href="#" onclick="normalizationChange(0);">Between years</a>
-                                    <a class="dropdown-item" id="normByItem1" href="#" onclick="normalizationChange(1);">Within years</a>
-                                </div>
-                            </div>
+                    <div id="searchQueryLabel" class="col-sm-6" style="color: #6C757D; opacity: 0.9; font: 33px Roboto;"></div>
+                      <div class="col-sm-6 btn-row">
+                        <div class="row" id="filterQueryOptions">
+
+                          <div class="dropdown filterOption">
+                              <button class="btn btn-outline-secondary dropdown-toggle disabled" id="incrementButton"
+                                  type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                  Increment By
+                              </button>
+                              <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                  <a class="dropdown-item" id="changeIncrementItem1" href="#" onclick="drawHome(1);">1%</a>
+                                  <a class="dropdown-item" id="changeIncrementItem2" href="#" onclick="drawHome(10);">10%</a>
+                                  <a class="dropdown-item" id="changeIncrementItem3" href="#" onclick="drawHome(25);">25%</a>
+                                  <a class="dropdown-item" id="changeIncrementItem4" href="#" onclick="drawHome(50);">50%</a>
+                              </div>
+                          </div>
+
+                          <div class="dropdown filterOption">
+                              <button class="btn btn-outline-secondary dropdown-toggle disabled" id="viewByButton"
+                                  type="button" data-toggle="dropdown" aria-haspopup="true"
+                                  aria-expanded="false">
+                                  View By
+                              </button>
+                              <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                  <a class="dropdown-item active" id="changeLabelItem0" href="#" onclick="changeLabel(0);">Amount
+                                      of hits</a>
+                                  <a class="dropdown-item" id="changeLabelItem1" href="#" onclick="changeLabel(1);">Amount
+                                      of papers</a>
+                              </div>
+                          </div>
+
+                          <div class="dropdown filterOption">
+                              <button class="btn btn-outline-secondary dropdown-toggle disabled" id="normByButton" type="button" data-toggle="dropdown" aria-haspopup="true"
+                                  aria-expanded="false">
+                                  Normalize
+                              </button>
+                              <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                  <a class="dropdown-item active" id="normByItem0" href="#" onclick="normalizationChange(0);">Between years</a>
+                                  <a class="dropdown-item" id="normByItem1" href="#" onclick="normalizationChange(1);">Within years</a>
+                              </div>
+                          </div>
+
+                          <button class="btn btn-outline-secondary filterOption disabled" id="clearAllButton"
+                              data-toggle="modal" data-target="#clearAllModal" type="button">Clear All
+                          </button>
+
                         </div>
                     </div>
+                  </div>
                 </div>
             </div>
-            <div class="tab-pane fade" id="pills-papers" role="tabpanel" aria-labelledby="pills-papers-tab"></div>
+            <div class="tab-pane fade" id="pills-papers" role="tabpanel" aria-labelledby="pills-papers-tab">
+              <div class="dropdown" id="sortOptions">
+                  <button class="btn btn-outline-secondary dropdown-toggle" id="paperSortButton" style="margin-right: 20px; display: none;"
+                      type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      Sort By
+                  </button>
+                  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                      <a class="dropdown-item" id="sortByJournal" href="#" onclick="changePaperSort('journaltitle')">Journal</a>
+                      <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a>
+                      <a class="dropdown-item" id="sortByYear" href="#" onclick="changePaperSort('articleyear')">Year</a>
+                  </div>
+              </div>
+            </div>
             <div class="tab-pane fade" id="pills-galaxies" role="tabpanel" aria-labelledby="pills-galaxies-tab">
                 <br>
             </div>
@@ -227,7 +231,7 @@
                     </li>
                     <li class="list-inline-item">
                         <button class="btn btn-outline-secondary" id="updateButton" onclick="var id = currentPaperSelected.selectAll('rect').filter(function (d, i) { return i === 2;}).attr('id');
-                             updateTextInput(this.parentElement.parentElement.childNodes[13].childNodes[1], this.parentElement.parentElement.childNodes[11].childNodes[1].value, this.parentElement.parentElement.childNodes[15].childNodes[1].value,id.substring(0,id.indexOf('_')), 0); 
+                             updateTextInput(this.parentElement.parentElement.childNodes[13].childNodes[1], this.parentElement.parentElement.childNodes[11].childNodes[1].value, this.parentElement.parentElement.childNodes[15].childNodes[1].value,id.substring(0,id.indexOf('_')), 0);
                                 changePaperTextBoundary(id.substring(0,id.indexOf('_')), id.substring(id.indexOf('_') + 1,id.length));"
                             type="button" style="display: none;">
                             Update Boundary
@@ -247,7 +251,7 @@
                     </li>
                     <li class="list-inline-item">
                         <input type="range" innertext="0" min="0" max="10" value="0" step="1" class="form-control-range slider"
-                            id="rangeAfterPopover" oninput=" 
+                            id="rangeAfterPopover" oninput="
                             var id = currentPaperSelected.selectAll('rect').filter(function (d, i) { return i === 2;}).attr('id');
                             updateTextInput(this.parentElement.parentElement.childNodes[13].childNodes[1], this.parentElement.parentElement.childNodes[11].childNodes[1].value , this.value,           id.substring(0,id.indexOf('_')), 2);"
                             style="display: none;">
@@ -258,7 +262,7 @@
         </nav>
         <!-- Other nav that could be used for info
             <nav class="navbar fixed-top navbar-expand bg-light" style = "overflow:hidden; margin-top: 59px;" id="paperInfoNav">
-                
+
         </nav>-->
         <br><br><br><br>
         <div id="popover_text" style="overflow-y: scroll; height: 365px; margin-top: -20px;"></div>
@@ -276,11 +280,17 @@
         </nav>
         <!-- Other nav that could be used for info
             <nav class="navbar fixed-top navbar-expand bg-light" style = "overflow:hidden; margin-top: 59px;" id="paperInfoNav">
-                
+
         </nav>-->
         <br><br><br><br>
         <div id="popover_galaxy_text" style="overflow-y: scroll; height: 360px; margin-top: -28px;"></div>
     </div>
+    <ul class='custom-menu'>
+      <li data-action = "first">First thing</li>
+      <li data-action = "second">Second thing</li>
+      <li data-action = "third">Third thing</li>
+    </ul>
+    <div class="tooltip" style="opacity: 0;"></div>
 </body>
 
 <!-- Scripts -->
