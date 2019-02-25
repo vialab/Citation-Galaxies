@@ -1,5 +1,6 @@
-function Signal(signal) {
+function Signal(signal, value=0) {
   this.signal = signal;
+  this.value = value;
   this.filter_distance = 0;
   this.custom_filters = [];
   this.negation_distance = 4;
@@ -7,7 +8,7 @@ function Signal(signal) {
 }
 
 var sentiment_signals = { "positive":[], "neutral":[], "negative":[] }; // sentiment rules
-
+var scores = {};
 
 // Trigger action when the contexmenu is about to be shown
 $(document).bind("mouseup", function (event) {
@@ -19,47 +20,54 @@ $(document).bind("mouseup", function (event) {
   }
   // Avoid the real one
   let sel = window.getSelection();
-  if(sel.toString() == "") {
-
-  } else {
-    $("#text-selection").val(sel);
-    $(".custom-menu").finish().toggle(100).css({
-        top: event.pageY + "px",
-        left: event.pageX + "px"
-    });
+  if(sel.toString() != "") {
+    // only show custom menu when we are highlighting in a popover
+    if($(sel.getRangeAt(0).commonAncestorContainer.parentNode).parents(".popover").length) {
+      $("#text-selection").val(sel);
+      $(".custom-menu").finish().toggle(100).css({
+          top: event.pageY + "px",
+          left: event.pageX + "px"
+      });
+    }
   }
 });
 
 // add a rule to our sentiment rule set
 function addRule(category) {
   $(".custom-menu").hide(100);
-  let text = $("#text-selection").val();
-  sentiment_signals[category].push(new Signal(text));
+  let text = $("#text-selection").val()
+    , value = 1;
+  if(category == "neutral") value = 0;
+  if(category == "negative") value = -1;
+  sentiment_signals[category].push(new Signal(text, value));
 }
 
 // given paper citation text, get matching rule counts
-function tagCitationSentiment(text) {
-  let tags = [];
+function tagCitationSentiment(articleid, text) {
+  let new_text = text, score = 0, n = 0;
   // a tag is a json object that contains signal_idx, location ([start, end]),
   // and value (1, 0, -1)
   for(let key of Object.keys(sentiment_signals)) {
-    let value = 1;
-    if(key == "neutral") value = 0;
-    if(key == "negative") value = -1;
-
+    let color = "42f465";
+    if(key == "neutral") color = "dbdbdb";
+    if(key == "negative") color = "ffd6d6";
     for(let i=0; i<sentiment_signals[key].length; i++) {
       let rule = sentiment_signals[key][i].signal
         , idx = text.indexOf(rule);
       if(idx > 0) {
-        let tag = {
-          "signal_idx": i
-          , "location": [idx, idx+rule.length]
-          , "value": value
-        }
-        tags.push(tag);
+        // markup the existence of this rule in the text
+        new_text = new_text.replace(rule, "<span style='background-color: #"
+          + color + "'>" + rule + "</span>");
+        score += value; // sum score
+        n++;
       }
     }
-
   }
-  return tags;
+  // save the score (average between -1 and +1)
+  if(articleid in scores) {
+    scores[articleid] = (scores[articleid] + (score / n)) / 2;
+  } else {
+    scores[articleid] = 0;
+  }
+  return new_text;
 }
