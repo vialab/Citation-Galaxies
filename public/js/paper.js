@@ -783,7 +783,7 @@ function switchToPapers(sections) {
     if (document.getElementById("pills-papers-tab").classList.contains('disabled')) {
         document.getElementById("pills-papers-tab").classList.remove("disabled");
     }
-    d3.select("#pills-papers").selectAll("*").remove(); //Remove all objects that might still be there
+    d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
 
     //Remove the paper row - append a message about the slow computation time, and run the search for the papers
     d3.select("#paperRow").remove();
