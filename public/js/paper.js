@@ -585,7 +585,6 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
         listEntry = listEntry.append("li").attr("class", "list-group-item").attr("id", articleid); //Not standard, but works
         //Onclick code to keep track of selected references incase they are added
         listEntry.attr("onclick", "selectPaperViewBoundary(this); updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
-
         var lastSplitIndex = paperData[articleid][i][0][8][0]; //Index used to figure out where the paper text was last split on
         //If the context has a space at the beginning, skip it
         if (paperText[articleid][0]['papertext'].charAt(lastSplitIndex) == ' ') {
@@ -669,9 +668,12 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
                   , paperData[articleid][i][0][4] + 1)
                 .trim();
 
+        // assumption: rules will never be found in citation text
         full_text = full_text.replace(citation_text
           , "<span style='background-color: #9DC4DF'>"+citation_text+"</span>");
-
+        // do rule markup first
+        full_text = tagCitationSentiment(articleid, full_text);
+        // now markup search query words
         for(let query of currSearchQuery) {
           full_text = full_text.replace(query, "<mark>"+query+"</mark>");
         }
