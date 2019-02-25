@@ -437,7 +437,8 @@ function drawPapers(titles) {
         }
 
         var divContainer = paperRow.append("div").attr("class", "col-xs-* partialpadding"); //Append a column for each paper
-        var svgContainer = divContainer.append("svg").attr("width", 115).attr("height", 168); //Container for paper to go into
+        var svgContainer = divContainer.append("svg").attr("class", "paper-thumbnail")
+          .attr("width", 115).attr("height", 168); //Container for paper to go into
 
         boundariesByPaper[temp[paper][0]] = [sentenceRangeAbove, sentenceRangeBelow]; //Used so that each paper has a reference of their boundaries, so that they can change seperate of the rest
 
@@ -592,67 +593,92 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
         }
         var endTextIndex = paperData[articleid][i][0][9][1]; //Index for the end of the context
 
-
-        var tempLocations = []; //Holds the citation and word(s) locations
+        // var tempLocations = []; //Holds the citation and word(s) locations
         //Pushes the citation
-        tempLocations.push([paperData[articleid][i][0][3] - 1,
-        paperData[articleid][i][0][4],
-            true]);
-        //and the word(s) location(s)
-        for (var j = 0; j < paperData[articleid][i].length; j++) { //Loops length of query times
-            tempLocations.push([paperData[articleid][i][j][1],
-            paperData[articleid][i][j][2],
-                false]);
-        }
+        // tempLocations.push([paperData[articleid][i][0][3] - 1,
+        // paperData[articleid][i][0][4],
+        //     true]);
+        // //and the word(s) location(s)
+        // for (var j = 0; j < paperData[articleid][i].length; j++) { //Loops length of query times
+        //     tempLocations.push([paperData[articleid][i][j][1],
+        //     paperData[articleid][i][j][2],
+        //         false]);
+        // }
 
         //Sorts the locations so that the item occuring first in the text is highlighted first, as not to go backward in the text
-        for (var j = 0; j < tempLocations.length; j++) {
-            for (var k = j + 1; k < tempLocations.length; k++) {
-                if (tempLocations[j][0] > tempLocations[k][0]) {
-                    var temp = tempLocations[j];
-                    tempLocations[j] = tempLocations[k];
-                    tempLocations[k] = temp;
-                }
-            }
-        }
+        // for (var j = 0; j < tempLocations.length; j++) {
+        //     for (var k = j + 1; k < tempLocations.length; k++) {
+        //         if (tempLocations[j][0] > tempLocations[k][0]) {
+        //             var temp = tempLocations[j];
+        //             tempLocations[j] = tempLocations[k];
+        //             tempLocations[k] = temp;
+        //         }
+        //     }
+        // }
 
         tempText += '"';
+
         //Loop through the locations
         //Works by getting text before word/citation, then adding the word/citation
         //Loops until all data is in
-        for (var j = 0; j < tempLocations.length; j++) {
-            if (tempLocations[j][0] != lastSplitIndex) {
-                //End location of the item
-                var tempEndIndex = tempLocations[j][0];
-                //A fix if the word starts at a space
-                if (paperText[articleid][0]['papertext'][tempEndIndex] == ' ') {
-                    tempEndIndex += 1;
-                }
+        // for (var j = 0; j < tempLocations.length; j++) {
+        //     if (tempLocations[j][0] != lastSplitIndex) {
+        //         //End location of the item
+        //         var tempEndIndex = tempLocations[j][0];
+        //         //A fix if the word starts at a space
+        //         if (paperText[articleid][0]['papertext'][tempEndIndex] == ' ') {
+        //             tempEndIndex += 1;
+        //         }
+        //
+        //         //Get all the text before the item
+        //         tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, tempEndIndex);
+        //     }
+        //
+        //     //If the value is true, it is a citation, and span it a different color
+        //     //else, just use mark for yellow
+        //     if (tempLocations[j][2] == true) {
+        //         tempText += "<span style='background-color: #9DC4DF'>";
+        //     } else {
+        //         tempText += "<mark>";
+        //     }
+        //     //Get the word/citation
+        //     tempText += paperText[articleid][0]['papertext'].substring(tempLocations[j][0], tempLocations[j][1] + 1);
+        //     if (tempLocations[j][2] == true) {
+        //         tempText += "</span>";
+        //     } else {
+        //         tempText += "</mark>";
+        //     }
+        //     lastSplitIndex = tempLocations[j][1] + 1;
+        // }
+        // //Add the rest of the context's data
+        // tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, endTextIndex + 1);
 
-                //Get all the text before the item
-                tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, tempEndIndex);
-            }
+        /***********************************************************************
+         Replace all the commented out code above so that we can play with
+         the raw code (sentiment scoring). The mark up is now based off of text
+         matching, as opposed to index based sub strings.
 
-            //If the value is true, it is a citation, and span it a different color
-            //else, just use mark for yellow
-            if (tempLocations[j][2] == true) {
-                tempText += "<span style='background-color: #9DC4DF'>";
-            } else {
-                tempText += "<mark>";
-            }
-            //Get the word/citation
-            tempText += paperText[articleid][0]['papertext'].substring(tempLocations[j][0], tempLocations[j][1] + 1);
-            if (tempLocations[j][2] == true) {
-                tempText += "</span>";
-            } else {
-                tempText += "</mark>";
-            }
-            lastSplitIndex = tempLocations[j][1] + 1;
+         JAY250220191 << identifying this change with this made up ID
+        ***********************************************************************/
+
+        // Mark up current search query and citations within each paragraph..
+        let full_text = paperText[articleid][0]['papertext']
+          .substring(lastSplitIndex, endTextIndex + 1).trim();
+        let citation_text = paperText[articleid][0]['papertext']
+                .substring(paperData[articleid][i][0][3] - 1
+                  , paperData[articleid][i][0][4] + 1)
+                .trim();
+
+        full_text = full_text.replace(citation_text
+          , "<span style='background-color: #9DC4DF'>"+citation_text+"</span>");
+
+        for(let query of currSearchQuery) {
+          full_text = full_text.replace(query, "<mark>"+query+"</mark>");
         }
-        //Add the rest of the context's data
-        tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, endTextIndex + 1);
+        //********************************************************* JAY250220191
+
         //End the text and pad it a little
-        tempText += '"';
+        tempText += full_text + '"';
         tempText += "<br><br><i>";
 
         //Add the citation information at the end in italics

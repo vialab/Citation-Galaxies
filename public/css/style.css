@@ -174,10 +174,10 @@ div.tooltip {
 
 .custom-menu {
     display: none;
-    z-index: 1000;
+    z-index: 1063;
     position: absolute;
     overflow: hidden;
-    border: 1px solid #CCC;
+    border: 1px solid #777;
     white-space: nowrap;
     font-family: sans-serif;
     background: #FFF;
@@ -185,24 +185,27 @@ div.tooltip {
     border-radius: 5px;
     list-style-type: none;
     padding: 0;
+    box-shadow: 1px 1px 7px grey;
 }
 
 .custom-menu li {
-    padding: 8px 12px;
+  padding: 8px 12px;
+}
+
+.custom-menu li.menu-btn {
     cursor: pointer;
 }
 
-.custom-menu li:hover {
+.custom-menu li.menu-btn:hover {
     background-color: #DEF;
 }
 
 .popover {
-  z-index: 998;
+  z-index: 1062;
 }
 
 .navbar {
   width: 100%;
-  z-index: 999;
 }
 
 .navbar-brand {
@@ -232,6 +235,10 @@ div.tooltip {
   margin-bottom: 10px;
 }
 
+.paper-thumbnail {
+  background-color: rgba(248, 249, 250, 1);
+}
+
 @media(max-width: 800px) {
   #navOptions {
     width: 100%;
@@ -250,9 +257,5 @@ div.tooltip {
 
   .nav-item {
     flex: 1;
-  }
-  #collapsingNavbar ul, #collapsingNavbar #navOptions {
-    width: 100%;
-    text-align: center;
   }
 }
