@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>Citation Galaxies - Bootstrap Test</title>
+    <title>Citation Networks</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -23,7 +23,6 @@
     <!--Local files, mainly script and stylesheet-->
     <script src="js/front.js"></script>
     <script src="js/paper.js"></script>
-    <script src="js/galaxy.js"></script>
     <script src="js/sentiment.js"></script>
     <link rel="stylesheet" type="text/css" href="css/style.css">
 </head>
@@ -34,7 +33,7 @@
         <div class="navbar" id="collapsingNavbar">
           <ul class="nav nav-pills">
                 <li class="nav-item">
-                  <a class="navbar-brand abs" href="#">Citation Galaxies</a>
+                  <a class="navbar-brand abs" href="#">Citation Networks</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" id="pills-home-tab" data-toggle="pill" href="#pills-home" role="tab"
@@ -45,8 +44,8 @@
                         aria-controls="pills-papers" aria-selected="false" onclick="if(!document.getElementById('pills-papers-tab').classList.contains('disabled')){ document.getElementById('paperSortButton').style.display = null; d3.select('#groupByButton').style('display', 'none'); d3.select('#exportButton').style('display', 'none');}">Papers</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link disabled" id="pills-galaxies-tab" data-toggle="pill" href="#pills-galaxies" role="tab"
-                        aria-controls="pills-galaxies" aria-selected="false" onclick="d3.select('#paperSortButton').style('display', 'none'); d3.select('#groupByButton').style('display', null); d3.select('#exportButton').style('display', null);  //Unhide sort button for papers">Galaxies</a>
+                    <a class="nav-link disabled" id="pills-networks-tab" data-toggle="pill" href="#pills-networks" role="tab"
+                        aria-controls="pills-networks" aria-selected="false" onclick="">Network</a>
                 </li>
             </ul>
           <div id="navOptions">
@@ -177,7 +176,7 @@
                   </div>
               </div>
             </div>
-            <div class="tab-pane fade" id="pills-galaxies" role="tabpanel" aria-labelledby="pills-galaxies-tab">
+            <div class="tab-pane fade" id="pills-networks" role="tabpanel" aria-labelledby="pills-networks-tab">
                 <br>
             </div>
         </div>
@@ -213,20 +212,19 @@
                         </button>
                     </li>
                     <li class="list-inline-item">
-                        <!-- var id = currentPaperSelected.selectAll('rect').filter(function (d, i) { return i === 2;}).attr('id'); id = id.substring(0,id.indexOf('_')); buttonsSelected[id][0] += inTextSelection.length; console.log((this.parentElement.parentElement.parentElement.parentElement.parentElement.childNodes[10].childNodes.length - 2) / 2); console.log(inTextSelection.length);-->
-                        <button class="btn btn-outline-secondary pull-right" id="addNegativeIcon" onclick="addDataToGalaxy(1); var len = inTextSelection.length; for(var i = 0; i < len; i++){selectPaperViewBoundary(inTextSelection[0]);}"
+                        <button class="btn btn-outline-secondary pull-right" id="addNegativeIcon" onclick="overrideSentiment(-1);"
                             style="margin-left: 197px" type="button">
                             <i class="fa fa-times-circle" aria-hidden="true"></i>
                         </button>
                     </li>
                     <li class="list-inline-item">
-                        <button class="btn btn-outline-secondary pull-right" id="addNeutralIcon" onclick="addDataToGalaxy(2); var len = inTextSelection.length; for(var i = 0; i < len; i++){selectPaperViewBoundary(inTextSelection[0]);}"
+                        <button class="btn btn-outline-secondary pull-right" id="addNeutralIcon" onclick="overrideSentiment(0);"
                             type="button">
                             <i class="fa fa-minus-circle" aria-hidden="true"></i>
                         </button>
                     </li>
                     <li class="list-inline-item">
-                        <button class="btn btn-outline-secondary pull-right" id="addPositiveIcon" onclick="addDataToGalaxy(0); var len = inTextSelection.length; for(var i = 0; i < len; i++){selectPaperViewBoundary(inTextSelection[0]);}"
+                        <button class="btn btn-outline-secondary pull-right" id="addPositiveIcon" onclick="overrideSentiment(1);"
                             type="button">
                             <i class="fa fa-check-circle" aria-hidden="true"></i>
                         </button>
@@ -269,24 +267,6 @@
         <br><br><br><br>
         <div id="popover_text" style="overflow-y: scroll; height: 365px; margin-top: -20px;"></div>
     </div>
-    <div id="popover_content_galaxy_wrapper" style="display: none;">
-        <nav class="navbar fixed-top navbar-expand bg-light" style="overflow:hidden; height: 56px; margin-top: 10px;"
-            id="popoverNav">
-            <ul class="navbar-nav ml-auto">
-                <button class="btn btn-outline-secondary pull-left" id="removeReference" style="margin-right: 450px"
-                    onclick="removeGalaxyReference(this.parentElement.parentElement.parentElement.childNodes[10].childNodes[1].innerHTML)"
-                    type="button">
-                    Remove
-                </button>
-            </ul>
-        </nav>
-        <!-- Other nav that could be used for info
-            <nav class="navbar fixed-top navbar-expand bg-light" style = "overflow:hidden; margin-top: 59px;" id="paperInfoNav">
-
-        </nav>-->
-        <br><br><br><br>
-        <div id="popover_galaxy_text" style="overflow-y: scroll; height: 360px; margin-top: -28px;"></div>
-    </div>
     <ul class='custom-menu'>
       <li class="menu-btn" onclick="addRule('positive');">Positive</li>
       <li class="menu-btn" onclick="addRule('negative');">Negative</li>
@@ -298,9 +278,6 @@
 
 <!-- Scripts -->
 <script>
-    //Define the row used for the galaxy data
-    var galaxyRow = d3.select("#pills-galaxies").append("div").attr("class", "row").attr("id", "galaxyRow");
-
     $(window).on('load', function () {
         //Get the year data
         getYears();

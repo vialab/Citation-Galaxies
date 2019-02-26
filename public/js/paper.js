@@ -569,136 +569,7 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
         .attr("id", "unfinishedCircle")
         .attr("display", "none");
 
-
-    //Append the relevant paper data in the popover
-    var popover = d3.select("#popover_text");
-    popover.html("");
-    popover.append("h2").text(paperText[articleid][0]['articletitle'] + " (" + paperText[articleid][0]['articleyear'] + ") (" + articleid + ") (" + paperText[articleid][0]['journaltitle'] + ")");
-    popover.append("h6").text("Boundaries are: " + boundariesByPaper[articleid][0] + " above and " + boundariesByPaper[articleid][1] + " below");
-
-    //Append each reference context
-    for (var i = 0; i < paperData[articleid].length; i++) {
-        var tempText = "";
-
-        //Append a container
-        var listEntry = popover.append("ul").attr("class", "list-group");
-        listEntry = listEntry.append("li").attr("class", "list-group-item").attr("id", articleid); //Not standard, but works
-        //Onclick code to keep track of selected references incase they are added
-        listEntry.attr("onclick", "selectPaperViewBoundary(this); updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
-        var lastSplitIndex = paperData[articleid][i][0][8][0]; //Index used to figure out where the paper text was last split on
-        //If the context has a space at the beginning, skip it
-        if (paperText[articleid][0]['papertext'].charAt(lastSplitIndex) == ' ') {
-            lastSplitIndex += 1;
-        }
-        var endTextIndex = paperData[articleid][i][0][9][1]; //Index for the end of the context
-
-        // var tempLocations = []; //Holds the citation and word(s) locations
-        //Pushes the citation
-        // tempLocations.push([paperData[articleid][i][0][3] - 1,
-        // paperData[articleid][i][0][4],
-        //     true]);
-        // //and the word(s) location(s)
-        // for (var j = 0; j < paperData[articleid][i].length; j++) { //Loops length of query times
-        //     tempLocations.push([paperData[articleid][i][j][1],
-        //     paperData[articleid][i][j][2],
-        //         false]);
-        // }
-
-        //Sorts the locations so that the item occuring first in the text is highlighted first, as not to go backward in the text
-        // for (var j = 0; j < tempLocations.length; j++) {
-        //     for (var k = j + 1; k < tempLocations.length; k++) {
-        //         if (tempLocations[j][0] > tempLocations[k][0]) {
-        //             var temp = tempLocations[j];
-        //             tempLocations[j] = tempLocations[k];
-        //             tempLocations[k] = temp;
-        //         }
-        //     }
-        // }
-
-        tempText += '"';
-
-        //Loop through the locations
-        //Works by getting text before word/citation, then adding the word/citation
-        //Loops until all data is in
-        // for (var j = 0; j < tempLocations.length; j++) {
-        //     if (tempLocations[j][0] != lastSplitIndex) {
-        //         //End location of the item
-        //         var tempEndIndex = tempLocations[j][0];
-        //         //A fix if the word starts at a space
-        //         if (paperText[articleid][0]['papertext'][tempEndIndex] == ' ') {
-        //             tempEndIndex += 1;
-        //         }
-        //
-        //         //Get all the text before the item
-        //         tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, tempEndIndex);
-        //     }
-        //
-        //     //If the value is true, it is a citation, and span it a different color
-        //     //else, just use mark for yellow
-        //     if (tempLocations[j][2] == true) {
-        //         tempText += "<span style='background-color: #9DC4DF'>";
-        //     } else {
-        //         tempText += "<mark>";
-        //     }
-        //     //Get the word/citation
-        //     tempText += paperText[articleid][0]['papertext'].substring(tempLocations[j][0], tempLocations[j][1] + 1);
-        //     if (tempLocations[j][2] == true) {
-        //         tempText += "</span>";
-        //     } else {
-        //         tempText += "</mark>";
-        //     }
-        //     lastSplitIndex = tempLocations[j][1] + 1;
-        // }
-        // //Add the rest of the context's data
-        // tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, endTextIndex + 1);
-
-        /***********************************************************************
-         Replace all the commented out code above so that we can play with
-         the raw code (sentiment scoring). The mark up is now based off of text
-         matching, as opposed to index based sub strings.
-
-         JAY250220191 << identifying this change with this made up ID
-        ***********************************************************************/
-
-        // Mark up current search query and citations within each paragraph..
-        let full_text = paperText[articleid][0]['papertext']
-          .substring(lastSplitIndex, endTextIndex + 1).trim();
-        let citation_text = paperText[articleid][0]['papertext']
-                .substring(paperData[articleid][i][0][3] - 1
-                  , paperData[articleid][i][0][4] + 1)
-                .trim();
-
-        // assumption: rules will never be found in citation text
-        full_text = full_text.replace(citation_text
-          , "<span style='background-color: #9DC4DF'>"+citation_text+"</span>");
-        // do rule markup first
-        full_text = tagCitationSentiment(articleid, full_text);
-        // now markup search query words
-        for(let query of currSearchQuery) {
-          full_text = full_text.replace(query, "<mark>"+query+"</mark>");
-        }
-        //********************************************************* JAY250220191
-
-        //End the text and pad it a little
-        tempText += full_text + '"';
-        tempText += "<br><br><i>";
-
-        //Add the citation information at the end in italics
-        if (paperData[articleid][i][0][6] != "") {
-            tempText += paperData[articleid][i][0][6] + ". "; //Author
-        }
-        if (paperData[articleid][i][0][5] != "") {
-            tempText += paperData[articleid][i][0][5] + ". "; //Referenced Paper Name
-        }
-        if (paperData[articleid][i][0][7] != "") {
-            tempText += paperData[articleid][i][0][7] + ". "; // Year
-        }
-        tempText += "</i>";
-        //Set the popover's text to the data just made
-        listEntry.html(tempText);
-        //Append "br" for padding
-        popover.append("br");
-    }
+    // moved popover text code to own function getPopoverContent();
 
     //The hitbox used to detect clicks on the entire glyph
     var squareHitBox = svgContainer.append("rect")
@@ -710,25 +581,34 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
         .attr("height", sizey)
         .attr("data-toggle", "popover")
         .attr("id", articleid + "_" + paperText[articleid][0]['articleyear'])
-        .attr("data-content", $('#popover_content_wrapper').html()) //Set the popover content to display custom html
+        // .attr("data-content", $('#popover_content_wrapper').html()) //Set the popover content to display custom html
         .style("fill", "rgba(0,0,0,0)");
 
-    $(squareHitBox.node()).popover({ html: true, container: 'body' }); //This is the cause of the slowdown - enables popups on all papers
-    $(squareHitBox.node()).on('click', function (e) { //Allows only one popup at a time - if a popup other than the one clicked is active, it is hidden
+    //This is the cause of the slowdown - enables popups on all papers
+    // Jay - set trigger to manual, we'll handle activations ourself
+    // let $popover = $(this).popover({ html: true, container: 'body', trigger: 'manual' });
+
+    //Allows only one popup at a time - if a popup other than the one clicked is active, it is hidden
+    $(squareHitBox.node()).on('click', function (e) {
+        let article_id = $(this).attr("id").split("_")[0];
+        setPopoverContent(article_id)
+        // enable popovers as we need them
+        let $popover = $(this).popover({
+          html: true
+          , container: 'body'
+          , trigger: 'manual'
+        });
+        // clear the data whenever we hide a popover to keep our html clean
+        $(this).on("hidden.bs.popover", function(e) {
+          d3.select(this).attr("data-content", "");
+        });
         //If the paper is clicked, hide all other papers open at the moment
         $('[data-toggle=popover]').not(this).popover('hide');
-
+        d3.select(this).attr("data-content", $('#popover_content_wrapper').html());
+        $(this).popover('show');
         //Reset selection data that was not added
         inTextSelection = [];
         referencesSelected = [];
-
-        //Still a work in progress - was used to change the notification circle's color from green to red but its not done yet
-        /*var id = d3.select(this).attr('id');
-        id = id.substring(0, id.indexOf('_'));
-        if(buttonsSelected[id] == null){
-            buttonsSelected[id] = [0,0,0];
-        }*/
-
 
         var temp = $('[data-toggle=popover]').not(this);
         //Remove a border on all the unselected objects
@@ -746,8 +626,6 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
             currentPaperIndicator = null;
             $(this).popover('hide');
         }
-
-
     });
 
     //Used to tell if the specific paper's popover should be shown immediately after creation - used when changing boundaries
@@ -824,4 +702,137 @@ function switchToPapers(sections) {
 
     $('#pills-papers-tab').tab('show');
     executeAsync(function () { drawPapers(sections); }, 500);
+}
+
+
+function setPopoverContent(articleid) {
+  //Append the relevant paper data in the popover
+  var popover = d3.select("#popover_text");
+  popover.html("");
+  popover.append("h2").text(paperText[articleid][0]['articletitle'] + " (" + paperText[articleid][0]['articleyear'] + ") (" + articleid + ") (" + paperText[articleid][0]['journaltitle'] + ")");
+  popover.append("h6").text("Boundaries are: " + boundariesByPaper[articleid][0] + " above and " + boundariesByPaper[articleid][1] + " below");
+
+  //Append each reference context
+  for (var i = 0; i < paperData[articleid].length; i++) {
+      var tempText = "";
+
+      //Append a container
+      var listEntry = popover.append("ul").attr("class", "list-group");
+      listEntry = listEntry.append("li").attr("class", "list-group-item").attr("id", articleid); //Not standard, but works
+      //Onclick code to keep track of selected references incase they are added
+      listEntry.attr("onclick", "selectPaperViewBoundary(this); updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
+      var lastSplitIndex = paperData[articleid][i][0][8][0]; //Index used to figure out where the paper text was last split on
+      //If the context has a space at the beginning, skip it
+      if (paperText[articleid][0]['papertext'].charAt(lastSplitIndex) == ' ') {
+          lastSplitIndex += 1;
+      }
+      var endTextIndex = paperData[articleid][i][0][9][1]; //Index for the end of the context
+
+      // var tempLocations = []; //Holds the citation and word(s) locations
+      //Pushes the citation
+      // tempLocations.push([paperData[articleid][i][0][3] - 1,
+      // paperData[articleid][i][0][4],
+      //     true]);
+      // //and the word(s) location(s)
+      // for (var j = 0; j < paperData[articleid][i].length; j++) { //Loops length of query times
+      //     tempLocations.push([paperData[articleid][i][j][1],
+      //     paperData[articleid][i][j][2],
+      //         false]);
+      // }
+
+      //Sorts the locations so that the item occuring first in the text is highlighted first, as not to go backward in the text
+      // for (var j = 0; j < tempLocations.length; j++) {
+      //     for (var k = j + 1; k < tempLocations.length; k++) {
+      //         if (tempLocations[j][0] > tempLocations[k][0]) {
+      //             var temp = tempLocations[j];
+      //             tempLocations[j] = tempLocations[k];
+      //             tempLocations[k] = temp;
+      //         }
+      //     }
+      // }
+
+      tempText += '"';
+
+      //Loop through the locations
+      //Works by getting text before word/citation, then adding the word/citation
+      //Loops until all data is in
+      // for (var j = 0; j < tempLocations.length; j++) {
+      //     if (tempLocations[j][0] != lastSplitIndex) {
+      //         //End location of the item
+      //         var tempEndIndex = tempLocations[j][0];
+      //         //A fix if the word starts at a space
+      //         if (paperText[articleid][0]['papertext'][tempEndIndex] == ' ') {
+      //             tempEndIndex += 1;
+      //         }
+      //
+      //         //Get all the text before the item
+      //         tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, tempEndIndex);
+      //     }
+      //
+      //     //If the value is true, it is a citation, and span it a different color
+      //     //else, just use mark for yellow
+      //     if (tempLocations[j][2] == true) {
+      //         tempText += "<span style='background-color: #9DC4DF'>";
+      //     } else {
+      //         tempText += "<mark>";
+      //     }
+      //     //Get the word/citation
+      //     tempText += paperText[articleid][0]['papertext'].substring(tempLocations[j][0], tempLocations[j][1] + 1);
+      //     if (tempLocations[j][2] == true) {
+      //         tempText += "</span>";
+      //     } else {
+      //         tempText += "</mark>";
+      //     }
+      //     lastSplitIndex = tempLocations[j][1] + 1;
+      // }
+      // //Add the rest of the context's data
+      // tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, endTextIndex + 1);
+
+      /***********************************************************************
+       Replace all the commented out code above so that we can play with
+       the raw code (sentiment scoring). The mark up is now based off of text
+       matching, as opposed to index based sub strings.
+
+       JAY250220191 << identifying this change with this made up ID
+      ***********************************************************************/
+
+      // Mark up current search query and citations within each paragraph..
+      let full_text = paperText[articleid][0]['papertext']
+        .substring(lastSplitIndex, endTextIndex + 1).trim();
+      let citation_text = paperText[articleid][0]['papertext']
+              .substring(paperData[articleid][i][0][3] - 1
+                , paperData[articleid][i][0][4] + 1)
+              .trim();
+
+      // assumption: rules will never be found in citation text
+      full_text = full_text.replace(citation_text
+        , "<span style='background-color: #9DC4DF'>"+citation_text+"</span>");
+      // do rule markup first
+      full_text = tagCitationSentiment(articleid, full_text);
+      // now markup search query words
+      for(let query of currSearchQuery) {
+        full_text = full_text.replace(query, "<mark>"+query+"</mark>");
+      }
+      //********************************************************* JAY250220191
+
+      //End the text and pad it a little
+      tempText += full_text + '"';
+      tempText += "<br><br><i>";
+
+      //Add the citation information at the end in italics
+      if (paperData[articleid][i][0][6] != "") {
+          tempText += paperData[articleid][i][0][6] + ". "; //Author
+      }
+      if (paperData[articleid][i][0][5] != "") {
+          tempText += paperData[articleid][i][0][5] + ". "; //Referenced Paper Name
+      }
+      if (paperData[articleid][i][0][7] != "") {
+          tempText += paperData[articleid][i][0][7] + ". "; // Year
+      }
+      tempText += "</i>";
+      //Set the popover's text to the data just made
+      listEntry.html(tempText);
+      //Append "br" for padding
+      popover.append("br");
+  }
 }
