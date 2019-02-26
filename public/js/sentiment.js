@@ -53,7 +53,8 @@ function tagCitationSentiment(articleid, text) {
     if(key == "negative") color = "ffd6d6";
     for(let i=0; i<sentiment_signals[key].length; i++) {
       let rule = sentiment_signals[key][i].signal
-        , idx = text.indexOf(rule);
+        , idx = text.indexOf(rule)
+        , value = sentiment_signals[key][i].value;
       if(idx > 0) {
         // markup the existence of this rule in the text
         new_text = new_text.replace(rule, "<span style='background-color: #"
@@ -70,4 +71,14 @@ function tagCitationSentiment(articleid, text) {
     scores[articleid] = 0;
   }
   return new_text;
+}
+
+// override the sentiment of all references to a single paper
+function overrideSentiment(value) {
+   // var len = inTextSelection.length; for(var i = 0; i < len; i++){
+   //   selectPaperViewBoundary(inTextSelection[0]);
+   // }
+   console.log($(this));
+   let article_id = $(this).data("id");
+   scores[article_id] = value;
 }
