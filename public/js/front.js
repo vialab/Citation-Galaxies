@@ -959,6 +959,13 @@ function drawHome(increment) {
     }
 }
 
+// Show toast notification
+function toast(title, text) {
+  $(".toast-header .mr-auto").html(title);
+  $(".toast-body").html(text);
+  $(".toast").toast("show");
+}
+
 //Run the search for the desired query
 //TODO - prevent SQL injections
 function searchForQuery(query) {
@@ -978,5 +985,8 @@ function searchForQuery(query) {
     var boundariesByPaper = {};
     indexToSortPapersOn = -1;
     drawHome(currIncrement);
-
 }
+
+$(document).ready(function() {
+  $(".toast").toast({"delay":2000});
+});

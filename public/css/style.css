@@ -84,7 +84,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    min-width: 481px;
+    min-width: 490px;
     overflow-x: scroll;
 }
 
@@ -239,7 +239,36 @@ div.tooltip {
   background-color: rgba(248, 249, 250, 1);
 }
 
-@media(max-width: 800px) {
+span.sentiment {
+  text-decoration: underline;
+}
+
+span.sentiment.positive {
+  color: #669999;
+}
+
+span.sentiment.negative {
+  color: #996666;
+}
+
+span.sentiment.neutral {
+  color: #666666;
+}
+
+span.citation {
+  background-color: #9DC4DF;
+  user-select: none; /* Standard */
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+}
+
+.del-rule-btn {
+  float: right;
+  cursor: pointer;
+}
+
+@media(max-width: 812px) {
   #navOptions {
     width: 100%;
   }
@@ -247,9 +276,6 @@ div.tooltip {
     width: 100%;
     text-align: center;
   }
-}
-
-@media(max-width: 636px) {
   .nav {
     justify-content: center;
     margin-bottom: 15px;
