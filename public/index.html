@@ -11,10 +11,8 @@
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU="
         crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T"
-        crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB"
-        crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.4.1/tinycolor.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -46,6 +44,10 @@
                 <li class="nav-item">
                     <a class="nav-link disabled" id="pills-networks-tab" data-toggle="pill" href="#pills-networks" role="tab"
                         aria-controls="pills-networks" aria-selected="false" onclick="">Network</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="pills-rules-tab" data-toggle="pill" href="#pills-rules" role="tab"
+                        aria-controls="pills-rules" aria-selected="false" onclick="">Rules</a>
                 </li>
             </ul>
           <div id="navOptions">
@@ -179,6 +181,42 @@
             <div class="tab-pane fade" id="pills-networks" role="tabpanel" aria-labelledby="pills-networks-tab">
                 <br>
             </div>
+            <div class="tab-pane fade" id="pills-rules" role="tabpanel" aria-labelledby="pills-rules-tab">
+              <div class="row">
+                <div class="col-sm-4">
+                  <h4>Positive</h4>
+                  <div id="positive-rules" class="rule-list">
+                  </div>
+                </div>
+                <div class="col-sm-4">
+                  <h4>Neutral</h4>
+                  <div id="neutral-rules" class="rule-list">
+                  </div>
+                </div>
+                <div class="col-sm-4">
+                  <h4>Negative</h4>
+                  <div id="negative-rules" class="rule-list">
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-sm-6 input-group mb-3">
+                  <div class="input-group-prepend">
+                    <select id="rule-type" class="custom-select">
+                      <option value="positive">positive</option>
+                      <option value="neutral">neutral</option>
+                      <option value="negative">negative</option>
+                    </select>
+                  </div>
+                  <input type="text" class="form-control" id="text-selection"/>
+                  <div class="input-group-append">
+                    <button class="btn btn-primary"
+                      onclick="addRule($('#rule-type').val(), true);">Add Rule
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
         </div>
     </div>
     <div class="modal fade" id="clearAllModal" tabindex="-1" role="dialog" aria-labelledby="clearAllModal" aria-hidden="true">
@@ -199,6 +237,15 @@
                 </div>
             </div>
         </div>
+    </div>
+    <div class="toast" style="position: fixed; bottom: 10px; right: 15px;">
+      <div class="toast-header">
+        <strong class="mr-auto"></strong>
+        <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="toast-body"></div>
     </div>
     <div id="popover_content_wrapper" style="display: none;">
         <nav class="navbar fixed-top navbar-expand bg-light" style="overflow:hidden; height: 60px; margin-top: 20px;"
@@ -272,7 +319,6 @@
       <li class="menu-btn" onclick="addRule('negative');">Negative</li>
       <li class="menu-btn" onclick="addRule('neutral');">Neutral</li>
     </ul>
-    <input type="hidden" id="text-selection"/>
     <div class="tooltip" style="opacity: 0;"></div>
 </body>
 

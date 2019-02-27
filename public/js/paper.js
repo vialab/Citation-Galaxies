@@ -806,7 +806,7 @@ function setPopoverContent(articleid) {
 
       // assumption: rules will never be found in citation text
       full_text = full_text.replace(citation_text
-        , "<span style='background-color: #9DC4DF'>"+citation_text+"</span>");
+        , "<span class='citation'>"+citation_text+"</span>");
       // do rule markup first
       full_text = tagCitationSentiment(articleid, full_text);
       // now markup search query words
