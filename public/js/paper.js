@@ -32,6 +32,7 @@ function selectPaperViewBoundary(object) {
 
 //Add the refernce to the current list of references selected
 function updateReferencesSelected(object) {
+  console.log(object);
     var found = false;
     //If the reference selected is already in the array do not add another copy
     for (var i = 0; i < referencesSelected.length; i++) {
@@ -718,9 +719,10 @@ function setPopoverContent(articleid) {
 
       //Append a container
       var listEntry = popover.append("ul").attr("class", "list-group");
-      listEntry = listEntry.append("li").attr("class", "list-group-item").attr("id", articleid); //Not standard, but works
       //Onclick code to keep track of selected references incase they are added
-      listEntry.attr("onclick", "selectPaperViewBoundary(this); updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
+      //Not standard, but works
+      listEntry = listEntry.append("li").attr("class", "list-group-item").attr("id", articleid);
+      listEntry.attr("onclick", "selectPaperViewBoundary(this);updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
       var lastSplitIndex = paperData[articleid][i][0][8][0]; //Index used to figure out where the paper text was last split on
       //If the context has a space at the beginning, skip it
       if (paperText[articleid][0]['papertext'].charAt(lastSplitIndex) == ' ') {
@@ -835,4 +837,14 @@ function setPopoverContent(articleid) {
       //Append "br" for padding
       popover.append("br");
   }
+
+  $("#popover_text .list-group-item").on("click", function() {
+    console.log("blah!");
+    selectPaperViewBoundary(this);
+    updateReferencesSelected([this.id, this.innerHTML
+      , paperText[this.id][0]['articletitle']
+      , paperText[this.id][0]['articleyear']
+      , paperText[this.id][0]['journaltitle']
+      , paperText[this.id][0]['papertext'].length]);
+  });
 }

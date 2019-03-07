@@ -182,36 +182,16 @@
                 <br>
             </div>
             <div class="tab-pane fade" id="pills-rules" role="tabpanel" aria-labelledby="pills-rules-tab">
-              <div class="row">
-                <div class="col-sm-4">
-                  <h4>Positive</h4>
-                  <div id="positive-rules" class="rule-list">
-                  </div>
-                </div>
-                <div class="col-sm-4">
-                  <h4>Neutral</h4>
-                  <div id="neutral-rules" class="rule-list">
-                  </div>
-                </div>
-                <div class="col-sm-4">
-                  <h4>Negative</h4>
-                  <div id="negative-rules" class="rule-list">
-                  </div>
-                </div>
-              </div>
+              <div class="row" id="categories"></div>
               <div class="row">
                 <div class="col-sm-6 input-group mb-3">
                   <div class="input-group-prepend">
-                    <select id="rule-type" class="custom-select">
-                      <option value="positive">positive</option>
-                      <option value="neutral">neutral</option>
-                      <option value="negative">negative</option>
-                    </select>
+                    <select id="rule-type" class="custom-select"></select>
                   </div>
                   <input type="text" class="form-control" id="text-selection"/>
                   <div class="input-group-append">
                     <button class="btn btn-primary"
-                      onclick="addRule($('#rule-type').val(), true);">Add Rule
+                      onclick="addSignal($('#rule-type').val(), true);">Add Rule
                     </button>
                   </div>
                 </div>
@@ -311,13 +291,9 @@
             <nav class="navbar fixed-top navbar-expand bg-light" style = "overflow:hidden; margin-top: 59px;" id="paperInfoNav">
 
         </nav>-->
-        <br><br><br><br>
         <div id="popover_text" style="overflow-y: scroll; height: 365px; margin-top: -20px;"></div>
     </div>
     <ul class='custom-menu'>
-      <li class="menu-btn" onclick="addRule('positive');">Positive</li>
-      <li class="menu-btn" onclick="addRule('negative');">Negative</li>
-      <li class="menu-btn" onclick="addRule('neutral');">Neutral</li>
     </ul>
     <div class="tooltip" style="opacity: 0;"></div>
 </body>
