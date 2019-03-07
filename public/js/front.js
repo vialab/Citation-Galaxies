@@ -19,6 +19,7 @@ var selectionObjects = []; //Current objects highlighted
 var currIncrement = 10; //The current homescreen increment
 var currBoxHeight = 64;
 var currBoxPadding = 10;
+var min_window_width = 562;
 
 var lineColors = []; //The colors of the lines on the left
 var paperGlyphLines = []; //The lines on the paper to the left
@@ -47,6 +48,8 @@ var yearResultsRequests = []; //Place to store the requests made to the server
 var currentURL = "http://localhost:5432/"; //The url to access the backend
 
 var currSearchQuery = ""; //The current search query
+
+var process_queue = []; //process queue of intervals
 
 //Used to change the increment on the main screen
 function seperationChange(increment) {
@@ -210,7 +213,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
     //var locationY = 30 + (((100 / currIncrement) / 2) * currBoxHeight) - (sizey / 2);
     var locationY = 30 + (((100 / currIncrement) * (currBoxHeight + currBoxPadding)) / 2) - (sizey / 2);
 
-    //Draw the paper
+    //Draw the paper only if we have space to do so
     svgContainer.append("rect")
         .attr("x", 3)
         .attr("y", locationY)
@@ -220,7 +223,6 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
         .attr("height", sizey)
         .attr("filter", "url(#dropshadowInitial)")
         .style("fill", d3.rgb(248, 249, 250));
-
 
     //Draw the lines with padding needed
     var locationXStart = 3 + sizex * 0.1;
@@ -233,7 +235,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
         //Change color if they should be selected
         var color = "rgb(204,206,209)";
         var line = svgContainer.append("line") // attach a line
-            .style("stroke", color) // colour the line
+          .style("stroke", color) // colour the line
             .attr("x1", locationXStart) // x position of the first end of the line
             .attr("y1", locationY) // y position of the first end of the line
             .attr("x2", locationXEnd) // x position of the second end of the line
@@ -253,7 +255,6 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
             .attr("x2", locationXEnd + 85) // x position of the second end of the line
             .attr("y2", lineLocationEnd)
             .attr('stroke-width', lineSizeY);
-
         //Seperation labels used to describe the area of the paper shown
         var sepLabel = svgContainer.append("text")
             .attr("x", locationXEnd + 120)
@@ -698,7 +699,8 @@ function prepContainers(increment) {
             if (maxFirstContainerSize > 10) {
                 maxFirstContainerSize = 11;
             }
-            svgContainers.push(distChart.append("svg").attr("width", 257).attr("height", maxFirstContainerSize * 75));
+            let dist_chart_width = 257;
+            svgContainers.push(distChart.append("svg").attr("width", dist_chart_width).attr("height", maxFirstContainerSize * 75));
         }
         svgContainers.push(yearCols.append("div").attr("class", "col-xs-* nopadding").attr("height", 785).append("svg").attr("width", 87));
 
@@ -860,59 +862,66 @@ function changeSquaresColors() {
 //TODO: IMPLEMENT LEFT PAPER % CHANGE AND THE BOX SIZE CHANGE - A SIZE OF 7PX FOR THE BOX AND 1PX FOR THE BOUNDARY SEEMS TO WORK WELL
 //Get the results for a search query
 function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
-    yearResultsRequests.push($.ajax({
-        type: 'POST',
-        url: currentURL + "queryCountsTEST",
-        data: { 'query': JSON.stringify(query), 'year': year, 'rangeLeft': rangeLeft, 'rangeRight': rangeRight },
-        success: function (data) {
-            //Clear the results for the year
-            yearResults[year] = [];
+  yearResultsRequests.push($.ajax({
+      type: 'POST',
+      url: currentURL + "queryCounts",
+      data: { 'query': JSON.stringify(query)
+        , 'year': year
+        , 'rangeLeft': rangeLeft
+        , 'rangeRight': rangeRight
+      },
+      success: function (data) {
+        //Clear the results for the year
+        yearResults[year] = [];
 
-            //Offset the loop to catch ngrams
-            var loopOffset = query.length;
+        //Offset the loop to catch ngrams
+        var loopOffset = query.length;
+        if (query.length == 1) {
+            loopOffset = 0;
+        }
+        //Filter the results to catch ngrams, if the words used in the ngram aren't in the same sentence or x sentences away, the entry is removed
+        for (var i = 0; i < data.length - loopOffset; i++) {
+            var valid = false; //Used to determine whether to add the result
+            var temp = [];
+
             if (query.length == 1) {
-                loopOffset = 0;
-            }
-            //Filter the results to catch ngrams, if the words used in the ngram aren't in the same sentence or x sentences away, the entry is removed
-            for (var i = 0; i < data.length - loopOffset; i++) {
-                var valid = false; //Used to determine whether to add the result
-                var temp = [];
-
-                if (query.length == 1) {
-                    valid = true;
-                    temp.push(data[i]);
-                } else {
-                    for (var j = 0; j < query.length; j++) {
-                        if (data[i + j]['lemma'] == query[j]
-                            && data[i + j]['wordsentence'] == data[i + j + 1]['wordsentence']
-                            && data[i + j]['citationStart'] == data[i + j + 1]['citationStart']) {
-                            valid = true;
-                            temp.push(data[i + j]);
-                        } else {
-                            valid = false;
-                            break;
-                        }
+                valid = true;
+                temp.push(data[i]);
+            } else {
+                for (var j = 0; j < query.length; j++) {
+                    if (data[i + j]['lemma'] == query[j]
+                        && data[i + j]['wordsentence'] == data[i + j + 1]['wordsentence']
+                        && data[i + j]['citationStart'] == data[i + j + 1]['citationStart']) {
+                        valid = true;
+                        temp.push(data[i + j]);
+                    } else {
+                        valid = false;
+                        break;
                     }
                 }
-
-                if (valid == true) {
-                    //Add the result to the new list
-                    yearResults[year].push(temp);
-                }
             }
 
-            //Filter the results to be used in the main screen
-            filterYearResults(increment, year);
+            if (valid == true) {
+                //Add the result to the new list
+                yearResults[year].push(temp);
+            }
+        }
 
-            //Draw the column
-            changeSquaresColors();
-            drawColumn(year, 80, 64, currBoxHeight, svgContainers[index], filteredYearPercents[year][currentLabel], filteredYearCounts[year][currentLabel]);
-            //Adapt the selection from the previous query
-            adaptSelection(year);
-        },
-        async: true,
-        timeout: 600000
-    }));
+        //Filter the results to be used in the main screen
+        filterYearResults(increment, year);
+
+        //Draw the column
+        changeSquaresColors();
+        drawColumn(year, 80, 64, currBoxHeight, svgContainers[index], filteredYearPercents[year][currentLabel], filteredYearCounts[year][currentLabel]);
+        //Adapt the selection from the previous query
+        adaptSelection(year);
+
+        //Process ruleset for this year
+        processSignals(query, year);
+    },
+    async: true,
+    timeout: 600000
+  }));
 }
 
 //Call the search and draw the homescreen for a particular query
@@ -955,11 +964,10 @@ function drawHome(increment) {
         homeRow.append("div").attr("class", "alert alert-warning alert-dismissible fade show")
             .attr("role", "alert").attr("id", "alert")
             .html("<strong>Waiting for a response from the server</strong> - please wait for a few seconds and then try searching again. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>");
-
     }
 }
 
-// Show toast notification
+//Show toast notification
 function toast(title, text) {
   $(".toast-header .mr-auto").html(title);
   $(".toast-body").html(text);
@@ -969,7 +977,7 @@ function toast(title, text) {
 //Run the search for the desired query
 //TODO - prevent SQL injections
 function searchForQuery(query) {
-    query = query.split(" ");
+    query = query.replace(/[^a-zA-Z ]/g, "").split(" ");
     for (var i = 0; i < query.length; i++) {
         query[i] = query[i].toLowerCase();
     }
@@ -985,6 +993,21 @@ function searchForQuery(query) {
     var boundariesByPaper = {};
     indexToSortPapersOn = -1;
     drawHome(currIncrement);
+}
+
+//Poll the progress of a background process until it is done
+function pollProcessProgress(process_name, callback) {
+  process_queue[process_name] = setInterval(function() {
+    $.ajax({
+        type: 'GET',
+        url: currentURL + "poll?process=" + process_name.serialize(),
+        success: function (data) {
+          clearInterval(process_queue[process_name]);
+        },
+        async: true
+    });
+  }, 1000);
+  return;
 }
 
 $(document).ready(function() {

@@ -16,6 +16,7 @@
     width: 100% !important;
     box-shadow: 1px 1px 7px grey;
     background: rgb(248, 249, 250);
+    overflow-y: scroll;
 }
 
 .popoverGalaxy {
@@ -84,7 +85,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    min-width: 490px;
+    min-width: 562px;
     overflow-x: scroll;
 }
 
@@ -268,7 +269,7 @@ span.citation {
   cursor: pointer;
 }
 
-@media(max-width: 812px) {
+@media(max-width: 900px) {
   #navOptions {
     width: 100%;
   }

@@ -1,16 +1,53 @@
-function Signal(signal, value=0) {
+function Signal(id, cat_id, signal, value=0) {
   this.signal = signal.trim();
   this.value = value;
   this.filter_distance = 0;
   this.custom_filters = [];
   this.negation_distance = 4;
   this.restrictions = [];
+  this.id = id;
+  this.category = cat_id;
 }
 
-var sentiment_signals = { "positive":[new Signal("test",1)], "neutral":[], "negative":[] }; // sentiment rules
-var scores = {};
+var sentiment_signals = {}; // sentiment rules
+var sentiment_categories = {}; // categories (+/-)
+var scores = {}; // pre-processed scores for all docs
 
 $(document).ready(function() {
+  $.ajax({
+    type: 'GET',
+    url: currentURL + "categories",
+    success: function(cats) {
+      for(let cat of cats) {
+        sentiment_categories[cat.id] = { "name": cat.catname, "value": cat.score }
+        sentiment_signals[cat.id] = [];
+        $("#rule-type").append(" \
+          <option value='" + cat.id + "'>" + cat.catname + "</option>");
+
+          let html = "<div class='col-sm-4'> \
+            <h4>" + sentiment_categories[cat.id].name + "</h4> \
+            <div id='" + cat.id + "-rules' class='rule-list'> \
+            </div>\
+          </div>";
+        $("#categories").append($(html));
+      }
+
+      $.ajax({
+        type: 'GET',
+        url: currentURL + "signals",
+        success: function(rules) {
+          for(let signal of rules) {
+            let s = new Signal(signal.id, signal.signalcategoryid, signal.signal, signal.score);
+            sentiment_signals[signal.signalcategoryid].push(s);
+          }
+        },
+        async: true
+      });
+
+    },
+    async: true
+  });
+
   $("#pills-rules-tab").on("click", drawRules);
 });
 
@@ -45,33 +82,53 @@ function drawRules() {
     $list.append("<ul/>");
     for(let i=0; i<sentiment_signals[key].length; i++) {
       $("ul",$list).append($("<li>" + sentiment_signals[key][i].signal
-        + "  <button id='" + key + "-" + i+ "' class='close del-rule-btn' \
-        onclick='removeRule(this);'>&times;</button></li>"));
+        + "  <button id='" + key + "-" + i + "' class='close del-rule-btn' \
+        onclick='removeSignal(this);'>&times;</button></li>"));
     }
   }
 }
 
 // add a rule to our sentiment rule set
-function addRule(category, draw_rules=false) {
+function addSignal(category_id, draw_rules=false) {
   $(".custom-menu").hide(100);
 
   let text = $("#text-selection").val().trim().replace(/<(?:.|\n)*?>/gm, '')
-    , value = 1;
+    , value = sentiment_categories[category_id].value;
+
   if(text == "") return;
-  if(category == "neutral") value = 0;
-  if(category == "negative") value = -1;
-  sentiment_signals[category].push(new Signal(text, value));
-  toast("Rule Added", text + " (" + category+ ")");
-  if(draw_rules) drawRules();
+
+  $.ajax({
+    type: 'POST',
+    url: currentURL + "addsignal",
+    data: { 'text': text
+      , 'value': value
+      , 'category_id': category_id
+    },
+    success: function (data) {
+      sentiment_signals[category_id].push(new Signal(data[0].id, category_id, text, value));
+      toast("Rule Added", text + " (" + sentiment_categories[category_id].name + ")");
+      if(draw_rules) drawRules();
+    },
+    async: true
+  }, 1000);
 }
 
 // delete a rule
-function removeRule(elem) {
+function removeSignal(elem) {
   let idx = $(elem).attr("id").split("-")
-  , rules = sentiment_signals[idx[0]];
-  toast("Rule Removed", rules[idx[1]].signal + " (" + idx[0] + ")");
-  sentiment_signals[idx[0]].splice(idx[1], 1);
-  drawRules();
+  , rules = sentiment_signals[idx[0]][idx[1]];
+
+  $.ajax({
+    type: 'POST',
+    url: currentURL + "removesignal",
+    data: { 'signal_id': rules.id },
+    success: function (data) {
+      toast("Rule Removed", rules.signal + " ("
+        + sentiment_categories[rules.category].name + ")");
+      sentiment_signals[idx[0]].splice(idx[1], 1);
+      drawRules();
+    }
+  });
 }
 
 // given paper citation text, get matching rule counts
@@ -103,6 +160,25 @@ function tagCitationSentiment(articleid, text) {
   }
   return new_text;
 }
+
+// Pre-process the front screen counts for a single year
+function processSignals(query, year) {
+  $.ajax({
+    type: 'POST',
+    url: currentURL + "process/signals",
+    data: {
+      'query': JSON.stringify(query)
+      , 'year': year
+      , 'ruleSet': JSON.stringify(sentiment_signals) // for backprocessing
+      , 'rangeLeft': sentenceRangeAbove
+      , 'rangeRight': sentenceRangeBelow
+    },
+    success: function (data) {
+      console.log(data);
+    }
+  });
+}
+
 
 // override the sentiment of all references to a single paper
 function overrideSentiment(value) {
