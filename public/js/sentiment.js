@@ -163,20 +163,20 @@ function tagCitationSentiment(articleid, text) {
 
 // Pre-process the front screen counts for a single year
 function processSignals(query, year) {
-  $.ajax({
-    type: 'POST',
-    url: currentURL + "process/signals",
-    data: {
-      'query': JSON.stringify(query)
-      , 'year': year
-      , 'ruleSet': JSON.stringify(sentiment_signals) // for backprocessing
-      , 'rangeLeft': sentenceRangeAbove
-      , 'rangeRight': sentenceRangeBelow
-    },
-    success: function (data) {
-      console.log(data);
-    }
-  });
+  // $.ajax({
+  //   type: 'POST',
+  //   url: currentURL + "process/signals",
+  //   data: {
+  //     'query': JSON.stringify(query)
+  //     , 'year': year
+  //     , 'ruleSet': JSON.stringify(sentiment_signals) // for backprocessing
+  //     , 'rangeLeft': sentenceRangeAbove
+  //     , 'rangeRight': sentenceRangeBelow
+  //   },
+  //   success: function (data) {
+  //     console.log(data);
+  //   }
+  // });
 }
 
 
