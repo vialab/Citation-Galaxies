@@ -235,7 +235,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
         //Change color if they should be selected
         var color = "rgb(204,206,209)";
         var line = svgContainer.append("line") // attach a line
-          .style("stroke", color) // colour the line
+            .style("stroke", color) // colour the line
             .attr("x1", locationXStart) // x position of the first end of the line
             .attr("y1", locationY) // y position of the first end of the line
             .attr("x2", locationXEnd) // x position of the second end of the line
@@ -722,9 +722,9 @@ function getYears() {
 //Filter the results for use in the home screen
 function filterYearResults(increment, year) {
     //Clear the arrays
-    filteredYearCounts[year] = []; //0 is for reference count, 1 is for paper count
+    filteredYearCounts[year] = []; // 0 is for reference count, 1 is for paper count
     filteredYearPercents[year] = [];
-    var currentArticle = [];
+    var currentArticle = []; // Holds the unique articleid's from the results
 
     for (var i = 0; i < maxLabels; i++) {
         filteredYearCounts[year].push([]);
@@ -741,9 +741,14 @@ function filterYearResults(increment, year) {
     if (yearResults[year] != undefined) {
         for (var i = 0; i < yearResults[year].length; i++) {
             for (var j = 0; j < 100; j += increment) {
+                // If the precent in the paper of the current result is less than
+                // the current precent (essentially sort the results into bins by year)
                 if (yearResults[year][i][0]['percent'] * 100 <= (j + increment)) {
+                    // Add 1 to the count for the amount of results in the bin
                     filteredYearCounts[year][0][((j + increment) / increment) - 1] += 1;
 
+                    // If the result's articleid is not found in the found article array (i.e. that is the first result from that paper) 
+                    // increment the amount of papers in the given bin, then add the articleid to the found article array
                     if (!currentArticle[((j + increment) / increment) - 1].includes(yearResults[year][i][0]['articleid'])) {
                         filteredYearCounts[year][1][((j + increment) / increment) - 1] += 1;
                         currentArticle[((j + increment) / increment) - 1].push(yearResults[year][i][0]['articleid']);
@@ -755,7 +760,6 @@ function filterYearResults(increment, year) {
     }
 
 
-
     //Change whether to normalize to all the years, or just to one year
     var yearsToChange = years;
     if (currentNorm == 1) {
@@ -763,13 +767,15 @@ function filterYearResults(increment, year) {
         yearsToChange[0]['articleyear'] = year;
     }
 
-    //Get the percent counts using the max hitcounts
+    //Get the percent counts using the max hitcounts - used for the color on the box
     for (var i = 0; i < maxLabels; i++) {
         var max = filteredYearCounts[years[0]['articleyear']][i][0];
         var min = 0;
 
         for (var j = 0; j < yearsToChange.length; j++) {
+            // If the year isnt undefined
             if (filteredYearCounts[yearsToChange[j]['articleyear']] != undefined) {
+                // Calculate the max and min values for the results
                 for (var k = 0; k < filteredYearCounts[yearsToChange[j]['articleyear']][i].length; k++) {
                     if (filteredYearCounts[yearsToChange[j]['articleyear']][i][k] > max) {
                         max = filteredYearCounts[yearsToChange[j]['articleyear']][i][k];
@@ -781,6 +787,7 @@ function filterYearResults(increment, year) {
             }
         }
 
+        // Calculate the average for the results
         for (var j = 0; j < yearsToChange.length; j++) {
             if (filteredYearCounts[yearsToChange[j]['articleyear']] != undefined) {
                 for (var k = 0; k < filteredYearCounts[yearsToChange[j]['articleyear']][i].length; k++) {
@@ -862,66 +869,67 @@ function changeSquaresColors() {
 //TODO: IMPLEMENT LEFT PAPER % CHANGE AND THE BOX SIZE CHANGE - A SIZE OF 7PX FOR THE BOX AND 1PX FOR THE BOUNDARY SEEMS TO WORK WELL
 //Get the results for a search query
 function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
-  yearResultsRequests.push($.ajax({
-      type: 'POST',
-      url: currentURL + "queryCounts",
-      data: { 'query': JSON.stringify(query)
-        , 'year': year
-        , 'rangeLeft': rangeLeft
-        , 'rangeRight': rangeRight
-      },
-      success: function (data) {
-        //Clear the results for the year
-        yearResults[year] = [];
+    yearResultsRequests.push($.ajax({
+        type: 'POST',
+        url: currentURL + "queryCounts",
+        data: {
+            'query': JSON.stringify(query)
+            , 'year': year
+            , 'rangeLeft': rangeLeft
+            , 'rangeRight': rangeRight
+        },
+        success: function (data) {
+            //Clear the results for the year
+            yearResults[year] = [];
 
-        //Offset the loop to catch ngrams
-        var loopOffset = query.length;
-        if (query.length == 1) {
-            loopOffset = 0;
-        }
-        //Filter the results to catch ngrams, if the words used in the ngram aren't in the same sentence or x sentences away, the entry is removed
-        for (var i = 0; i < data.length - loopOffset; i++) {
-            var valid = false; //Used to determine whether to add the result
-            var temp = [];
-
+            //Offset the loop to catch ngrams
+            var loopOffset = query.length;
             if (query.length == 1) {
-                valid = true;
-                temp.push(data[i]);
-            } else {
-                for (var j = 0; j < query.length; j++) {
-                    if (data[i + j]['lemma'] == query[j]
-                        && data[i + j]['wordsentence'] == data[i + j + 1]['wordsentence']
-                        && data[i + j]['citationStart'] == data[i + j + 1]['citationStart']) {
-                        valid = true;
-                        temp.push(data[i + j]);
-                    } else {
-                        valid = false;
-                        break;
+                loopOffset = 0;
+            }
+            //Filter the results to catch ngrams, if the words used in the ngram aren't in the same sentence or x sentences away, the entry is removed
+            for (var i = 0; i < data.length - loopOffset; i++) {
+                var valid = false; //Used to determine whether to add the result
+                var temp = [];
+
+                if (query.length == 1) {
+                    valid = true;
+                    temp.push(data[i]);
+                } else {
+                    for (var j = 0; j < query.length; j++) {
+                        if (data[i + j]['lemma'] == query[j]
+                            && data[i + j]['wordsentence'] == data[i + j + 1]['wordsentence']
+                            && data[i + j]['citationStart'] == data[i + j + 1]['citationStart']) {
+                            valid = true;
+                            temp.push(data[i + j]);
+                        } else {
+                            valid = false;
+                            break;
+                        }
                     }
+                }
+
+                if (valid == true) {
+                    //Add the result to the new list
+                    yearResults[year].push(temp);
                 }
             }
 
-            if (valid == true) {
-                //Add the result to the new list
-                yearResults[year].push(temp);
-            }
-        }
+            //Filter the results to be used in the main screen
+            filterYearResults(increment, year);
 
-        //Filter the results to be used in the main screen
-        filterYearResults(increment, year);
+            //Draw the column
+            changeSquaresColors();
+            drawColumn(year, 80, 64, currBoxHeight, svgContainers[index], filteredYearPercents[year][currentLabel], filteredYearCounts[year][currentLabel]);
+            //Adapt the selection from the previous query
+            adaptSelection(year);
 
-        //Draw the column
-        changeSquaresColors();
-        drawColumn(year, 80, 64, currBoxHeight, svgContainers[index], filteredYearPercents[year][currentLabel], filteredYearCounts[year][currentLabel]);
-        //Adapt the selection from the previous query
-        adaptSelection(year);
-
-        //Process ruleset for this year
-        processSignals(query, year);
-    },
-    async: true,
-    timeout: 600000
-  }));
+            //Process ruleset for this year
+            processSignals(query, year);
+        },
+        async: true,
+        timeout: 600000
+    }));
 }
 
 //Call the search and draw the homescreen for a particular query
@@ -969,9 +977,9 @@ function drawHome(increment) {
 
 //Show toast notification
 function toast(title, text) {
-  $(".toast-header .mr-auto").html(title);
-  $(".toast-body").html(text);
-  $(".toast").toast("show");
+    $(".toast-header .mr-auto").html(title);
+    $(".toast-body").html(text);
+    $(".toast").toast("show");
 }
 
 //Run the search for the desired query
@@ -997,19 +1005,19 @@ function searchForQuery(query) {
 
 //Poll the progress of a background process until it is done
 function pollProcessProgress(process_name, callback) {
-  process_queue[process_name] = setInterval(function() {
-    $.ajax({
-        type: 'GET',
-        url: currentURL + "poll?process=" + process_name.serialize(),
-        success: function (data) {
-          clearInterval(process_queue[process_name]);
-        },
-        async: true
-    });
-  }, 1000);
-  return;
+    process_queue[process_name] = setInterval(function () {
+        $.ajax({
+            type: 'GET',
+            url: currentURL + "poll?process=" + process_name.serialize(),
+            success: function (data) {
+                clearInterval(process_queue[process_name]);
+            },
+            async: true
+        });
+    }, 1000);
+    return;
 }
 
-$(document).ready(function() {
-  $(".toast").toast({"delay":2000});
+$(document).ready(function () {
+    $(".toast").toast({ "delay": 2000 });
 });
