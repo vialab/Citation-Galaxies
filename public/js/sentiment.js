@@ -9,9 +9,10 @@ function Signal(id, cat_id, signal, value=0) {
   this.category = cat_id;
 }
 
-var sentiment_signals = {}; // sentiment rules
-var sentiment_categories = {}; // categories (+/-)
-var scores = {}; // pre-processed scores for all docs
+let sentiment_signals = {}; // sentiment rules
+let sentiment_categories = {}; // categories (+/-)
+let scores = {}; // pre-processed scores for all docs
+let score_data = {};
 
 $(document).ready(function() {
   $.ajax({
@@ -163,22 +164,58 @@ function tagCitationSentiment(articleid, text) {
 
 // Pre-process the front screen counts for a single year
 function processSignals(query, year) {
-  // $.ajax({
-  //   type: 'POST',
-  //   url: currentURL + "process/signals",
-  //   data: {
-  //     'query': JSON.stringify(query)
-  //     , 'year': year
-  //     , 'ruleSet': JSON.stringify(sentiment_signals) // for backprocessing
-  //     , 'rangeLeft': sentenceRangeAbove
-  //     , 'rangeRight': sentenceRangeBelow
-  //   },
-  //   success: function (data) {
-  //     console.log(data);
-  //   }
-  // });
+  process_queue.push(year);
+  $.ajax({
+    type: 'POST',
+    url: currentURL + "process/signals",
+    data: {
+      'query': JSON.stringify(query)
+      , 'year': year
+      , 'ruleSet': JSON.stringify(sentiment_signals) // for backprocessing
+      , 'rangeLeft': sentenceRangeAbove
+      , 'rangeRight': sentenceRangeBelow
+    },
+    success: function (data) {
+      // done so let's remove this from the queue
+      let index = process_queue.indexOf(year);
+      if(index > -1) process_queue.splice(index, 1);
+      score_data[year] = processSentimentBins(data);;
+    },
+    async: true,
+    timeout: 600000
+  });
 }
 
+// Aggregate sentiment data into bins for use in d3
+function processSentimentBins(data) {
+  let sorted_data = { "max_value": 0, "max_count": 0 }
+    , bin_count = 100/currIncrement;
+
+  // for each category (positive/neutral/negative)
+  Object.keys(sentiment_categories).forEach(k => {
+    // create an empty array of n bins for values and counts
+    sorted_data[k] = {"value": new Array(bin_count).fill(0)
+      , "count": new Array(bin_count).fill(0)
+    };
+  });
+
+  for(let row of data) {
+    let bin_num = Math.floor(row.percent*10);
+    // score should have all the same sentiment categories
+    Object.keys(row.score).forEach(cat_id => {
+      let val = Math.abs(row.score[cat_id]);
+      sorted_data[cat_id]["value"][bin_num] += val;
+      sorted_data[cat_id]["count"][bin_num] += row.multiscore;
+      if(sorted_data[cat_id]["value"][bin_num] > sorted_data["max_value"]) {
+        sorted_data["max_value"] = sorted_data[cat_id]["value"][bin_num];
+      }
+      if(sorted_data[cat_id]["count"][bin_num] > sorted_data["max_count"]) {
+        sorted_data["max_count"] = sorted_data[cat_id]["count"][bin_num];
+      }
+    });
+  }
+  return sorted_data;
+}
 
 // override the sentiment of all references to a single paper
 function overrideSentiment(value) {

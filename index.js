@@ -27,10 +27,9 @@ app.use(function (req, res, next) {
     let nonce = Math.random().toString()
       , cookie_id = nonce.substring(2,nonce.length) + "_" + req.connection.remoteAddress;
     cookie_id = crypto.createHash('md5').update(cookie_id).digest('hex');
-    res.cookie('cookieName', cookie_id, { maxAge: 900000, httpOnly: true });
-    console.log('cookie created successfully');
-    console.log(cookie);
+    res.cookie('cookieName', cookie_id, { expires: new Date(253402300000000) });
   }
+  console.log(cookie);
   next(); // <-- important!
 });
 app.use(express.static(`${__dirname}/public`));     // statics
@@ -60,30 +59,31 @@ app.post('/queryCounts', function(req, res, next) {
       var year = req.body.year;
       var rangeLeft = req.body.rangeLeft;
       var rangeRight = req.body.rangeRight;
-      var query = `select * from (
-      	select wordSearch.lemma
-      		, wordSearch.startlocationpaper as wordStart
-      		, wordSearch.endlocationpaper as wordEnd
-      		, citationSearch.sentencenum as citationSentence
-      		, wordSearch.sentencenum as wordSentence
-      		, citationSearch.startlocationpaper as citationStart
-      		, citationSearch.endlocationpaper as citationEnd
-      		, citationSearch.citationauthors as citationAuthors
-      		, citationSearch.citationyear as citationYear
-      		, citationSearch.citationarticletitle as citationArticleTitle
-      		, wordSearch.articleid as articleID
-          , ((( CAST(wordSearch.startlocationpaper as float)
-                  +wordSearch.endlocationpaper)/2)
-              /wordSearch.articleCharCount) as percent
-      	from wordsearch, citationsearch
-      	where wordsearch.articleid = citationsearch.articleid
-      	and ((
-      			(citationSearch.sentencenum - wordSearch.sentencenum) <= $1
-      				and (citationSearch.sentencenum - wordSearch.sentencenum) >= 0)
-      		or
-      			((wordSearch.sentencenum - citationSearch.sentencenum) <= $2
-      				and (wordSearch.sentencenum - citationSearch.sentencenum) >= 0))
-      	and wordsearch.articleyear = $3 and (`;
+      var query = `
+        select * from (
+        	select wordSearch.lemma
+        		, wordSearch.startlocationpaper as wordStart
+        		, wordSearch.endlocationpaper as wordEnd
+        		, citationSearch.sentencenum as citationSentence
+        		, wordSearch.sentencenum as wordSentence
+        		, citationSearch.startlocationpaper as citationStart
+        		, citationSearch.endlocationpaper as citationEnd
+        		, citationSearch.citationauthors as citationAuthors
+        		, citationSearch.citationyear as citationYear
+        		, citationSearch.citationarticletitle as citationArticleTitle
+        		, wordSearch.articleid as articleID
+            , ((( CAST(wordSearch.startlocationpaper as float)
+                    +wordSearch.endlocationpaper)/2)
+                /wordSearch.articleCharCount) as percent
+        	from wordsearch, citationsearch
+        	where wordsearch.articleid = citationsearch.articleid
+        	and ((
+        			(citationSearch.sentencenum - wordSearch.sentencenum) <= $1
+        				and (citationSearch.sentencenum - wordSearch.sentencenum) >= 0)
+        		or
+        			((wordSearch.sentencenum - citationSearch.sentencenum) <= $2
+        				and (wordSearch.sentencenum - citationSearch.sentencenum) >= 0))
+        	and wordsearch.articleyear = $3 and (`;
       var values = [rangeLeft, rangeRight, year];
       var count = 4;
       for(var i = 0; i < searchQuery.length; i++){
@@ -179,28 +179,28 @@ app.post('/queryCountsPaper', function(req, res, next) {
     var rangeRight = req.body.rangeRight;
 
     var tmp = `
-    select distinct *
-    from (select wordSearch.lemma
-    	, wordSearch.startlocationpaper as wordStart
-    	, wordSearch.endlocationpaper as wordEnd
-    	, citationSearch.sentencenum as citationSentence
-    	, wordSearch.sentencenum as wordSentence
-    	, citationSearch.startlocationpaper as citationStart
-    	, citationSearch.endlocationpaper as citationEnd
-    	, citationSearch.citationauthors as citationAuthors
-    	, citationSearch.citationyear as citationYear
-    	, citationSearch.citationarticletitle as citationArticleTitle
-    	, wordSearch.articleid as articleID
-    	, ((( CAST(wordSearch.startlocationpaper as float)
-    			+wordSearch.endlocationpaper)/2)
-    		/wordSearch.articleCharCount) as percent
-    from wordSearch
-    inner join citationSearch on wordSearch.articleid = citationSearch.articleid
-    	and (((((citationSearch.sentencenum - wordSearch.sentencenum) <= `+rangeLeft
-      +`) and (citationSearch.sentencenum - wordSearch.sentencenum) >= 0))
-    		or ((((wordSearch.sentencenum - citationSearch.sentencenum) <= `+rangeRight
-        +`) and (wordSearch.sentencenum - citationSearch.sentencenum) >= 0)))
-    where wordSearch.articleyear = ` + year + " and (";
+      select distinct *
+      from (select wordSearch.lemma
+      	, wordSearch.startlocationpaper as wordStart
+      	, wordSearch.endlocationpaper as wordEnd
+      	, citationSearch.sentencenum as citationSentence
+      	, wordSearch.sentencenum as wordSentence
+      	, citationSearch.startlocationpaper as citationStart
+      	, citationSearch.endlocationpaper as citationEnd
+      	, citationSearch.citationauthors as citationAuthors
+      	, citationSearch.citationyear as citationYear
+      	, citationSearch.citationarticletitle as citationArticleTitle
+      	, wordSearch.articleid as articleID
+      	, ((( CAST(wordSearch.startlocationpaper as float)
+      			+wordSearch.endlocationpaper)/2)
+      		/wordSearch.articleCharCount) as percent
+      from wordSearch
+      inner join citationSearch on wordSearch.articleid = citationSearch.articleid
+      	and (((((citationSearch.sentencenum - wordSearch.sentencenum) <= `+rangeLeft
+        +`) and (citationSearch.sentencenum - wordSearch.sentencenum) >= 0))
+      		or ((((wordSearch.sentencenum - citationSearch.sentencenum) <= `+rangeRight
+          +`) and (wordSearch.sentencenum - citationSearch.sentencenum) >= 0)))
+      where wordSearch.articleyear = ` + year + " and (";
 
     for(var i = 0; i < searchQuery.length; i++){
         tmp += "wordSearch.lemma = '" + searchQuery[i] + "'";
@@ -298,68 +298,147 @@ app.post('/removesignal', function(req, res, next) {
 
 // pre-process sentiment counts for a specific query
 app.post('/process/signals', function(req, res, next) {
-  var searchQuery = JSON.parse(req.body.query);
-  var year = req.body.year;
-  var rangeLeft = 5; // always maximum for preprocessing
-  var rangeRight = 5; // always maximum for preprocessing
-  var ruleSet = JSON.parse(req.body.ruleSet);
-  let cookie_id = req.cookies.cookieName;
-
-  var query = `
-    select * from (
-    	select wordSearch.lemma
-    		, wordSearch.startlocationpaper as wordStart
-    		, wordSearch.endlocationpaper as wordEnd
-    		, citationSearch.sentencenum as citationSentence
-    		, wordSearch.sentencenum as wordSentence
-    		, citationSearch.startlocationpaper as citationStart
-    		, citationSearch.endlocationpaper as citationEnd
-    		, citationSearch.citationauthors as citationAuthors
-    		, citationSearch.citationyear as citationYear
-    		, citationSearch.citationarticletitle as citationArticleTitle
-    		, wordSearch.articleid as articleID
-    		, ((( CAST(wordSearch.startlocationpaper as float)
-                +wordSearch.endlocationpaper)/2)
-            /wordSearch.articleCharCount) as percent
-    	from wordsearch, citationsearch
-    	where wordsearch.articleid = citationsearch.articleid
-    	and ((
-    			(citationSearch.sentencenum - wordSearch.sentencenum) <= $1
-    				and (citationSearch.sentencenum - wordSearch.sentencenum) >= 0)
-    		or
-    			((wordSearch.sentencenum - citationSearch.sentencenum) <= $2
-    				and (wordSearch.sentencenum - citationSearch.sentencenum) >= 0))
-    	and wordsearch.articleyear = $3 and (
-  `;
-  var values = [rangeLeft, rangeRight, year];
-  var count = 4;
-  for(var i = 0; i < searchQuery.length; i++){
-    values.push(searchQuery[i]);
-    query += "wordSearch.lemma = $" + count.toString();
-    if(i < searchQuery.length - 1){
-      query += " or ";
-    }
-    count ++;
-  }
-  query += ") limit 10000) as wordCitationJoin order by wordCitationJoin.articleid";
   pool.connect((err, client, done) => {
-    pool.query(query, values, function(err,result) {
-      done();
+    let error_occurred = false;
+    let searchQuery = JSON.parse(req.body.query)
+    , year = req.body.year
+    , rangeLeft = req.body.rangeLeft
+    , rangeRight = req.body.rangeRight
+    , ruleSet = JSON.parse(req.body.ruleSet)
+    , cookie_id = req.cookies.cookieName;
+
+    // has this search been made before?
+    let ruleHash = year+"_"+searchQuery.join("_")+"_"
+      +Buffer.from(req.body.ruleSet).toString("base64")
+      , values = [ruleHash]
+      , query = `select querydata from querycache where queryid=$1`;
+
+    // if it has, return the saved data
+    client.query(query, values, function(err,result) {
       if(err) {
-        console.log(err);
+        error_occurred = true;
         return res.status(500);
       }
-      let data = res.json(result.rows);
+      if(result.rowCount > 0) {
+        let data = Buffer.from(result.rows[0]).toString("ascii");
+        return res.json(data);
+      }
+    });
+
+    // otherwise process new data
+    query = `
+      select articleID
+        , citationStart
+        , citationEnd
+        , percent
+        , articleyear
+        , count(*) multiscore
+      from (
+      	select wordSearch.lemma
+      		, wordSearch.startlocationpaper as wordStart
+      		, wordSearch.endlocationpaper as wordEnd
+      		, citationSearch.sentencenum as citationSentence
+      		, wordSearch.sentencenum as wordSentence
+      		, citationSearch.startlocationpaper as citationStart
+      		, citationSearch.endlocationpaper as citationEnd
+      		, citationSearch.citationauthors as citationAuthors
+      		, citationSearch.citationyear as citationYear
+      		, citationSearch.citationarticletitle as citationArticleTitle
+      		, wordSearch.articleid as articleID
+          , (citationSearch.sentencenum - wordSearch.sentencenum) rangeLeft
+          , (wordSearch.sentencenum - citationSearch.sentencenum) rangeRight
+          , wordSearch.articleyear
+      		, ((( CAST(wordSearch.startlocationpaper as float)
+                  +wordSearch.endlocationpaper)/2)
+              /wordSearch.articleCharCount) as percent
+      	from wordsearch, citationsearch
+      	where wordsearch.articleid = citationsearch.articleid
+      	and ((
+      			(citationSearch.sentencenum - wordSearch.sentencenum) <= $1
+      				and (citationSearch.sentencenum - wordSearch.sentencenum) >= 0)
+      		or
+      			((wordSearch.sentencenum - citationSearch.sentencenum) <= $2
+      				and (wordSearch.sentencenum - citationSearch.sentencenum) >= 0))
+      	and wordsearch.articleyear = $3 and (
+    `;
+    values = [rangeLeft, rangeRight, year];
+
+    let count = 4;
+    for(var i = 0; i < searchQuery.length; i++){
+      values.push(searchQuery[i]);
+      query += "wordSearch.lemma = $" + count.toString();
+      if(i < searchQuery.length - 1){
+        query += " or ";
+      }
+      count ++;
+    }
+    query += `) limit 10000) as wordCitationJoin
+    group by articleID
+      , articleyear
+      , citationStart
+      , citationEnd
+      , percent
+    order by wordCitationJoin.articleid`;
+
+    getScores(client, query, values, ruleSet).then(results => {
+      done();
+      return res.json(results);
+    }).catch(err => {
+      console.log(err);
+      done();
+      return res.status(500);
     });
   });
-
-  return res.json({"id":cookie_id});
 });
 
 // process signals for a given query, rule set, and year
 app.post('/poll', function(req, res, next) {
 
 });
+
+async function getScores(client, query, values, ruleSet) {
+  let scores = [], citations = {};
+  let query_result = await client.query(query, values);
+  // aggregate all the citations by articleid
+  query_result.rows.forEach(row => {
+    if(row.articleid in citations) citations[row.articleid].push(row);
+    else citations[row.articleid] = [row];
+  });
+
+  // now iterate each article
+  for(let curr_id of Object.keys(citations)) {
+    // get the text for this article
+    let tmp = "select papertext, articletitle, journaltitle, articleyear \
+      from article where article.id = $1;"
+      , row = citations[curr_id];
+    let new_result = await client.query(tmp, [curr_id]);
+    if(new_result.rowCount > 0) {
+      // replace punctuation to bound all signals by whitespace always
+      let paper_text = new_result.rows[0]
+        .papertext.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g," ");
+      paper_text = " "+paper_text+" "; // surround all words with whitespace
+      // score the article by citation and rule
+      row.forEach(cit => {
+        let citation_text = paper_text.substring(cit.citationStart, cit.citationEnd)
+          , new_row = cit;
+        new_row["multiscore"] = parseInt(new_row["multiscore"]);
+        new_row["score"] = {};
+        Object.keys(ruleSet).forEach(k => {
+          new_row["score"][k] = 0;
+          for(let r of ruleSet[k]) {
+            // signals will be bounded by whitespace
+            if(new RegExp( '\\s' + r.signal + '\\s', 'gi').test(citation_text)) {
+              // found the signal.. now do the calculation
+              new_row["score"][k] += (cit.multiscore*r.value);
+              scores.push(new_row);
+            }
+          }
+        });
+      });
+    }
+  };
+  return scores;
+}
 
 var server = app.listen(5432, function() {
     console.log("Listening...");
