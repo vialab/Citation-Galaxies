@@ -723,7 +723,7 @@ function getYears() {
 function filterYearResults(increment, year) {
     //Clear the arrays
     filteredYearCounts[year] = []; // 0 is for reference count, 1 is for paper count
-    filteredYearPercents[year] = [];
+    filteredYearPercents[year] = []; // ratio between bin freq and max bin freq
     var currentArticle = []; // Holds the unique articleid's from the results
 
     for (var i = 0; i < maxLabels; i++) {
@@ -747,7 +747,7 @@ function filterYearResults(increment, year) {
                     // Add 1 to the count for the amount of results in the bin
                     filteredYearCounts[year][0][((j + increment) / increment) - 1] += 1;
 
-                    // If the result's articleid is not found in the found article array (i.e. that is the first result from that paper) 
+                    // If the result's articleid is not found in the found article array (i.e. that is the first result from that paper)
                     // increment the amount of papers in the given bin, then add the articleid to the found article array
                     if (!currentArticle[((j + increment) / increment) - 1].includes(yearResults[year][i][0]['articleid'])) {
                         filteredYearCounts[year][1][((j + increment) / increment) - 1] += 1;
