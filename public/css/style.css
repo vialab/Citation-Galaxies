@@ -269,6 +269,10 @@ span.citation {
   cursor: pointer;
 }
 
+.sentiment {
+  display: none;
+}
+
 @media(max-width: 900px) {
   #navOptions {
     width: 100%;

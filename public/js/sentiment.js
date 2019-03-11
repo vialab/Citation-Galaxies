@@ -31,6 +31,9 @@ $(document).ready(function() {
             </div>\
           </div>";
         $("#categories").append($(html));
+
+        html = "<li class='menu-btn' onclick='addSignal(" + cat.id + ");'>" + cat.catname + "</li>";
+        $(".custom-menu").append($(html));
       }
 
       $.ajax({
@@ -108,6 +111,10 @@ function addSignal(category_id, draw_rules=false) {
     success: function (data) {
       sentiment_signals[category_id].push(new Signal(data[0].id, category_id, text, value));
       toast("Rule Added", text + " (" + sentiment_categories[category_id].name + ")");
+      // reprocess sentiment scores for all of the years
+      for(let year of years) {
+        processSignals(currSearchQuery, year);
+      }
       if(draw_rules) drawRules();
     },
     async: true
@@ -164,8 +171,8 @@ function tagCitationSentiment(articleid, text) {
 
 // Pre-process the front screen counts for a single year
 function processSignals(query, year) {
-  process_queue.push(year);
-  $.ajax({
+  if(process_queue[year] != undefined) process_queue[year].abort();
+  process_queue[year] = $.ajax({
     type: 'POST',
     url: currentURL + "process/signals",
     data: {
@@ -177,9 +184,9 @@ function processSignals(query, year) {
     },
     success: function (data) {
       // done so let's remove this from the queue
-      let index = process_queue.indexOf(year);
-      if(index > -1) process_queue.splice(index, 1);
+      if(index > -1) process_queue[year] = undefined;
       score_data[year] = processSentimentBins(data);;
+      if(currentLabel == 2) drawSentimentColumn(year);
     },
     async: true,
     timeout: 600000
@@ -188,33 +195,77 @@ function processSignals(query, year) {
 
 // Aggregate sentiment data into bins for use in d3
 function processSentimentBins(data) {
-  let sorted_data = { "max_value": 0, "max_count": 0 }
-    , bin_count = 100/currIncrement;
+  let bin_count = 100/currIncrement
+    , sorted_data = { "max_value": 0
+        , "max_count": 0
+        , "total_value": new Array(bin_count).fill(0).map(() => 0)
+      };
 
   // for each category (positive/neutral/negative)
   Object.keys(sentiment_categories).forEach(k => {
+    let cat_id = k.toString();
     // create an empty array of n bins for values and counts
-    sorted_data[k] = {"value": new Array(bin_count).fill(0)
-      , "count": new Array(bin_count).fill(0)
-    };
+    sorted_data[cat_id] = {
+      "value": new Array(bin_count).fill(0).map(() => 0)
+    }
   });
 
   for(let row of data) {
-    let bin_num = Math.floor(row.percent*10);
+    let bin_num = Math.floor((row.percent*100)/currIncrement);
     // score should have all the same sentiment categories
-    Object.keys(row.score).forEach(cat_id => {
+    Object.keys(row.score).forEach(k => {
+      let cat_id = k.toString();
       let val = Math.abs(row.score[cat_id]);
       sorted_data[cat_id]["value"][bin_num] += val;
-      sorted_data[cat_id]["count"][bin_num] += row.multiscore;
+      sorted_data["total_value"][bin_num] += val;
       if(sorted_data[cat_id]["value"][bin_num] > sorted_data["max_value"]) {
         sorted_data["max_value"] = sorted_data[cat_id]["value"][bin_num];
-      }
-      if(sorted_data[cat_id]["count"][bin_num] > sorted_data["max_count"]) {
-        sorted_data["max_count"] = sorted_data[cat_id]["count"][bin_num];
       }
     });
   }
   return sorted_data;
+}
+
+//Draw the column on the main screen
+function drawSentimentColumn(year) {
+  // this is okay because at this point, the column has been drawn
+  let cat_list = Object.keys(sentiment_categories);
+  let catColorScale = d3.scaleOrdinal()
+    .domain(cat_list)
+    .range(['#69c242','#ffcc00','#cf2030']);
+  for(let i=0; i<100/currIncrement; i++) {
+    let $box = $("." + ([year,"minsqr","box-"+i].join(".")))
+      , minsqr = d3.select($box[0])
+      , box_width = $box.width()
+      , box_height = $box.height()
+      , svgContainer = d3.select("#svg-"+year)
+      , x_offset = 0
+      , total_val = score_data[year]["total_value"][i];
+      if(total_val == 0) {
+        svgContainer.append("rect")
+          .attr("width", box_width)
+          .attr("height", box_height)
+          .attr("x", minsqr.attr("x"))
+          .attr("y", minsqr.attr("y"))
+          .attr("class", "sentiment")
+          .style("fill", "#ffcc00");
+        continue;
+      }
+      for(let cat of cat_list) {
+        let cat_width = (score_data[year][cat]["value"][i]/total_val) * box_width;
+        x_offset += cat_width;
+        svgContainer.append("rect")
+          .attr("width", cat_width)
+          .attr("height", box_height)
+          .attr("x", parseFloat(minsqr.attr("x"))+box_width-x_offset)
+          .attr("y", minsqr.attr("y"))
+          .attr("class", "sentiment")
+          .style("fill", catColorScale(cat));
+      }
+  }
+  if(currentLabel == 2) {
+    $(".sentiment").show();
+  }
 }
 
 // override the sentiment of all references to a single paper

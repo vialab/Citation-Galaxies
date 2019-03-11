@@ -29,7 +29,6 @@ app.use(function (req, res, next) {
     cookie_id = crypto.createHash('md5').update(cookie_id).digest('hex');
     res.cookie('cookieName', cookie_id, { expires: new Date(253402300000000) });
   }
-  console.log(cookie);
   next(); // <-- important!
 });
 app.use(express.static(`${__dirname}/public`));     // statics
@@ -423,13 +422,13 @@ async function getScores(client, query, values, ruleSet) {
           , new_row = cit;
         new_row["multiscore"] = parseInt(new_row["multiscore"]);
         new_row["score"] = {};
-        Object.keys(ruleSet).forEach(k => {
-          new_row["score"][k] = 0;
-          for(let r of ruleSet[k]) {
+        Object.keys(ruleSet).forEach(cat_id => {
+          new_row["score"][cat_id] = 0;
+          for(let r of ruleSet[cat_id]) {
             // signals will be bounded by whitespace
             if(new RegExp( '\\s' + r.signal + '\\s', 'gi').test(citation_text)) {
               // found the signal.. now do the calculation
-              new_row["score"][k] += (cit.multiscore*r.value);
+              new_row["score"][cat_id] += (cit.multiscore*r.value);
               scores.push(new_row);
             }
           }
