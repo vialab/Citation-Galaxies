@@ -49,7 +49,7 @@ var currentURL = "http://localhost:5432/"; //The url to access the backend
 
 var currSearchQuery = ""; //The current search query
 
-var process_queue = []; //process queue of intervals
+var process_queue = {}; //process queue of intervals
 
 //Used to change the increment on the main screen
 function seperationChange(increment) {
@@ -145,31 +145,40 @@ function updateTextInput(field, before, after, articleid, sendToDefault) {
 
 //Used to change the labels on the square boxes on the main screen (can display how many results or how many papers)
 function changeLabel(choice) {
-    //Based on a int in the label's id, make one label white (or grey) and make the other transparent
+  //Based on a int in the label's id, make one label white (or grey) and make the other transparent
+  //Change the old label to be invisible, show the new one
+  currentLabel = choice;
+  // sentiment
+  if(choice == 2) {
+    Object.keys(score_data).forEach(year => {
+      drawSentimentColumn(year);
+    });
+    $(".sentiment").show();
+    return;
+  } else {
+    $(".sentiment").hide();
+  }
 
-    //Change the old label to be invisible, show the new one
-    currentLabel = choice;
+  //Clear the paper glyph and recalculate the lines
+  $(svgContainers[0].node()).empty();
+  paperGlyphLines = [];
+  lineColors = [];
+  drawFirstColumn(110, (100 / currIncrement) * 16, 80, svgContainers[0], 100 / currIncrement);
+  for (var i = 0; i < years.length; i++) {
+      if (filteredYearCounts[years[i]['articleyear']] != undefined) {
+          $(svgContainers[i + 1].node()).empty();
+          drawColumn(years[i]['articleyear'], 80, 64, currBoxHeight, svgContainers[i + 1], filteredYearPercents[years[i]['articleyear']][currentLabel], filteredYearCounts[years[i]['articleyear']][currentLabel]);
+      }
+  }
 
-    //Clear the paper glyph and recalculate the lines
-    $(svgContainers[0].node()).empty();
-    paperGlyphLines = [];
-    lineColors = [];
-    drawFirstColumn(110, (100 / currIncrement) * 16, 80, svgContainers[0], 100 / currIncrement);
-    for (var i = 0; i < years.length; i++) {
-        if (filteredYearCounts[years[i]['articleyear']] != undefined) {
-            $(svgContainers[i + 1].node()).empty();
-            drawColumn(years[i]['articleyear'], 80, 64, currBoxHeight, svgContainers[i + 1], filteredYearPercents[years[i]['articleyear']][currentLabel], filteredYearCounts[years[i]['articleyear']][currentLabel]);
-        }
-    }
-
-    //Change the active label
-    for (var i = 0; i < maxLabels; i++) {
-        if (i != currentLabel) {
-            d3.select("#changeLabelItem" + i.toString()).classed('active', false);
-        } else {
-            d3.select("#changeLabelItem" + i.toString()).classed('active', true);
-        }
-    }
+  //Change the active label
+  for (var i = 0; i < maxLabels; i++) {
+      if (i != currentLabel) {
+          d3.select("#changeLabelItem" + i.toString()).classed('active', false);
+      } else {
+          d3.select("#changeLabelItem" + i.toString()).classed('active', true);
+      }
+  }
 }
 
 //Draws the first column (the paper on the home screen)
@@ -347,7 +356,8 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
         .attr("xy", 3)
         .attr("width", containerSizeW)
         .attr("filter", "url(#dropshadowSquare)")
-        .style("fill", d3.rgb(248, 249, 250));
+        .style("fill", d3.rgb(248, 249, 250))
+        .attr("class", "year-col-"+label);
 
     //Label on the year container
     svgContainer.append("text")
@@ -418,7 +428,7 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
         if (currBoxHeight < 15) {
             boxText = "";
         }
-        drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeY, miniSquareColor, currentData[i], miniSquareHitboxID);
+        drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeY, miniSquareColor, currentData[i], miniSquareHitboxID, label, i);
         total += currentData[i];
 
 
@@ -465,7 +475,7 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
 //Draws the indiviual squares on the main screen
 //Requires the container, location, size, color, text to put on, and the id for the box
 //ID must be in the format xxx_year_numOfBox for selection to work
-function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, miniSquareColor, labelData, miniSquareID) {
+function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, miniSquareColor, labelData, miniSquareID, year, idx) {
     //Draw square
     miniSquaresObjects.push(svgContainer.append("rect")
         .attr("x", locationX)
@@ -473,7 +483,8 @@ function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, mini
         .attr("width", sizeX)
         .attr("height", sizeY)
         .attr("id", miniSquareID)
-        .style("fill", miniSquareColor));
+        .style("fill", miniSquareColor)
+        .attr("class", year+" minsqr box-"+idx));
 
 
     //Used to change the text color if the background is too dark
@@ -700,9 +711,17 @@ function prepContainers(increment) {
                 maxFirstContainerSize = 11;
             }
             let dist_chart_width = 257;
-            svgContainers.push(distChart.append("svg").attr("width", dist_chart_width).attr("height", maxFirstContainerSize * 75));
+            svgContainers.push(distChart.append("svg")
+              .attr("width", dist_chart_width)
+              .attr("height", maxFirstContainerSize * 75)
+            );
         }
-        svgContainers.push(yearCols.append("div").attr("class", "col-xs-* nopadding").attr("height", 785).append("svg").attr("width", 87));
+        svgContainers.push(yearCols.append("div")
+          .attr("class", "col-xs-* nopadding")
+          .attr("height", 785).append("svg")
+          .attr("width", 87)
+          .attr("id", "svg-"+years[i].articleyear)
+        );
 
     }
 }
