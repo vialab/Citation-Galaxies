@@ -224,7 +224,7 @@ app.post('/queryCountsPaper', function(req, res, next) {
 app.get('/categories', function(req, res, next) {
   let cookie_id = req.cookies.cookieName;
   pool.connect((err, client, done) => {
-    pool.query("select id, catname, score from signalcategory where enabled\
+    pool.query("select id, catname, score, color from signalcategory where enabled\
      and cookieid=$1;"
       , [cookie_id]
       , function(err, result) {
@@ -319,6 +319,7 @@ app.post('/process/signals', function(req, res, next) {
         return res.status(500);
       }
       if(result.rowCount > 0) {
+        console.log("cache found");
         let data = Buffer.from(result.rows[0]).toString("ascii");
         return res.json(data);
       }
