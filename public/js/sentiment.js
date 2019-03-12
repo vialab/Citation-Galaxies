@@ -174,7 +174,7 @@ function tagCitationSentiment(articleid, text) {
 }
 
 // Pre-process the front screen counts for a single year
-function processSignals(query, year) {
+function processSignals(query, year, recache=0) {
   // if a request already exists, abort it and request new one
   if(process_queue[year] != undefined) process_queue[year].abort();
   // request
@@ -187,6 +187,7 @@ function processSignals(query, year) {
       , 'ruleSet': JSON.stringify(sentiment_signals) // for backprocessing
       , 'rangeLeft': sentenceRangeAbove
       , 'rangeRight': sentenceRangeBelow
+      , 'recache': recache
     },
     success: function (data) {
       // done so let's remove this from the queue
@@ -194,8 +195,10 @@ function processSignals(query, year) {
       score_data[year] = processSentimentBins(data);;
       if(currentLabel == 2) drawSentimentColumn(year);
     },
-    async: true,
-    timeout: 600000
+    error: function() {
+      process_queue[year] = undefined;
+    },
+    async: true
   });
 }
 
@@ -255,7 +258,8 @@ function drawSentimentColumn(year) {
           .attr("x", minsqr.attr("x"))
           .attr("y", minsqr.attr("y"))
           .attr("class", "sentiment")
-          .style("fill", default_color);
+          .style("fill", default_color)
+          .style("opacity", 0.5);
         continue;
       }
       // for each of the categories listed by user
@@ -269,7 +273,8 @@ function drawSentimentColumn(year) {
           .attr("x", parseFloat(minsqr.attr("x"))+box_width-x_offset)
           .attr("y", minsqr.attr("y"))
           .attr("class", "sentiment")
-          .style("fill", sentiment_categories[cat].color);
+          .style("fill", sentiment_categories[cat].color)
+          .style("opacity", (filteredYearPercents[year][1][i] * 0.6)+0.3);
       }
   }
   if(currentLabel == 2) {

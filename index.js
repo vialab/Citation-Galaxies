@@ -304,27 +304,10 @@ app.post('/process/signals', function(req, res, next) {
     , rangeLeft = req.body.rangeLeft
     , rangeRight = req.body.rangeRight
     , ruleSet = JSON.parse(req.body.ruleSet)
-    , cookie_id = req.cookies.cookieName;
-
-    // has this search been made before?
-    let ruleHash = year+"_"+searchQuery.join("_")+"_"
-      +Buffer.from(req.body.ruleSet).toString("base64")
-      , values = [ruleHash]
-      , query = `select querydata from querycache where queryid=$1`;
-
-    // if it has, return the saved data
-    client.query(query, values, function(err,result) {
-      if(err) {
-        error_occurred = true;
-        return res.status(500);
-      }
-      if(result.rowCount > 0) {
-        console.log("cache found");
-        let data = Buffer.from(result.rows[0]).toString("ascii");
-        return res.json(data);
-      }
-    });
-
+    , cookie_id = req.cookies.cookieName
+    , recache = Boolean(req.body.recache)
+    , ruleHash = year+"_"+searchQuery.join("_")+"_"
+        +Buffer.from(req.body.ruleSet).toString("base64");
     // otherwise process new data
     query = `
       select articleID
@@ -380,7 +363,7 @@ app.post('/process/signals', function(req, res, next) {
       , percent
     order by wordCitationJoin.articleid`;
 
-    getScores(client, query, values, ruleSet).then(results => {
+    getScores(client, query, values, ruleSet, ruleHash, recache).then(results => {
       done();
       return res.json(results);
     }).catch(err => {
@@ -396,7 +379,20 @@ app.post('/poll', function(req, res, next) {
 
 });
 
-async function getScores(client, query, values, ruleSet) {
+async function getScores(client, query, values, ruleSet, ruleHash, recache) {
+  // if we're not recaching the results, use old if applicable
+  if(!rechache) {
+    // has this search been made before?
+    let cache_query = `select querydata from querycache where queryid=$1`;
+    // if it has already been cached, return the cached version
+    let cached = await client.query(cache_query, [ruleHash]);
+    if(cached.rowCount > 0) {
+      let data = new Buffer(cached.rows[0].querydata, "base64").toString();
+      return JSON.parse(data);
+    }
+  }
+
+  // otherwise, run the query
   let scores = [], citations = {};
   let query_result = await client.query(query, values);
   // aggregate all the citations by articleid
@@ -437,6 +433,14 @@ async function getScores(client, query, values, ruleSet) {
       });
     }
   };
+  // cache this version for later
+  cache_query = `insert into querycache(queryid, querydata) values($1, $2)
+    ON CONFLICT (queryid) DO UPDATE
+    SET querydata = $2;`;
+  let query_data = Buffer.from(JSON.stringify(scores)).toString("base64");
+  values = [ruleHash, query_data];
+  await client.query(cache_query, values);
+
   return scores;
 }
 
