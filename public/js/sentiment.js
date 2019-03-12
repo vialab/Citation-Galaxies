@@ -13,6 +13,7 @@ let sentiment_signals = {}; // sentiment rules
 let sentiment_categories = {}; // categories (+/-)
 let scores = {}; // pre-processed scores for all docs
 let score_data = {};
+let default_color = "#bbb";
 
 $(document).ready(function() {
   $.ajax({
@@ -20,7 +21,10 @@ $(document).ready(function() {
     url: currentURL + "categories",
     success: function(cats) {
       for(let cat of cats) {
-        sentiment_categories[cat.id] = { "name": cat.catname, "value": cat.score }
+        sentiment_categories[cat.id] = { "name": cat.catname
+          , "value": cat.score
+          , "color": cat.color
+        }
         sentiment_signals[cat.id] = [];
         $("#rule-type").append(" \
           <option value='" + cat.id + "'>" + cat.catname + "</option>");
@@ -171,7 +175,9 @@ function tagCitationSentiment(articleid, text) {
 
 // Pre-process the front screen counts for a single year
 function processSignals(query, year) {
+  // if a request already exists, abort it and request new one
   if(process_queue[year] != undefined) process_queue[year].abort();
+  // request
   process_queue[year] = $.ajax({
     type: 'POST',
     url: currentURL + "process/signals",
@@ -184,7 +190,7 @@ function processSignals(query, year) {
     },
     success: function (data) {
       // done so let's remove this from the queue
-      if(index > -1) process_queue[year] = undefined;
+      process_queue[year] = undefined;
       score_data[year] = processSentimentBins(data);;
       if(currentLabel == 2) drawSentimentColumn(year);
     },
@@ -230,9 +236,8 @@ function processSentimentBins(data) {
 function drawSentimentColumn(year) {
   // this is okay because at this point, the column has been drawn
   let cat_list = Object.keys(sentiment_categories);
-  let catColorScale = d3.scaleOrdinal()
-    .domain(cat_list)
-    .range(['#69c242','#ffcc00','#cf2030']);
+
+  // iterate for each incremental block in this column
   for(let i=0; i<100/currIncrement; i++) {
     let $box = $("." + ([year,"minsqr","box-"+i].join(".")))
       , minsqr = d3.select($box[0])
@@ -241,17 +246,21 @@ function drawSentimentColumn(year) {
       , svgContainer = d3.select("#svg-"+year)
       , x_offset = 0
       , total_val = score_data[year]["total_value"][i];
+      // no sentiment? Make it a completely neutral square
       if(total_val == 0) {
+        // obviously this is temporary.. should be a default set by user (if any)
         svgContainer.append("rect")
           .attr("width", box_width)
           .attr("height", box_height)
           .attr("x", minsqr.attr("x"))
           .attr("y", minsqr.attr("y"))
           .attr("class", "sentiment")
-          .style("fill", "#ffcc00");
+          .style("fill", default_color);
         continue;
       }
+      // for each of the categories listed by user
       for(let cat of cat_list) {
+        // draw a proportional square for this category/square
         let cat_width = (score_data[year][cat]["value"][i]/total_val) * box_width;
         x_offset += cat_width;
         svgContainer.append("rect")
@@ -260,7 +269,7 @@ function drawSentimentColumn(year) {
           .attr("x", parseFloat(minsqr.attr("x"))+box_width-x_offset)
           .attr("y", minsqr.attr("y"))
           .attr("class", "sentiment")
-          .style("fill", catColorScale(cat));
+          .style("fill", sentiment_categories[cat].color);
       }
   }
   if(currentLabel == 2) {
@@ -268,7 +277,8 @@ function drawSentimentColumn(year) {
   }
 }
 
-// override the sentiment of all references to a single paper
+
+// override the sentiment of all references to a single paper [UNUSED]
 function overrideSentiment(value) {
    // var len = inTextSelection.length; for(var i = 0; i < len; i++){
    //   selectPaperViewBoundary(inTextSelection[0]);

@@ -87,7 +87,7 @@ function normalizationChange(value) {
 }
 
 //Remove all database requests
-function clearRequests(yearRequests, paperRequest) {
+function clearRequests(yearRequests, paperRequest, sentimentRequest) {
     //If a paper request was made, clear all the previous paper requests
     if (paperRequest == true) {
         for (var i = 0; i < paperRequests.length; i++) {
@@ -101,6 +101,14 @@ function clearRequests(yearRequests, paperRequest) {
             yearResultsRequests[i].abort();
         }
         yearRequests = [];
+    }
+    // clear all sentiment processing requests
+    if (sentimentRequest) {
+      Object.keys(process_queue).forEach(year => {
+        if(process_queue[year] != undefined) {
+          process_queue[year].abort();
+        }
+      });
     }
 }
 
@@ -116,7 +124,7 @@ function clearAll() {
     miniSquaresObjects = [];
     lineColors = [];
     paperGlyphLines = [];
-    clearRequests(true, true);
+    clearRequests(true, true, true);
 }
 
 //Used to shorten integers when they go past 1000, 1000 would go to 1.0k and so on
@@ -324,7 +332,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
 }
 
 //Draw the column on the main screen
-function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svgContainer, currentPrecents, currentData) {
+function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svgContainer, currentPercents, currentData) {
     //Filter for dropshadows
     var filter = svgContainer.append("defs").append("filter")
         .attr("id", "dropshadowSquare")
@@ -392,9 +400,9 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
 
     var lineColorIndex = 0;
     var total = 0;
-    for (var i = 0; i < currentPrecents.length; i++) {
+    for (var i = 0; i < currentPercents.length; i++) {
         //Percent used for box color
-        var percent = currentPrecents[i];
+        var percent = currentPercents[i];
         var miniSquareColor = colors(percent);
 
         //Get the color of the box, and update the line colors on the papre glyph
@@ -435,7 +443,7 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
 
         //Increment the main box's location
         locationY += miniSquareSizeY + currBoxPadding;
-        lineColorIndex += (lineColors.length / currentPrecents.length);
+        lineColorIndex += (lineColors.length / currentPercents.length);
     }
 
     verticalContainer.attr("height", locationY); //Change the height to be the max allowed
