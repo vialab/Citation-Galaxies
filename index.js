@@ -4,7 +4,7 @@ const pg = require('pg');
 var bodyParser = require('body-parser');
 var path = require('path');
 var crypto = require('crypto');
-
+var master_cookie = "196d2081988549fb86f38cf1944e79a9";
 var app = express();
 const pool = new pg.Pool({
     user: process.env.USER,
@@ -23,6 +23,7 @@ app.use(cookieParser());
 app.use(function (req, res, next) {
   // check if client sent cookie
   let cookie = req.cookies.cookieName;
+  if(master_cookie != "") cookie = master_cookie;
   if (cookie === undefined) {
     // no: set a new cookie
     let nonce = Math.random().toString()
@@ -226,6 +227,7 @@ app.post('/queryCountsPaper', function(req, res, next) {
 // get a list of available categories for scoring purposes
 app.get('/categories', function(req, res, next) {
   let cookie_id = req.cookies.cookieName;
+  if(master_cookie != "") cookie_id = master_cookie;
   pool.connect((err, client, done) => {
     pool.query("select id, catname, score, color from signalcategory where enabled\
      and cookieid=$1;"
@@ -244,6 +246,7 @@ app.get('/categories', function(req, res, next) {
 // get a list of rules to score documents on
 app.get('/signals', function(req, res, next) {
   let cookie_id = req.cookies.cookieName;
+  if(master_cookie != "") cookie_id = master_cookie;
   pool.connect((err, client, done) => {
     pool.query("select id, signalcategoryid, signal, score from signal\
       where enabled and cookieid=$1;", [cookie_id], function(err, result) {
@@ -263,6 +266,7 @@ app.post('/addsignal', function(req, res, next) {
   var value = req.body.value;
   var category_id = req.body.category_id;
   let cookie_id = req.cookies.cookieName;
+  if(master_cookie != "") cookie_id = master_cookie;
   pool.connect((err, client, done) => {
     pool.query("insert into signal(signal, score, signalcategoryid, cookieid, enabled) \
       values($1, $2, $3, $4, true) returning id;"
@@ -283,6 +287,7 @@ app.post('/addsignal', function(req, res, next) {
 app.post('/removesignal', function(req, res, next) {
   let signal_id = req.body.signal_id;
   let cookie_id = req.cookies.cookieName;
+  if(master_cookie != "") cookie_id = master_cookie;
   pool.connect((err, client, done) => {
     pool.query("delete from signal where id=$1 and cookieid=$2;"
       , [signal_id, cookie_id]
@@ -311,6 +316,7 @@ app.post('/process/signals', function(req, res, next) {
     , recache = Boolean(parseInt(req.body.recache))
     , ruleHash = year+"_"+searchQuery.join("_")+"_"
         +Buffer.from(req.body.ruleSet).toString("base64");
+    if(master_cookie != "") cookie_id = master_cookie;
     // otherwise process new data
     query = `
       select articleID
