@@ -718,11 +718,10 @@ function setPopoverContent(articleid) {
       var tempText = "";
 
       //Append a container
-      var listEntry = popover.append("ul").attr("class", "list-group");
+      var listEntry = popover.append("ul").attr("class", "list-group citation-text").attr("id", articleid);
       //Onclick code to keep track of selected references incase they are added
       //Not standard, but works
-      listEntry = listEntry.append("li").attr("class", "list-group-item").attr("id", articleid);
-      listEntry.attr("onclick", "selectPaperViewBoundary(this);updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
+      listEntry = listEntry.append("li").attr("class", "list-group-item").attr("onclick", "selectPaperViewBoundary(this);updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
       var lastSplitIndex = paperData[articleid][i][0][8][0]; //Index used to figure out where the paper text was last split on
       //If the context has a space at the beginning, skip it
       if (paperText[articleid][0]['papertext'].charAt(lastSplitIndex) == ' ') {

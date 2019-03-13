@@ -18,6 +18,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 // need cookieParser middleware before we can do anything with cookies
 app.use(cookieParser());
+
 // set a cookie
 app.use(function (req, res, next) {
   // check if client sent cookie
@@ -31,6 +32,8 @@ app.use(function (req, res, next) {
   }
   next(); // <-- important!
 });
+
+
 app.use(express.static(`${__dirname}/public`));     // statics
 
 app.get('/', function(req,res,next) {
@@ -305,7 +308,7 @@ app.post('/process/signals', function(req, res, next) {
     , rangeRight = req.body.rangeRight
     , ruleSet = JSON.parse(req.body.ruleSet)
     , cookie_id = req.cookies.cookieName
-    , recache = Boolean(req.body.recache)
+    , recache = Boolean(parseInt(req.body.recache))
     , ruleHash = year+"_"+searchQuery.join("_")+"_"
         +Buffer.from(req.body.ruleSet).toString("base64");
     // otherwise process new data
@@ -381,7 +384,7 @@ app.post('/poll', function(req, res, next) {
 
 async function getScores(client, query, values, ruleSet, ruleHash, recache) {
   // if we're not recaching the results, use old if applicable
-  if(!rechache) {
+  if(!recache) {
     // has this search been made before?
     let cache_query = `select querydata from querycache where queryid=$1`;
     // if it has already been cached, return the cached version
