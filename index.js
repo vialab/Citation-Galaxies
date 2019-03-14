@@ -260,6 +260,63 @@ app.get('/signals', function(req, res, next) {
   });
 });
 
+// Get specific signals based on user request
+app.post('/specificSignals', function(req, res){
+  let cookie_id = req.cookies.cookieName;
+  let input = req.body.input;
+  if(master_cookie != "") cookie_id = master_cookie;
+
+  pool.connect((err, client, done) => {
+    pool.query("select signal.id,\
+                signalcategory.catname,\
+                signal.score,\
+                signal.enabled\
+                from\
+                signal,\
+                signalcategory\
+                where\
+                signal.signalcategoryid = signalcategory.id\
+                and signal.cookieid = $1\
+                and signalcategory.cookieid = $1\
+                and signal.signal = $2;", [cookie_id, input], function(err, result){
+        done();
+        if(err){
+          console.log(err);
+          return res.status(500);
+        }
+        return res.json(result.rows);
+      });
+  });
+});
+
+// Get specific categories based on user request
+app.post('/specificCategories', function(req, res){
+  let cookie_id = req.cookies.cookieName;
+  let input = req.body.input;
+  if(master_cookie != "") cookie_id = master_cookie;
+
+  pool.connect((err, client, done) => {
+    pool.query("select id\,\
+                score,\
+                enabled,\
+                color\
+                from\
+                signalcategory\
+                where\
+                catname = $2\
+                and\
+                cookieid = $1;", [cookie_id, input], function(err, result){
+        done();
+        if(err){
+          console.log(err);
+          return res.status(500);
+        }
+        return res.json(result.rows);
+      });
+  });
+});
+
+
 // add a rule to be applied to documents
 app.post('/addsignal', function(req, res, next) {
   var text = req.body.text;
