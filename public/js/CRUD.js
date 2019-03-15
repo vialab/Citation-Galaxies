@@ -1,5 +1,11 @@
 $(document).ready(function () {
 
+
+  /* CRUD processes are not based on search, although a nice touch would be
+  having the ability to filter the results
+   */
+
+
     // On submit for the rule CRUD
     $("#ruleForm").submit(function (event) {
         // Prevent the page from reloading
@@ -26,7 +32,6 @@ $(document).ready(function () {
             success: function (signals) {
                 let table = $("#ruleTable");
                 table.children().remove();
-
                 // Populate the table
                 populateTable(signals, table);
             }
@@ -35,6 +40,32 @@ $(document).ready(function () {
 
 });
 
+// clear the form and clear the table of any results
+function clearCrudTable() {
+  let table = $("#ruleTable");
+  table.children().remove();
+  $("#ruleForm")[0].reset();
+}
+
+// load category results from server and populate the results table
+function loadCategoryTable() {
+  clearCrudTable();
+  loadData("categories", function(results) {
+    // since we are loading the categories again, may as well update our json
+    transformCategoryData(results);
+    populateTable(results, table);
+  });
+}
+
+// same as above, but will probably need custom code later on.
+function loadSignalTable() {
+  clearCrudTable();
+  loadData("signals", function(results) {
+    // since we are loading the signals again, may as well update our json
+    transformSignalData(results);
+    populateTable(results, table);
+  });
+}
 
 function populateTable(signals, table) {
     // Create the header row
