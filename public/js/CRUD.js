@@ -53,7 +53,7 @@ function loadCategoryTable() {
   loadData("categories", function(results) {
     // since we are loading the categories again, may as well update our json
     transformCategoryData(results);
-    populateTable(results, table);
+    populateTable(results, $("#ruleTable"));
   });
 }
 
