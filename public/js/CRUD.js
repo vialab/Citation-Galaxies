@@ -63,7 +63,7 @@ function loadSignalTable() {
   loadData("signals", function(results) {
     // since we are loading the signals again, may as well update our json
     transformSignalData(results);
-    populateTable(results, table);
+    populateTable(results, $("#ruleTable"));
   });
 }
 
