@@ -1,4 +1,10 @@
 function Signal(id, cat_id, signal, value=0) {
+  // ensure this category exists
+  if(!sentiment_categories[cat_id]) throw "Category " + cat_id + " does not exist!";
+  // ensure that there are no duplicates (this.id must be unique)
+  for(let s of sentiment_signals[cat_id]) {
+    if(id == s.id) throw "Signal " + id + " already exists!";
+  }
   this.signal = signal.trim();
   this.value = value;
   this.filter_distance = 0;
@@ -16,46 +22,14 @@ let score_data = {};
 let default_color = "#bbb";
 
 $(document).ready(function() {
-  $.ajax({
-    type: 'GET',
-    url: currentURL + "categories",
-    success: function(cats) {
-      for(let cat of cats) {
-        sentiment_categories[cat.id] = { "name": cat.catname
-          , "value": cat.score
-          , "color": cat.color
-        }
-        sentiment_signals[cat.id] = [];
-        $("#rule-type").append(" \
-          <option value='" + cat.id + "'>" + cat.catname + "</option>");
-
-          let html = "<div class='col-sm-4'> \
-            <h4>" + sentiment_categories[cat.id].name + "</h4> \
-            <div id='" + cat.id + "-rules' class='rule-list'> \
-            </div>\
-          </div>";
-        $("#categories").append($(html));
-
-        html = "<li class='menu-btn' onclick='addSignal(" + cat.id + ");'>" + cat.catname + "</li>";
-        $(".custom-menu").append($(html));
-      }
-
-      $.ajax({
-        type: 'GET',
-        url: currentURL + "signals",
-        success: function(rules) {
-          for(let signal of rules) {
-            let s = new Signal(signal.id, signal.signalcategoryid, signal.signal, signal.score);
-            sentiment_signals[signal.signalcategoryid].push(s);
-          }
-        },
-        async: true
+  loadData("categories", function(results) {
+      sentiment_signals = {};
+      transformCategoryData(results);
+      loadData("signals", function(signals) {
+        transformSignalData(signals);
+        updateInterface();
       });
-
-    },
-    async: true
   });
-
   $("#pills-rules-tab").on("click", drawRules);
 });
 
@@ -290,4 +264,77 @@ function overrideSentiment(value) {
    // }
    let article_id = $(this).data("id");
    scores[article_id] = value;
+}
+
+// master update of sentiment rules.. pulls categories and signals
+// as well as populates anything using Either
+function updateSentimentRules(callback) {
+  sentiment_categories = {};
+  sentiment_signals = {};
+
+  // any errors would result into no updates on the interface
+}
+
+// query for some data
+function loadData(url, callback, _async=true) {
+  // first get the categories
+  $.ajax({
+    type: 'GET',
+    url: currentURL + url,
+    success: function(results) {
+      callback(results);
+    },
+    async: _async
+  });
+}
+
+// load category data into json object
+function transformCategoryData(results) {
+  for(let cat of results) {
+    sentiment_categories[cat.id] = { "name": cat.catname
+      , "value": cat.score
+      , "color": cat.color
+    }
+    sentiment_signals[cat.id] = [];
+  }
+}
+
+// load signal data into json object
+function transformSignalData(results) {
+  for(let signal of results) {
+    let s = new Signal(signal.id, signal.signalcategoryid, signal.signal, signal.score);
+    sentiment_signals[signal.signalcategoryid].push(s);
+  }
+}
+
+// redraw all html elements
+function updateInterface() {
+  updateCategoryInterface();
+  updateSignalInterface();
+}
+
+// redraw category elements
+function updateCategoryInterface() {
+  $("#categories").html("");
+  $(".custom-menu").html("");
+  Object.keys(sentiment_categories).forEach( id => {
+    let cat = sentiment_categories[id];
+    $("#rule-type").append(" \
+      <option value='" + id + "'>" + cat.name + "</option>");
+
+      let html = "<div class='col-sm-4'> \
+        <h4>" + cat.name + "</h4> \
+        <div id='" + id + "-rules' class='rule-list'> \
+        </div>\
+      </div>";
+    $("#categories").append($(html));
+
+    html = "<li class='menu-btn' onclick='addSignal(" + id + ");'>" + cat.name + "</li>";
+    $(".custom-menu").append($(html));
+  });
+}
+
+// redraw signal elements
+function updateSignalInterface() {
+    // nothing to do here yet
 }
