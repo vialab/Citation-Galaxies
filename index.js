@@ -470,8 +470,7 @@ async function getScores(client, query, values, ruleSet, ruleHash, recache) {
   // now iterate each article
   for(let curr_id of Object.keys(citations)) {
     // get the text for this article
-    let tmp = "select papertext, articletitle, journaltitle, articleyear \
-      from article where article.id = $1;"
+    let tmp = "select papertext, articletitle, journaltitle, articleyear from article where article.id = $1;"
       , row = citations[curr_id];
     let new_result = await client.query(tmp, [curr_id]);
     if(new_result.rowCount > 0) {
@@ -498,7 +497,7 @@ async function getScores(client, query, values, ruleSet, ruleHash, recache) {
         });
       });
     }
-  };
+  }
   // cache this version for later
   cache_query = `insert into querycache(queryid, querydata) values($1, $2)
     ON CONFLICT (queryid) DO UPDATE
