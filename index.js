@@ -6,6 +6,7 @@ var path = require('path');
 var crypto = require('crypto');
 var master_cookie = "196d2081988549fb86f38cf1944e79a9";
 var app = express();
+var dbschema = require("./dbschema.js");
 const { exec } = require('child_process');
 const pool = new pg.Pool({
     user: process.env.USER,
@@ -19,7 +20,7 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
 // need cookieParser middleware before we can do anything with cookies
 app.use(cookieParser());
-
+app.use(express.static(`${__dirname}/public`));     // statics
 // set a cookie
 app.use(function (req, res, next) {
   // check if client sent cookie
@@ -36,11 +37,11 @@ app.use(function (req, res, next) {
 });
 
 
-app.use(express.static(`${__dirname}/public`));     // statics
 
 app.get('/', function(req,res,next) {
   res.sendFile(path.join(__dirname + "/index.html"));
 })
+
 
 app.get('/years', function(req, res, next) {
     pool.connect((err, client, done) => {
@@ -55,6 +56,7 @@ app.get('/years', function(req, res, next) {
 
     });
 });
+
 
 app.post('/queryCounts', function(req, res, next) {
     pool.connect((err, client, done) => {
@@ -112,6 +114,7 @@ app.post('/queryCounts', function(req, res, next) {
     });
   });
 
+
 //Return the text of a paper
 app.post('/paperText', function(req, res, next) {
     pool.connect((err, client, done) => {
@@ -129,6 +132,7 @@ app.post('/paperText', function(req, res, next) {
       });
     });
   });
+
 
 //Return the location of a sentence for a certain article
 app.post('/sectionBoundary', function(req, res, next) {
@@ -225,6 +229,7 @@ app.post('/queryCountsPaper', function(req, res, next) {
   });
 });
 
+
 // get a list of available categories for scoring purposes
 app.get('/categories', function(req, res, next) {
   let cookie_id = req.cookies.cookieName;
@@ -244,6 +249,7 @@ app.get('/categories', function(req, res, next) {
   });
 });
 
+
 // get a list of rules to score documents on
 app.get('/signals', function(req, res, next) {
   let cookie_id = req.cookies.cookieName;
@@ -258,62 +264,6 @@ app.get('/signals', function(req, res, next) {
       }
       return res.json(result.rows);
     });
-  });
-});
-
-// Get specific signals based on user request
-app.post('/specificSignals', function(req, res){
-  let cookie_id = req.cookies.cookieName;
-  let input = req.body.input;
-  if(master_cookie != "") cookie_id = master_cookie;
-
-  pool.connect((err, client, done) => {
-    pool.query("select signal.id,\
-                signalcategory.catname,\
-                signal.score,\
-                signal.enabled\
-                from\
-                signal,\
-                signalcategory\
-                where\
-                signal.signalcategoryid = signalcategory.id\
-                and signal.cookieid = $1\
-                and signalcategory.cookieid = $1\
-                and signal.signal = $2;", [cookie_id, input], function(err, result){
-        done();
-        if(err){
-          console.log(err);
-          return res.status(500);
-        }
-        return res.json(result.rows);
-      });
-  });
-});
-
-// Get specific categories based on user request
-app.post('/specificCategories', function(req, res){
-  let cookie_id = req.cookies.cookieName;
-  let input = req.body.input;
-  if(master_cookie != "") cookie_id = master_cookie;
-
-  pool.connect((err, client, done) => {
-    pool.query("select id\,\
-                score,\
-                enabled,\
-                color\
-                from\
-                signalcategory\
-                where\
-                catname = $2\
-                and\
-                cookieid = $1;", [cookie_id, input], function(err, result){
-        done();
-        if(err){
-          console.log(err);
-          return res.status(500);
-        }
-        return res.json(result.rows);
-      });
   });
 });
 
@@ -341,6 +291,7 @@ app.post('/addsignal', function(req, res, next) {
   });
 });
 
+
 // pre-process sentiment counts for a specific query
 app.post('/removesignal', function(req, res, next) {
   let signal_id = req.body.signal_id;
@@ -360,6 +311,71 @@ app.post('/removesignal', function(req, res, next) {
     );
   });
 });
+
+
+// get word2vec results
+app.get('/w2v/similar', function(req, res, next) {
+  var word = req.query.word;
+  exec(__dirname+"/model/similarity.sh " + word, function(error, stdout, stderr) {
+    if(error) {
+      console.log("exec error: " + error);
+      return res.status(500);
+
+    }
+    let lines = stdout.split("\n");
+    let payload = [];
+    for(let i=1; i<lines.length; i++) {
+      let row = lines[i].split(",");
+      if(row.length < 1) {
+        continue;
+      }
+      let temp = {};
+      temp["word"] = row[0];
+      temp["score"] = row[1];
+      payload.push(temp);
+    }
+    return res.json(payload);
+  });
+});
+
+
+// dynamically update a row in our database -- measures have been taken to keep
+// this function safe from injection (dbschema.js)
+// req.body.data should be a JSON object with an "id" key
+app.post("/update", function(req, res, next) {
+  let data = JSON.parse(req.body.data);
+  let table_name = JSON.parse(req.body.table_name);
+  let index = JSON.parse(req.body.index);
+  // make sure table and respective index column exists
+  if(!dbschema.hasTable(table_name)) return res.status(400);
+  if(!dbschema.hasColumn(table_name, index)) return res.status(400);
+  pool.connect((err, client, done) => {
+    let query = `UPDATE $1~ SET `;
+    let values = [table_name];
+    let columns = Object.keys(data);
+
+    // Make sure all of the columns exist, and generate our query as we go
+    for(let i=0; i<columns; i++) {
+      let key = columns[i];
+      if(key == "id") continue;
+      if(!dbschema.hasColumn(table_name, key)) return res.status(400);
+      if(values.length > 0) query += ", "
+      query += key+" = $" + values.length;
+      values.push(data[key]);
+    }
+    query += " WHERE " + index + " = $" + values.length;
+    values.push(data["id"]); // index column must always exist in "id"
+
+    client.query(query, values, function(err, result) {
+      if(err) {
+        console.log("update error: " + err);
+        return res.status(500);
+      }
+
+    });
+  });
+});
+
 
 // pre-process sentiment counts for a specific query
 app.post('/process/signals', function(req, res, next) {
@@ -441,31 +457,7 @@ app.post('/process/signals', function(req, res, next) {
   });
 });
 
-// get word2vec results
-app.get('/w2v/similar', function(req, res, next) {
-  var word = req.query.word;
-  exec(__dirname+"/model/similarity.sh " + word, function(error, stdout, stderr) {
-    if(error) {
-      console.log("exec error: " + error);
-      res.status(500);
-      return;
-    }
-    let lines = stdout.split("\n");
-    let payload = [];
-    for(let i=1; i<lines.length; i++) {
-      let row = lines[i].split(",");
-      if(row.length < 1) {
-        continue;
-      }
-      let temp = {};
-      temp["word"] = row[0];
-      temp["score"] = row[1];
-      payload.push(temp);
-    }
-    return res.json(payload);
-  });
-});
-
+// async function that returns/calculates the sentiment for a specific query
 async function getScores(client, query, values, ruleSet, ruleHash, recache) {
   // if we're not recaching the results, use old if applicable
   if(!recache) {
@@ -474,7 +466,7 @@ async function getScores(client, query, values, ruleSet, ruleHash, recache) {
     // if it has already been cached, return the cached version
     let cached = await client.query(cache_query, [ruleHash]);
     if(cached.rowCount > 0) {
-      let data = new Buffer(cached.rows[0].querydata, "base64").toString();
+      let data = Buffer.from(cached.rows[0].querydata, "base64").toString();
       return JSON.parse(data);
     }
   }
@@ -529,6 +521,7 @@ async function getScores(client, query, values, ruleSet, ruleHash, recache) {
 
   return scores;
 }
+
 
 var server = app.listen(5432, function() {
     console.log("Listening...");
