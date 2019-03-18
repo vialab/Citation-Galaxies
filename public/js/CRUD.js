@@ -221,18 +221,18 @@ function editCrudRow(event) {
 
 // update a table using a datastructure that should remain consistent
 // JSON object that must include an id
-function updateRow(data) {
+function updateRow(table_name, data, index="id") {
   if(!data["id"]) throw "Updating a row without an ID is not permitted";
   $.ajax({
     type: "POST",
     url: currentURL + "update",
     data: {
       "data": JSON.stringify(data)
-      , "table_name": data
+      , "table_name": table_name
+      , "index": index
     },
     success: function(results) {
-      callback(results);
-    },
-    async: _async
+      console.log("success");
+    }
   });
 }
