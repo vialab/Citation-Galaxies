@@ -155,7 +155,6 @@ function updateTextInput(field, before, after, articleid, sendToDefault) {
 function changeLabel(choice) {
   //Based on a int in the label's id, make one label white (or grey) and make the other transparent
   //Change the old label to be invisible, show the new one
-  currentLabel = choice;
   // sentiment
   if(choice == 2) {
     Object.keys(score_data).forEach(year => {
@@ -166,7 +165,7 @@ function changeLabel(choice) {
   } else {
     $(".sentiment").hide();
   }
-
+  currentLabel = choice;
   //Clear the paper glyph and recalculate the lines
   $(svgContainers[0].node()).empty();
   paperGlyphLines = [];
