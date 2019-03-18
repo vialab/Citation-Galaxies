@@ -6,6 +6,7 @@ var path = require('path');
 var crypto = require('crypto');
 var master_cookie = "196d2081988549fb86f38cf1944e79a9";
 var app = express();
+const { exec } = require('child_process');
 const pool = new pg.Pool({
     user: process.env.USER,
     host: process.env.HOST,
@@ -440,9 +441,29 @@ app.post('/process/signals', function(req, res, next) {
   });
 });
 
-// process signals for a given query, rule set, and year
-app.post('/poll', function(req, res, next) {
-
+// get word2vec results
+app.get('/w2v/similar', function(req, res, next) {
+  var word = req.query.word;
+  exec(__dirname+"/model/similarity.sh " + word, function(error, stdout, stderr) {
+    if(error) {
+      console.log("exec error: " + error);
+      res.status(500);
+      return;
+    }
+    let lines = stdout.split("\n");
+    let payload = [];
+    for(let i=1; i<lines.length; i++) {
+      let row = lines[i].split(",");
+      if(row.length < 1) {
+        continue;
+      }
+      let temp = {};
+      temp["word"] = row[0];
+      temp["score"] = row[1];
+      payload.push(temp);
+    }
+    return res.json(payload);
+  });
 });
 
 async function getScores(client, query, values, ruleSet, ruleHash, recache) {
