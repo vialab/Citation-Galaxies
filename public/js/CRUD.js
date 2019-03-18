@@ -82,7 +82,7 @@ function populateTable(signals, table) {
     let tableBody = $("<tbody></tbody>").appendTo(table);
     let headerRow = $("<tr></tr>").appendTo(tableHeader);
 
-    // Get the form 
+    // Get the form
     let form = $("<div class='form-group'></div>").appendTo($("#ruleForm"));
 
 
@@ -217,4 +217,22 @@ function editCrudRow(event) {
         // Focus on the clicked element
         $(event.target).focus();
     }
+}
+
+// update a table using a datastructure that should remain consistent
+// JSON object that must include an id
+function updateRow(data) {
+  if(!data["id"]) throw "Updating a row without an ID is not permitted";
+  $.ajax({
+    type: "POST",
+    url: currentURL + "update",
+    data: {
+      "data": JSON.stringify(data)
+      , "table_name": data
+    },
+    success: function(results) {
+      callback(results);
+    },
+    async: _async
+  });
 }

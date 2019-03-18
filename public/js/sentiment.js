@@ -2,8 +2,10 @@ function Signal(id, cat_id, signal, value=0) {
   // ensure this category exists
   if(!sentiment_categories[cat_id]) throw "Category " + cat_id + " does not exist!";
   // ensure that there are no duplicates (this.id must be unique)
-  for(let s of sentiment_signals[cat_id]) {
-    if(id == s.id) throw "Signal " + id + " already exists!";
+  if(sentiment_signals[cat_id]) {
+    for(let s of sentiment_signals[cat_id]) {
+      if(id == s.id) throw "Signal " + id + " already exists!";
+    }
   }
   this.signal = signal.trim();
   this.value = value;
@@ -289,7 +291,11 @@ function loadData(url, callback, _async=true) {
 }
 
 // load category data into json object
-function transformCategoryData(results) {
+function transformCategoryData(results, replace_all=false) {
+  if(replace_all) {
+    sentiment_categories = {};
+    sentiment_signals = {};
+  }
   for(let cat of results) {
     sentiment_categories[cat.id] = { "name": cat.catname
       , "value": cat.score
@@ -300,10 +306,22 @@ function transformCategoryData(results) {
 }
 
 // load signal data into json object
-function transformSignalData(results) {
+function transformSignalData(results, replace_all) {
+  if(replace_all) {
+    sentiment_signals = {};
+    let cat_list = Object.keys(sentiment_categories);
+    if(cat_list.length == 0) throw "Must load categories before signals!";
+    Object.keys(sentiment_categories).forEach(cat_id => {
+      sentiment_signals[cat_id] = [];
+    });
+  }
   for(let signal of results) {
-    let s = new Signal(signal.id, signal.signalcategoryid, signal.signal, signal.score);
-    sentiment_signals[signal.signalcategoryid].push(s);
+    try {
+      let s = new Signal(signal.id, signal.signalcategoryid, signal.signal, signal.score);
+      sentiment_signals[signal.signalcategoryid].push(s);
+    } catch(e) {
+      continue;
+    }
   }
 }
 
