@@ -53,6 +53,11 @@
     margin: 0 auto;
 }
 
+.temp-load {
+  background-color: rgba(248, 249, 250, 1);
+  margin: 0 2px;
+}
+
 #rangeBefore,
 #rangeAfter {
     width: 70px;
@@ -240,20 +245,8 @@ div.tooltip {
   background-color: rgba(248, 249, 250, 1);
 }
 
-span.sentiment {
+span.sentiment-text {
   text-decoration: underline;
-}
-
-span.sentiment.positive {
-  color: #669999;
-}
-
-span.sentiment.negative {
-  color: #996666;
-}
-
-span.sentiment.neutral {
-  color: #666666;
 }
 
 span.citation {
@@ -262,6 +255,10 @@ span.citation {
   -webkit-user-select: none; /* Safari */
   -moz-user-select: none; /* Firefox */
   -ms-user-select: none; /* IE10+/Edge */
+}
+
+span.query-text {
+  background-color: #f4d442;
 }
 
 .del-rule-btn {

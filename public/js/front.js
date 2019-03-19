@@ -50,6 +50,7 @@ var currentURL = "http://localhost:5432/"; //The url to access the backend
 var currSearchQuery = ""; //The current search query
 
 var process_queue = {}; //process queue of intervals
+var overlay_sentiment = false; // flag to immediately show sentiment results
 
 //Used to change the increment on the main screen
 function seperationChange(increment) {
@@ -161,8 +162,10 @@ function changeLabel(choice) {
       drawSentimentColumn(year);
     });
     $(".sentiment").show();
+    overlay_sentiment = true;
     return;
   } else {
+    overlay_sentiment = false;
     $(".sentiment").hide();
   }
   currentLabel = choice;
@@ -332,151 +335,152 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
 
 //Draw the column on the main screen
 function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svgContainer, currentPercents, currentData) {
-    //Filter for dropshadows
-    var filter = svgContainer.append("defs").append("filter")
-        .attr("id", "dropshadowSquare")
-        .attr("height", "130%");
-    filter.append("feOffset")
-        .attr("result", "offOut")
-        .attr("in", "SourceGraphic")
-        .attr("dx", 0)
-        .attr("dy", 2);
-    filter.append("feColorMatrix")
-        .attr("result", "matrixOut")
-        .attr("in", "offOut")
-        .attr("type", "matrix")
-        .attr("values", "0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0");
-    filter.append("feGaussianBlur")
-        .attr("result", "blurOut")
-        .attr("in", "matrixOut")
-        .attr("stdDeviation", 2);
-    filter.append("feBlend")
-        .attr("in", "SourceGraphic")
-        .attr("in2", "blurOut")
-        .attr("mode", "normal");
+  $("#container-"+label).removeClass("temp-load");
+  //Filter for dropshadows
+  var filter = svgContainer.append("defs").append("filter")
+      .attr("id", "dropshadowSquare")
+      .attr("height", "130%");
+  filter.append("feOffset")
+      .attr("result", "offOut")
+      .attr("in", "SourceGraphic")
+      .attr("dx", 0)
+      .attr("dy", 2);
+  filter.append("feColorMatrix")
+      .attr("result", "matrixOut")
+      .attr("in", "offOut")
+      .attr("type", "matrix")
+      .attr("values", "0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0");
+  filter.append("feGaussianBlur")
+      .attr("result", "blurOut")
+      .attr("in", "matrixOut")
+      .attr("stdDeviation", 2);
+  filter.append("feBlend")
+      .attr("in", "SourceGraphic")
+      .attr("in2", "blurOut")
+      .attr("mode", "normal");
 
-    //Year container
-    var verticalContainer = svgContainer.append("rect")
-        .attr("x", 3)
-        .attr("y", 3)
-        .attr("rx", 3)
-        .attr("xy", 3)
-        .attr("width", containerSizeW)
-        .attr("filter", "url(#dropshadowSquare)")
-        .style("fill", d3.rgb(248, 249, 250))
-        .attr("class", "year-col-"+label);
+  //Year container
+  var verticalContainer = svgContainer.append("rect")
+      .attr("x", 3)
+      .attr("y", 3)
+      .attr("rx", 3)
+      .attr("xy", 3)
+      .attr("width", containerSizeW)
+      .attr("filter", "url(#dropshadowSquare)")
+      .style("fill", d3.rgb(248, 249, 250))
+      .attr("class", "year-col-"+label);
 
-    //Label on the year container
-    svgContainer.append("text")
-        .attr("x", (containerSizeW / 2) + 3)
-        .attr("y", 21)
-        .attr("text-anchor", "middle")
-        .style("fill", d3.rgb(108, 117, 125))
-        .text(label);
+  //Label on the year container
+  svgContainer.append("text")
+      .attr("x", (containerSizeW / 2) + 3)
+      .attr("y", 21)
+      .attr("text-anchor", "middle")
+      .style("fill", d3.rgb(108, 117, 125))
+      .text(label);
 
-    //Year container hitbox
-    var verticalContainerHitbox = svgContainer.append("rect")
-        .attr("x", 3)
-        .attr("y", 3)
-        .attr("rx", 3)
-        .attr("xy", 3)
-        .attr("width", containerSizeW)
-        .attr("height", containerSizeW)
-        .style("fill", "rgba(0,0,0,0)"); // <-- used to make transparent
+  //Year container hitbox
+  var verticalContainerHitbox = svgContainer.append("rect")
+      .attr("x", 3)
+      .attr("y", 3)
+      .attr("rx", 3)
+      .attr("xy", 3)
+      .attr("width", containerSizeW)
+      .attr("height", containerSizeW)
+      .style("fill", "rgba(0,0,0,0)"); // <-- used to make transparent
 
-    //Total on the year container
-    var totalText = svgContainer.append("text")
-        .attr("x", (containerSizeW / 2) + 3)
-        .attr("y", 21)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .style("fill", d3.rgb(108, 117, 125))
-        .text(0);
+  //Total on the year container
+  var totalText = svgContainer.append("text")
+      .attr("x", (containerSizeW / 2) + 3)
+      .attr("y", 21)
+      .attr("text-anchor", "middle")
+      .style("font-size", "12px")
+      .style("fill", d3.rgb(108, 117, 125))
+      .text(0);
 
-    //Draw the mini squares with padding needed
-    var locationX = 3 + containerSizeW * 0.1;
-    var locationY = 30;
+  //Draw the mini squares with padding needed
+  var locationX = 3 + containerSizeW * 0.1;
+  var locationY = 30;
 
-    var lineColorIndex = 0;
-    var total = 0;
-    for (var i = 0; i < currentPercents.length; i++) {
-        //Percent used for box color
-        var percent = currentPercents[i];
-        var miniSquareColor = colors(percent);
+  var lineColorIndex = 0;
+  var total = 0;
+  for (var i = 0; i < currentPercents.length; i++) {
+      //Percent used for box color
+      var percent = currentPercents[i];
+      var miniSquareColor = colors(percent);
 
-        //Get the color of the box, and update the line colors on the papre glyph
-        var rgb = miniSquareColor.split(",");
-        lineColors[Math.floor(lineColorIndex)][0].push(parseInt(rgb[0].substring(4, rgb[0].length)));
-        lineColors[Math.floor(lineColorIndex)][1].push(parseInt(rgb[1]));
-        lineColors[Math.floor(lineColorIndex)][2].push(parseInt(rgb[2].substring(0, rgb[2].length - 1)));
+      //Get the color of the box, and update the line colors on the papre glyph
+      var rgb = miniSquareColor.split(",");
+      lineColors[Math.floor(lineColorIndex)][0].push(parseInt(rgb[0].substring(4, rgb[0].length)));
+      lineColors[Math.floor(lineColorIndex)][1].push(parseInt(rgb[1]));
+      lineColors[Math.floor(lineColorIndex)][2].push(parseInt(rgb[2].substring(0, rgb[2].length - 1)));
 
-        var redNew = 0;
-        var greenNew = 0;
-        var blueNew = 0;
-        for (var j = 0; j < lineColors[Math.floor(lineColorIndex)][0].length; j++) {
-            redNew += lineColors[Math.floor(lineColorIndex)][0][j];
-            greenNew += lineColors[Math.floor(lineColorIndex)][1][j];
-            blueNew += lineColors[Math.floor(lineColorIndex)][2][j];
-        }
-        redNew /= lineColors[Math.floor(lineColorIndex)][0].length;
-        greenNew /= lineColors[Math.floor(lineColorIndex)][0].length;
-        blueNew /= lineColors[Math.floor(lineColorIndex)][0].length;
+      var redNew = 0;
+      var greenNew = 0;
+      var blueNew = 0;
+      for (var j = 0; j < lineColors[Math.floor(lineColorIndex)][0].length; j++) {
+          redNew += lineColors[Math.floor(lineColorIndex)][0][j];
+          greenNew += lineColors[Math.floor(lineColorIndex)][1][j];
+          blueNew += lineColors[Math.floor(lineColorIndex)][2][j];
+      }
+      redNew /= lineColors[Math.floor(lineColorIndex)][0].length;
+      greenNew /= lineColors[Math.floor(lineColorIndex)][0].length;
+      blueNew /= lineColors[Math.floor(lineColorIndex)][0].length;
 
-        var lineColor = "rgb(" + redNew + "," + greenNew + "," + blueNew + ")"
-        for (var j = 0; j < paperGlyphLines[Math.floor(lineColorIndex)][0].length; j++) {
-            paperGlyphLines[Math.floor(lineColorIndex)][0][j].style('stroke', lineColor);
-        }
+      var lineColor = "rgb(" + redNew + "," + greenNew + "," + blueNew + ")"
+      for (var j = 0; j < paperGlyphLines[Math.floor(lineColorIndex)][0].length; j++) {
+          paperGlyphLines[Math.floor(lineColorIndex)][0][j].style('stroke', lineColor);
+      }
 
-        //Create the ID for the miniSquare's hitbox
-        var miniSquareHitboxID = "minSqrHB_" + label + "_" + i.toString();
-        miniSquares.push(miniSquareHitboxID); //Store the minisquare's id
+      //Create the ID for the miniSquare's hitbox
+      var miniSquareHitboxID = "minSqrHB_" + label + "_" + i.toString();
+      miniSquares.push(miniSquareHitboxID); //Store the minisquare's id
 
-        //Draw the miniSquare
-        if (currBoxHeight < 15) {
-            boxText = "";
-        }
-        drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeY, miniSquareColor, currentData[i], miniSquareHitboxID, label, i);
-        total += currentData[i];
+      //Draw the miniSquare
+      if (currBoxHeight < 15) {
+          boxText = "";
+      }
+      drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeY, miniSquareColor, currentData[i], miniSquareHitboxID, label, i);
+      total += currentData[i];
 
 
 
-        //Increment the main box's location
-        locationY += miniSquareSizeY + currBoxPadding;
-        lineColorIndex += (lineColors.length / currentPercents.length);
-    }
+      //Increment the main box's location
+      locationY += miniSquareSizeY + currBoxPadding;
+      lineColorIndex += (lineColors.length / currentPercents.length);
+  }
 
-    verticalContainer.attr("height", locationY); //Change the height to be the max allowed
-    verticalContainerHitbox.attr("height", locationY); //Change the height to be the max allowed
-    totalText.attr("y", locationY + 20); //Change the location of the total label
-    totalText.text(shortenVal(total)); //Change the total label data
-    svgContainer.attr("height", locationY + 25); //Change the height of the container for the svg objects so no clipping occurs
+  verticalContainer.attr("height", locationY); //Change the height to be the max allowed
+  verticalContainerHitbox.attr("height", locationY); //Change the height to be the max allowed
+  totalText.attr("y", locationY + 20); //Change the location of the total label
+  totalText.text(shortenVal(total)); //Change the total label data
+  svgContainer.attr("height", locationY + 25); //Change the height of the container for the svg objects so no clipping occurs
 
-    //On click select the year
-    verticalContainerHitbox.on("click", function () {
-        d3.event.stopPropagation();
+  //On click select the year
+  verticalContainerHitbox.on("click", function () {
+      d3.event.stopPropagation();
 
-        //If shift is pressed, dont process the selection - else do
-        var shiftPressed = false;
-        if (d3.event.shiftKey) {
-            shiftPressed = true;
-        } else {
-            removeAllSelections();
-        }
+      //If shift is pressed, dont process the selection - else do
+      var shiftPressed = false;
+      if (d3.event.shiftKey) {
+          shiftPressed = true;
+      } else {
+          removeAllSelections();
+      }
 
-        for (var i = 0; i < miniSquares.length; i++) {
-            var tmp = miniSquares[i].split("_");
-            if (tmp[1] == label) {
-                var currSelection = tmp[1] + ": " + (parseInt(tmp[2]) * currIncrement) + "%-" + ((parseInt(tmp[2]) * currIncrement) + currIncrement) + "%";
-                //MultipleSelection() deals with having a variety of selections, and when to process them
-                multipleSelection(currSelection, true, shiftPressed, d3.select("#" + miniSquares[i]));
-            }
-        }
+      for (var i = 0; i < miniSquares.length; i++) {
+          var tmp = miniSquares[i].split("_");
+          if (tmp[1] == label) {
+              var currSelection = tmp[1] + ": " + (parseInt(tmp[2]) * currIncrement) + "%-" + ((parseInt(tmp[2]) * currIncrement) + currIncrement) + "%";
+              //MultipleSelection() deals with having a variety of selections, and when to process them
+              multipleSelection(currSelection, true, shiftPressed, d3.select("#" + miniSquares[i]));
+          }
+      }
 
-        //Switch to the papers if shift is not pressed
-        if (shiftPressed == false) {
-            switchToPapers(selections);
-        }
-    });
+      //Switch to the papers if shift is not pressed
+      if (shiftPressed == false) {
+          switchToPapers(selections);
+      }
+  });
 }
 
 //Draws the indiviual squares on the main screen
@@ -709,8 +713,8 @@ function prepContainers(increment) {
     svgContainers = [];
     d3.select("#homeRow").remove();
     var homeRow = d3.select("#pills-home").append("div").attr("id", "homeRow");
-    let distChart = homeRow.append("div").attr("id", "distChart").attr("class", "nopadding");
-    let yearCols = homeRow.append("div").attr("id", "years").attr("class", "nopadding");
+    let distChart = homeRow.append("div").attr("id", "distChart").attr("class", "nopadding ");
+    let yearCols = homeRow.append("div").attr("id", "years").attr("class", "nopadding ");
     for (var i = 0; i < years.length; i++) {
         if (i == 0) {
             var maxFirstContainerSize = 100 / increment;
@@ -724,10 +728,12 @@ function prepContainers(increment) {
             );
         }
         svgContainers.push(yearCols.append("div")
-          .attr("class", "col-xs-* nopadding")
-          .attr("height", 785).append("svg")
-          .attr("width", 87)
-          .attr("id", "svg-"+years[i].articleyear)
+          .attr("class", "col-xs-* nopadding temp-load")
+          .attr("height", 785)
+          .attr("id", "container-"+years[i].articleyear)
+          .append("svg")
+            .attr("width", 87)
+            .attr("id", "svg-"+years[i].articleyear)
         );
 
     }
@@ -795,7 +801,7 @@ function filterYearResults(increment, year) {
 
     //Get the percent counts using the max hitcounts - used for the color on the box
     for (var i = 0; i < maxLabels; i++) {
-        var max = filteredYearCounts[years[0]['articleyear']][i][0];
+        var max = 0;
         var min = 0;
 
         for (var j = 0; j < yearsToChange.length; j++) {

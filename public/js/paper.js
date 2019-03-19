@@ -812,7 +812,7 @@ function setPopoverContent(articleid) {
       full_text = tagCitationSentiment(articleid, full_text);
       // now markup search query words
       for(let query of currSearchQuery) {
-        full_text = full_text.replace(query, "<mark>"+query+"</mark>");
+        full_text = full_text.replace(query, "<span class='query-text'>"+query+"</span>");
       }
       //********************************************************* JAY250220191
 
