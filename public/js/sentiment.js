@@ -133,8 +133,8 @@ function tagCitationSentiment(articleid, text) {
         , value = sentiment_signals[key][i].value;
       if(rule.exec(new_text)) {
         // markup the existence of this rule in the text
-        new_text = new_text.replace(rule, "<span class='sentiment " + key
-          + "'>$1</span>");
+        new_text = new_text.replace(rule, "<span class='sentiment-text'>"
+          + sentiment_signals[key][i].signal + "</span>");
         score += value; // sum score
         n++;
       }
@@ -169,7 +169,7 @@ function processSignals(query, year, recache=0) {
       // done so let's remove this from the queue
       process_queue[year] = undefined;
       score_data[year] = processSentimentBins(data);;
-      if(currentLabel == 2) drawSentimentColumn(year);
+      if(overlay_sentiment) drawSentimentColumn(year);
     },
     error: function() {
       process_queue[year] = undefined;
@@ -215,7 +215,7 @@ function processSentimentBins(data) {
 function drawSentimentColumn(year) {
   // this is okay because at this point, the column has been drawn
   let cat_list = Object.keys(sentiment_categories);
-
+  if($(".sentiment.overlay-"+year).length > 0) return; // already drawn
   // iterate for each incremental block in this column
   for(let i=0; i<100/currIncrement; i++) {
     let $box = $("." + ([year,"minsqr","box-"+i].join(".")))
@@ -233,7 +233,7 @@ function drawSentimentColumn(year) {
           .attr("height", box_height)
           .attr("x", minsqr.attr("x"))
           .attr("y", minsqr.attr("y"))
-          .attr("class", "sentiment")
+          .attr("class", "sentiment overlay-"+year)
           .style("fill", default_color)
           .style("opacity", 0.5);
         continue;
@@ -248,12 +248,12 @@ function drawSentimentColumn(year) {
           .attr("height", box_height)
           .attr("x", parseFloat(minsqr.attr("x"))+box_width-x_offset)
           .attr("y", minsqr.attr("y"))
-          .attr("class", "sentiment")
+          .attr("class", "sentiment overlay-"+year)
           .style("fill", sentiment_categories[cat].color)
           .style("opacity", (filteredYearPercents[year][1][i] * 0.6)+0.3);
       }
   }
-  if(currentLabel == 2) {
+  if(overlay_sentiment) {
     $(".sentiment").show();
   }
 }
