@@ -328,11 +328,12 @@ function transformSignalData(results, replace_all) {
 // redraw all html elements
 function updateInterface() {
   updateCategoryInterface();
-  updateSignalInterface();
+  // drawSignalManager();
 }
 
 // redraw category elements
 function updateCategoryInterface() {
+  // update global html elements to reflect any changes to categories
   $("#categories").html("");
   $(".custom-menu").html("");
   Object.keys(sentiment_categories).forEach( id => {
@@ -350,11 +351,6 @@ function updateCategoryInterface() {
     html = "<li class='menu-btn' onclick='addSignal(" + id + ");'>" + cat.name + "</li>";
     $(".custom-menu").append($(html));
   });
-}
-
-// redraw signal elements
-function updateSignalInterface() {
-    // nothing to do here yet
 }
 
 // get a list of similar words
