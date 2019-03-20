@@ -356,3 +356,15 @@ function updateCategoryInterface() {
 function updateSignalInterface() {
     // nothing to do here yet
 }
+
+// get a list of similar words
+function getSimilarWords(word, callback) {
+  $.ajax({
+    type: "GET"
+    , url: currentURL + "w2v/similar?word=" + word
+    , success: function(results) {
+      callback(results);
+    }
+    , async: true
+  });
+}

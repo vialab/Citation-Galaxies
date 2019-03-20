@@ -326,7 +326,7 @@ app.get('/w2v/similar', function(req, res, next) {
     let payload = [];
     for(let i=1; i<lines.length; i++) {
       let row = lines[i].split(",");
-      if(row.length < 1) {
+      if(row.length < 1 && row[0] != "") {
         continue;
       }
       let temp = {};

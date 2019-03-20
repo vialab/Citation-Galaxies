@@ -2,7 +2,7 @@ import sys
 import pprint
 from gensim.models import Word2Vec
 
-EMBEDDINGS_WORD2VEC_MODEL_FILE = "./model/word2vec.model"
+EMBEDDINGS_WORD2VEC_MODEL_FILE = "./model/vectors/word2vec.model"
 
 def get_model():
     model = Word2Vec.load(EMBEDDINGS_WORD2VEC_MODEL_FILE)
