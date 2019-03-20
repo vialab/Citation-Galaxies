@@ -1052,4 +1052,13 @@ function pollProcessProgress(process_name, callback) {
 
 $(document).ready(function () {
     $(".toast").toast({ "delay": 2000 });
+    currentURL = window.location.origin + "/";
+
+    // hide the rules testing harness for local use only
+    // though we hide it, it should not contain system breaking functionality
+    if(currentURL.indexOf("localhost") >= 0) {
+      $("#pills-rules-tab").show();
+    } else {
+      $("#pills-rules-tab").hide();
+    }
 });

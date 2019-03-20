@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>Citation Networks</title>
+    <title>Citation Analysis</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -33,7 +33,7 @@
         <div class="navbar" id="collapsingNavbar">
           <ul class="nav nav-pills">
                 <li class="nav-item">
-                  <a class="navbar-brand abs" href="#">Citation Networks</a>
+                  <a class="navbar-brand abs" href="#">Citation Analysis</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" id="pills-home-tab" data-toggle="pill" href="#pills-home" role="tab"
@@ -44,12 +44,12 @@
                         aria-controls="pills-papers" aria-selected="false" onclick="if(!document.getElementById('pills-papers-tab').classList.contains('disabled')){ document.getElementById('paperSortButton').style.display = null; d3.select('#groupByButton').style('display', 'none'); d3.select('#exportButton').style('display', 'none');}">Papers</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link disabled" id="pills-networks-tab" data-toggle="pill" href="#pills-networks" role="tab"
-                        aria-controls="pills-networks" aria-selected="false" onclick="">Network</a>
+                    <a class="nav-link" id="pills-rules-tab" data-toggle="pill" href="#pills-rules" role="tab"
+                        aria-controls="pills-rules" aria-selected="false" onclick="drawCategoryList();">Rules</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" id="pills-rules-tab" data-toggle="pill" href="#pills-rules" role="tab"
-                        aria-controls="pills-rules" aria-selected="false" onclick="">Rules</a>
+                    <a class="nav-link" id="pills-admin-tab" data-toggle="pill" href="#pills-admin" role="tab"
+                        aria-controls="pills-rules" aria-selected="false" onclick="">Admin</a>
                 </li>
             </ul>
           <div id="navOptions">
@@ -181,63 +181,25 @@
                   </div>
               </div>
             </div>
-            <div class="tab-pane fade" id="pills-networks" role="tabpanel" aria-labelledby="pills-networks-tab">
-                <br>
-            </div>
             <div class="tab-pane fade" id="pills-rules" role="tabpanel" aria-labelledby="pills-rules-tab">
-
-
-
+              <div id="vis-container">
+                <ul id="crumb-list">
+                  <li class="crumb active" onclick="drawCategoryList();">Categories</li>
+                </ul>
+                <div id="category-list" class="vis-list"></div>
+                <div id="signal-list" class="vis-list"></div>
+                <div id="signal-vis"></div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="pills-admin" role="tabpanel" aria-labelledby="pills-admin-tab">
 
               <div class="container">
                 <div class="row">
                     <div class="col">
-                      <p>This is just a testing harness.. will build out interface later. Press buttons below to load a table</p>
                       <button type="button" class="btn btn-secondary" onclick="loadCategoryTable()">Categories</button>
                       <button type="button" class="btn btn-secondary" onclick="loadSignalTable()">Signals</button>
                       <br/><br/><br/>
-
-
-
-
-                      <form class="form-inline" id="ruleForm">
-                        <!-- <i>vvv This form should have input for each column loaded in results table</i>
-                        <br/><br/>
-                        <div class="form-group">
-                            <label for="ruleInput">Value to search:</label>
-                            <input id="ruleInput" type="text" class="form-control" placeholder="Enter category">
-                        </div>
-
-                        <div class="form-check form-check-inline">
-                            <input checked class="form-check-input" type="radio" name="signal_category_search" id="signalRadio" value="signal">
-                            <label class="form-check-label" for="signalRadio">Signal</label>
-                        </div>
-
-                        <div class="form-check form-check-inline">
-                              <input class="form-check-input" type="radio" name="signal_category_search" id="categoryRadio" value="category">
-                              <label class="form-check-label" for="categoryRadio">Category</label>
-                        </div>
-                        <div class="form-group mt-2">
-                              <button type="submit" class="btn btn-primary">Submit</button>
-                              <i>&lt;&lt;&lt;-- Submit button should create a new row in the database for the table that is loaded</i>
-                        </div> -->
-
-                        <!-- <div class="form-group">
-
-                                    <label for="inputPassword2" class="sr-only">Password</label>
-                                    <input type="text" class="form-control" id="inputPassword2" placeholder="Password">
-                                    <input type="password" class="form-control" id="inputPassword2" placeholder="Password">
-                                    <input type="password" class="form-control" id="inputPassword2" placeholder="Password">
-                                    <input type="password" class="form-control" id="inputPassword2" placeholder="Password">
-                                <button type="submit" class="btn btn-primary mb-2">Confirm identity</button>
-                        </div> -->
-
-
-                      </form>
-
-
-
-
+                      <form class="form-inline" id="ruleForm"></form>
                     </div>
                 </div>
                 <!-- Table for the results -->
@@ -250,14 +212,6 @@
                     </div>
                 </div>
               </div>
-
-
-
-
-
-
-
-
 
             </div>
         </div>
