@@ -31,12 +31,13 @@ function drawSignalList(cat_id) {
   $("#crumb-list .crumb:gt(0)").remove();
   $("#crumb-list .crumb").removeClass("active");
   $("#crumb-list").append("<li class='crumb active' onclick='drawSignalList("
-    + cat_id + ")'>"+category.name+"</li>");
+    + cat_id + ")'><span>"+category.name+"</span></li>");
   // clear the container
   $container.html("");
-  $container.css("background-color", category.color);
+  $container.css("background-color", hexToRgba(category.color, 0.5));
   sentiment_signals[cat_id].forEach((row,i) => {
     let $elem = $("<div class='vis-signal'></div>");
+    $elem.css("background-color", category.color);
     $elem.append("<h2>" + row.signal + "</h2>");
     $elem.attr("onclick", "drawSignalVis(" + cat_id + ", " + i + ");");
     $container.append($elem);
@@ -45,20 +46,33 @@ function drawSignalList(cat_id) {
 
 // draw a vis for a specific signal
 function drawSignalVis(cat_id, sig_idx) {
-  let $container = $("#signal-list")
+  let $container = $("#signal-vis")
     , category = sentiment_categories[cat_id]
     , signal = sentiment_signals[cat_id][sig_idx];
   // show the appropriate list
   $("#category-list").hide();
-  $("#signal-vis").hide();
-  $("#signal-list").show();
+  $("#signal-list").hide();
+  $("#signal-vis").show();
   // clear and add any applicable crumbs
   $("#crumb-list .crumb:gt(1)").remove();
   $("#crumb-list .crumb").removeClass("active");
   $("#crumb-list").append("<li class='crumb active' onclick='drawSignalVis("
-    + cat_id + ", " + sig_idx + ")'>"+signal.signal+"</li>");
+    + cat_id + ", " + sig_idx + ")'><span>"+signal.signal+"</span></li>");
   // clear the container
   $container.html("");
   $container.css("background-color", category.color);
   $container.append("<h2>" + signal.signal + "</h2>");
+}
+
+// convert some hex to rgb
+// NOTE: NEED TO MAKE SURE ALL COLORS SAVED FOR CATEGORIES ARE IN HEX
+function hexToRgba(hex, alpha) {
+    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    let rgb = result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+    if(!rgb) return hex;
+    return "rgba("+rgb.r+","+rgb.g+","+rgb.b+","+alpha+")";
 }
