@@ -1,5 +1,4 @@
 import sys
-import pprint
 from gensim.models import Word2Vec
 
 EMBEDDINGS_WORD2VEC_MODEL_FILE = "./model/vectors/word2vec.model"
