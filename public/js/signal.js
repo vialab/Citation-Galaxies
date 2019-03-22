@@ -9,9 +9,8 @@ function Signal(id, cat_id, signal, value=0) {
   }
   this.signal = signal.trim();
   this.value = value;
-  this.filter_distance = 0;
-  this.custom_filters = [];
-  this.negation_distance = 4;
+  this.distance = 0;
+  this.filters = [];
   this.restrictions = [];
   this.id = id;
   this.category = cat_id;
