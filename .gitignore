@@ -3,3 +3,4 @@ start_server.sh
 node_modules
 model/venv
 model/vectors
+model/index
