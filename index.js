@@ -339,6 +339,22 @@ app.get('/w2v/similar', function(req, res, next) {
 });
 
 
+// get search engine results
+app.get('/search', function(req, res, next) {
+  // var word = Buffer.from(req.body.data).toString("base64");
+  var word = Buffer.from(req.query.data).toString("base64");
+  exec(__dirname+"/model/search.sh " + word, function(error, stdout, stderr) {
+    if(error) {
+      console.log("exec error: " + error);
+      return res.status(500);
+
+    }
+    let lines = JSON.parse(stdout);
+    return res.json(lines);
+  });
+});
+
+
 // dynamically update a row in our database -- measures have been taken to keep
 // this function safe from injection (dbschema.js)
 // req.body.data should be a JSON object with an "id" key
