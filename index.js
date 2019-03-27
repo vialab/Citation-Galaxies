@@ -230,6 +230,7 @@ app.post('/queryCountsPaper', function(req, res, next) {
   });
 });
 
+// hook to dynamically pull data using the dbschema api markup
 app.post("/api/*", function(req, res, next) {
   // all requests need a cookie
   let cookie_id = req.cookies.cookieName;
@@ -238,13 +239,13 @@ app.post("/api/*", function(req, res, next) {
   let full_url = req.originalUrl.split("/");
   let table_name = full_url[full_url.length-1];
 
-  if(!Object.keys(dbschema.query).includes(table_name)) {
+  if(!Object.keys(dbschema.api).includes(table_name)) {
     return res.json({});
   }
 
-  let query = dbschema.query[table_name].query;
+  let query = dbschema.api[table_name].query;
   let values = JSON.parse(req.body.values);
-  if(dbschema.query[table_name].require_cookie) values["cookieid"] = cookie_id;
+  if(dbschema.api[table_name].require_cookie) values["cookieid"] = cookie_id;
   pool.connect((err, client, done) => {
     pool.query(named(query)(values), function(err, result) {
       done();
@@ -252,7 +253,10 @@ app.post("/api/*", function(req, res, next) {
         console.log(err);
         return res.status(500);
       }
-      return res.json({"data":result.rows, "name":table_name});
+      return res.json({"data":result.rows
+        , "actions": dbschema.api[table_name].actions
+        ,"name":table_name
+      });
     });
   });
 });
