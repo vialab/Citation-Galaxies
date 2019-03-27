@@ -58,7 +58,7 @@ function loadData(url, callback, params={}, _async=true) {
         'values': JSON.stringify(params)
     },
     success: function(results) {
-      callback(results["data"], results["actions"], results["name"]);
+      callback(results["data"], results["links"], results["actions"], results["name"]);
     },
     async: _async
   });
@@ -77,13 +77,13 @@ function clearCrudTable() {
 function loadTable(table_name, params, draw_table=true, callback=undefined) {
   if(typeof(params) == "string") params = JSON.parse(params);
   clearCrudTable();
-  loadData(table_name, function (results, actions, name) {
+  loadData(table_name, function (results, links, actions, name) {
     if(typeof(callback) != "undefined") callback(results);
-    if(draw_table) populateTable(results, name, $("#ruleTable"), actions);
+    if(draw_table) populateTable(results, name, $("#ruleTable"), links, actions);
   }, params);
 }
 
-function populateTable(signals, name, table, actions) {
+function populateTable(signals, name, table, links, actions) {
     // Create the header row
     let tableHeader = $("<thead></thead>").appendTo(table);
     let tableBody = $("<tbody></tbody>").appendTo(table);
@@ -124,22 +124,31 @@ function populateTable(signals, name, table, actions) {
         for (let i = 1; i < headers.length; i++) {
             $("<td id='" + headers[i] + "'>" + signal[headers[i]] + "</td>").appendTo(row);
         }
-
-        // Add the remove button
-        if(typeof(actions) != "undefined") {
-          Object.keys(actions).forEach(key => {
-            let action = actions[key];
+        // create link buttons
+        if(typeof(links) != "undefined") {
+          Object.keys(links).forEach(key => {
+            let link = links[key];
             let params = {};
-            Object.keys(action.params).forEach(id => {
-              params[action.params[id]] = signal[id];
+            Object.keys(link.params).forEach(id => {
+              params[link.params[id]] = signal[id];
             })
             let html = "<button class='btn btn-primary ml-2' onclick='loadTable(\""
-              + action.query + "\","  + JSON.stringify(params).replace(/\\"/g, '\'')
+              + link.query + "\","  + JSON.stringify(params).replace(/\\"/g, '\'')
               + ")'>" + key + "</button>";
             $(html).appendTo(row);
           });
         }
-
+        // create action buttons that perform some sort of "action"
+        if(typeof(actions) != "undefined") {
+          Object.keys(actions).forEach(key => {
+            let action = actions[key];
+            let params = {};
+            let html = "<button class='btn btn-primary ml-2' onclick='"
+              + action + "(this)'>" + key + "</button>";
+            $(html).appendTo(row);
+          });
+        }
+        // Add the remove button
         $("<button class='btn btn-primary ml-2' onclick=''> X </button>").appendTo(row);
 
         // On a cell click allow the row to be edited

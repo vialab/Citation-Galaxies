@@ -254,6 +254,7 @@ app.post("/api/*", function(req, res, next) {
         return res.status(500);
       }
       return res.json({"data":result.rows
+        , "links": dbschema.api[table_name].links
         , "actions": dbschema.api[table_name].actions
         ,"name":table_name
       });
