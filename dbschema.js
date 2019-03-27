@@ -2,14 +2,55 @@ var fs = require("fs")
 var dbschema = JSON.parse(fs.readFileSync("dbschema.json"));
 const dbquery = {
   signal: {
-    query: "select id, signalcategoryid, signal, score from signal \
+    query: "select id, signalcategoryid, signal, score, distance from signal \
       where enabled and cookieid=:cookieid;"
+    , require_cookie: true
+    , actions: { // to be used for more interactive/heirarchical tables
+        "filters": {
+          "params":{"id":"parentid"} // potential parameters to pass into next query
+          , "query": "filter" // name of another query
+        }
+        , "restrictions": {
+          "params":{"id":"parentid"}
+          , "query": "restriction"
+        }
+      }
+  }
+  , signalbytype: {
+    query: "select id, signalcategoryid, signal, score, distance from signal \
+      where enabled and signalcategoryid=:signalcategoryid and cookieid=:cookieid;"
+    , require_cookie: true
+    , actions: { // to be used for more interactive/heirarchical tables
+        "filters": {
+          "params":{"id":"parentid"} // potential parameters to pass into next query
+          , "query": "filter" // name of another query
+        }
+        , "restrictions": {
+          "params":{"id":"parentid"}
+          , "query": "restriction"
+        }
+      }
+  }
+  , filter: {
+    query: "select id, signalcategoryid, signal, distance from signal \
+      where enabled and signaltypeid=2 and parentid=:parentid and cookieid=:cookieid"
+    , require_cookie: true
+  }
+  , restriction: {
+    query: "select id, signalcategoryid, signal, distance from signal \
+      where enabled and signaltypeid=3 and parentid=:parentid and cookieid=:cookieid"
     , require_cookie: true
   }
   , signalcategory: {
     query: "select id, catname, score, color from signalcategory where enabled\
       and cookieid=:cookieid;"
     , require_cookie: true
+    , actions: {
+      "signals": {
+        "params": {"id":"signalcategoryid"}
+        , "query": "signalbytype"
+      }
+    }
   }
   , signaltype: {
     query: "select * from signaltype"
@@ -21,7 +62,7 @@ module.exports = {
   hasTable: hasTable
   , hasColumn: hasColumn
   , schema: dbschema
-  , query: dbquery
+  , api: dbquery
 };
 
 // does our database have this table?

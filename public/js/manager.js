@@ -58,7 +58,7 @@ function loadData(url, callback, params={}, _async=true) {
         'values': JSON.stringify(params)
     },
     success: function(results) {
-      callback(results["data"], results["name"]);
+      callback(results["data"], results["actions"], results["name"]);
     },
     async: _async
   });
@@ -73,27 +73,17 @@ function clearCrudTable() {
     $("#ruleForm")[0].reset();
 }
 
-// load category results from server and populate the results table
-function loadCategoryTable() {
-    clearCrudTable();
-    loadData("signalcategory", function (results) {
-        // since we are loading the categories again, may as well update our json
-        transformCategoryData(results);
-        populateTable(results, $("#ruleTable"));
-    });
+// dynamically load data from a query and show results in a table
+function loadTable(table_name, params, draw_table=true, callback=undefined) {
+  if(typeof(params) == "string") params = JSON.parse(params);
+  clearCrudTable();
+  loadData(table_name, function (results, actions, name) {
+    if(typeof(callback) != "undefined") callback(results);
+    if(draw_table) populateTable(results, name, $("#ruleTable"), actions);
+  }, params);
 }
 
-// same as above, but will probably need custom code later on.
-function loadSignalTable() {
-    clearCrudTable();
-    loadData("signal", function (results) {
-        // since we are loading the signals again, may as well update our json
-        transformSignalData(results);
-        populateTable(results, $("#ruleTable"));
-    });
-}
-
-function populateTable(signals, table) {
+function populateTable(signals, name, table, actions) {
     // Create the header row
     let tableHeader = $("<thead></thead>").appendTo(table);
     let tableBody = $("<tbody></tbody>").appendTo(table);
@@ -106,7 +96,6 @@ function populateTable(signals, table) {
     // Create a array to hold the keys from the json
     // To be used as the header to the table
     let headers = [];
-
     // Populate the header row
     for (let key in signals[0]) {
         // Used to prevent showing the id row
@@ -137,6 +126,20 @@ function populateTable(signals, table) {
         }
 
         // Add the remove button
+        if(typeof(actions) != "undefined") {
+          Object.keys(actions).forEach(key => {
+            let action = actions[key];
+            let params = {};
+            Object.keys(action.params).forEach(id => {
+              params[action.params[id]] = signal[id];
+            })
+            let html = "<button class='btn btn-primary ml-2' onclick='loadTable(\""
+              + action.query + "\","  + JSON.stringify(params).replace(/\\"/g, '\'')
+              + ")'>" + key + "</button>";
+            $(html).appendTo(row);
+          });
+        }
+
         $("<button class='btn btn-primary ml-2' onclick=''> X </button>").appendTo(row);
 
         // On a cell click allow the row to be edited

@@ -196,8 +196,8 @@
               <div class="container">
                 <div class="row">
                     <div class="col">
-                      <button type="button" class="btn btn-secondary" onclick="loadCategoryTable()">Categories</button>
-                      <button type="button" class="btn btn-secondary" onclick="loadSignalTable()">Signals</button>
+                      <button type="button" class="btn btn-secondary" onclick="loadTable('signalcategory', undefined, true, transformCategoryData)">Categories</button>
+                      <button type="button" class="btn btn-secondary" onclick="loadTable('signal', undefined, true, transformSignalData)">Signals</button>
                       <br/><br/><br/>
                       <form class="form-inline" id="ruleForm"></form>
                     </div>
