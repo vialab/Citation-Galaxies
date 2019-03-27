@@ -1,10 +1,27 @@
 var fs = require("fs")
 var dbschema = JSON.parse(fs.readFileSync("dbschema.json"));
+const dbquery = {
+  signal: {
+    query: "select id, signalcategoryid, signal, score from signal \
+      where enabled and cookieid=:cookieid;"
+    , require_cookie: true
+  }
+  , signalcategory: {
+    query: "select id, catname, score, color from signalcategory where enabled\
+      and cookieid=:cookieid;"
+    , require_cookie: true
+  }
+  , signaltype: {
+    query: "select * from signaltype"
+    , require_cookie: false
+  }
+};
 
 module.exports = {
   hasTable: hasTable
   , hasColumn: hasColumn
   , schema: dbschema
+  , query: dbquery
 };
 
 // does our database have this table?

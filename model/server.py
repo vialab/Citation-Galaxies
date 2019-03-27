@@ -7,7 +7,7 @@ from bottle import route, run, request, response
 from gensim.models import Word2Vec
 
 def get_model():
-    model = Word2Vec.load("./vectors/word2vec.model")
+    model = Word2Vec.load("./model/vectors/word2vec.model")
     return model
 
 @route("/similarity", method="GET")
@@ -29,16 +29,20 @@ def do_search():
     data = request.query
     q = qp.parse(data["word"])
     results = []
-    with ix.searcher() as searcher:
-        hits = searcher.search(q)
-        for hit in hits:
-            h = dict(hit)
-            results.append({"id":h["id"]})
+    # with ix.searcher() as searcher:
+    n = None
+    if "limit" in data:
+        n = int(data["limit"])
+    hits = searcher.search(q, limit=n)
+    for hit in hits:
+        h = dict(hit)
+        results.append({"id":h["id"]})
     response.content_type = "application/json"
     return dumps(results)
 
 w2v = get_model()
-ix = open_dir(dirname="./index")
+ix = open_dir(dirname="./model/index")
+searcher = ix.searcher()
 qp = QueryParser("content", schema=ix.schema)
 
-run(host="localhost", port="5431", debug=True)
+run(host="localhost", port="5431", debug=True, threaded=True)
