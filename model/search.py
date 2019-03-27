@@ -18,4 +18,4 @@ qp = QueryParser("content", schema=ix.schema)
 q = qp.parse(decodeInput())
 with ix.searcher() as searcher:
     results = searcher.search(q, limit=10)
-    print(dumps(dict(results)))
+    print(dumps(dict(response)))

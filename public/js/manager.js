@@ -47,6 +47,23 @@ $(document).ready(function () {
 
 });
 
+
+// query for some data
+function loadData(url, callback, params={}, _async=true) {
+  // first get the categories
+  $.ajax({
+    type: 'POST',
+    url: currentURL + "api/" + url,
+    data: {
+        'values': JSON.stringify(params)
+    },
+    success: function(results) {
+      callback(results["data"], results["name"]);
+    },
+    async: _async
+  });
+}
+
 // clear the form and clear the table of any results
 function clearCrudTable() {
     let table = $("#ruleTable");
@@ -59,7 +76,7 @@ function clearCrudTable() {
 // load category results from server and populate the results table
 function loadCategoryTable() {
     clearCrudTable();
-    loadData("categories", function (results) {
+    loadData("signalcategory", function (results) {
         // since we are loading the categories again, may as well update our json
         transformCategoryData(results);
         populateTable(results, $("#ruleTable"));
@@ -69,7 +86,7 @@ function loadCategoryTable() {
 // same as above, but will probably need custom code later on.
 function loadSignalTable() {
     clearCrudTable();
-    loadData("signals", function (results) {
+    loadData("signal", function (results) {
         // since we are loading the signals again, may as well update our json
         transformSignalData(results);
         populateTable(results, $("#ruleTable"));
@@ -120,7 +137,7 @@ function populateTable(signals, table) {
         }
 
         // Add the remove button
-        $("<button class='btn btn-primary ml-2'> X </button>").appendTo(row);
+        $("<button class='btn btn-primary ml-2' onclick=''> X </button>").appendTo(row);
 
         // On a cell click allow the row to be edited
         row.find("td").click(function (event) {

@@ -23,10 +23,10 @@ let score_data = {};
 let default_color = "#bbb";
 
 $(document).ready(function() {
-  loadData("categories", function(results) {
+  loadData("signalcategory", function(results) {
       sentiment_signals = {};
       transformCategoryData(results);
-      loadData("signals", function(signals) {
+      loadData("signal", function(signals) {
         transformSignalData(signals);
         updateInterface();
       });
@@ -102,7 +102,7 @@ function addSignal(category_id, draw_rules=false) {
 
 // delete a rule
 function removeSignal(elem) {
-  let idx = $(elem).attr("id").split("-")
+  let idx = $(elem).attr("id").split("_")
   , rules = sentiment_signals[idx[0]][idx[1]];
 
   $.ajax({
@@ -276,19 +276,6 @@ function updateSentimentRules(callback) {
   // any errors would result into no updates on the interface
 }
 
-// query for some data
-function loadData(url, callback, _async=true) {
-  // first get the categories
-  $.ajax({
-    type: 'GET',
-    url: currentURL + url,
-    success: function(results) {
-      callback(results);
-    },
-    async: _async
-  });
-}
-
 // load category data into json object
 function transformCategoryData(results, replace_all=false) {
   if(replace_all) {
@@ -300,7 +287,7 @@ function transformCategoryData(results, replace_all=false) {
       , "value": cat.score
       , "color": cat.color
     }
-    sentiment_signals[cat.id] = [];
+    if(!sentiment_signals[cat.id]) sentiment_signals[cat.id] = [];
   }
 }
 

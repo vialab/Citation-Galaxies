@@ -7,6 +7,7 @@ var crypto = require('crypto');
 var master_cookie = "196d2081988549fb86f38cf1944e79a9";
 var app = express();
 var dbschema = require("./dbschema.js");
+var named = require("yesql").pg;
 const { exec } = require('child_process');
 const pool = new pg.Pool({
     user: process.env.USER,
@@ -229,44 +230,32 @@ app.post('/queryCountsPaper', function(req, res, next) {
   });
 });
 
-
-// get a list of available categories for scoring purposes
-app.get('/categories', function(req, res, next) {
+app.post("/api/*", function(req, res, next) {
+  // all requests need a cookie
   let cookie_id = req.cookies.cookieName;
   if(master_cookie != "") cookie_id = master_cookie;
+
+  let full_url = req.originalUrl.split("/");
+  let table_name = full_url[full_url.length-1];
+
+  if(!Object.keys(dbschema.query).includes(table_name)) {
+    return res.json({});
+  }
+
+  let query = dbschema.query[table_name].query;
+  let values = JSON.parse(req.body.values);
+  if(dbschema.query[table_name].require_cookie) values["cookieid"] = cookie_id;
   pool.connect((err, client, done) => {
-    pool.query("select id, catname, score, color from signalcategory where enabled\
-     and cookieid=$1;"
-      , [cookie_id]
-      , function(err, result) {
+    pool.query(named(query)(values), function(err, result) {
       done();
       if(err) {
         console.log(err);
         return res.status(500);
       }
-      return res.json(result.rows);
+      return res.json({"data":result.rows, "name":table_name});
     });
   });
 });
-
-
-// get a list of rules to score documents on
-app.get('/signals', function(req, res, next) {
-  let cookie_id = req.cookies.cookieName;
-  if(master_cookie != "") cookie_id = master_cookie;
-  pool.connect((err, client, done) => {
-    pool.query("select id, signalcategoryid, signal, score from signal\
-      where enabled and cookieid=$1;", [cookie_id], function(err, result) {
-      done();
-      if(err) {
-        console.log(err);
-        return res.status(500);
-      }
-      return res.json(result.rows);
-    });
-  });
-});
-
 
 // add a rule to be applied to documents
 app.post('/addsignal', function(req, res, next) {
@@ -540,5 +529,5 @@ async function getScores(client, query, values, ruleSet, ruleHash, recache) {
 
 
 var server = app.listen(5432, function() {
-    console.log("Listening...");
+    console.log("Node listening on http://localhost:5432/");
 });
