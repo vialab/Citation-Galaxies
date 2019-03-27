@@ -5,7 +5,7 @@ const dbquery = {
     query: "select id, signalcategoryid, signal, score, distance from signal \
       where enabled and cookieid=:cookieid;"
     , require_cookie: true
-    , actions: { // to be used for more interactive/heirarchical tables
+    , links: { // to be used to connect to other queries
         "filters": {
           "params":{"id":"parentid"} // potential parameters to pass into next query
           , "query": "filter" // name of another query
@@ -15,12 +15,15 @@ const dbquery = {
           , "query": "restriction"
         }
       }
+    , actions: { // to be used to perform specific javascript functions
+      "similar": "findSimilar" // let's let javascript handle getting the params
+    }
   }
   , signalbytype: {
     query: "select id, signalcategoryid, signal, score, distance from signal \
       where enabled and signalcategoryid=:signalcategoryid and cookieid=:cookieid;"
     , require_cookie: true
-    , actions: { // to be used for more interactive/heirarchical tables
+    , links: { // to be used for more interactive/heirarchical tables
         "filters": {
           "params":{"id":"parentid"} // potential parameters to pass into next query
           , "query": "filter" // name of another query
@@ -45,7 +48,7 @@ const dbquery = {
     query: "select id, catname, score, color from signalcategory where enabled\
       and cookieid=:cookieid;"
     , require_cookie: true
-    , actions: {
+    , links: {
       "signals": {
         "params": {"id":"signalcategoryid"}
         , "query": "signalbytype"
