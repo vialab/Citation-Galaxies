@@ -231,6 +231,54 @@ app.post('/queryCountsPaper', function(req, res, next) {
   });
 });
 
+
+// hook to dynamically delete data using the dbschema api markup
+app.post("/api/delete", function(req, res, next) {
+  // all requests need a cookie
+  let cookie_id = req.cookies.cookieName;
+  if(master_cookie != "") cookie_id = master_cookie;
+
+  let table_name = req.body.table_name;
+  let row_id = req.body.id;
+  let values = {};
+
+  // validate this request
+  if(!Object.keys(dbschema.api).includes(table_name)) return res.status(400);
+  if(dbschema.api[table_name].require_cookie) values["cookieid"] = cookie_id;
+
+  let query = dbschema.api["delete_"+table_name].query;
+  values["id"] = row_id;// variable should always be called id
+
+  pool.connect((err, client, done) => {
+    pool.query(named(query)(values), function(err, result) {
+      done();
+      if(err) {
+        console.log(err);
+        return res.status(500);
+      }
+      return res.status(200);
+    });
+  });
+});
+
+// hook to dynamically pull data using the dbschema api markup
+app.post("/api/add", function(req, res, next) {
+  // all requests need a cookie
+  let cookie_id = req.cookies.cookieName;
+  if(master_cookie != "") cookie_id = master_cookie;
+
+  let full_url = req.originalUrl.split("/");
+  let table_name = full_url[full_url.length-1];
+
+  if(!Object.keys(dbschema.api).includes(table_name)) {
+    return res.json({});
+  }
+
+  let query = dbschema.api[table_name].query;
+  let values = JSON.parse(req.body.values);
+  if(dbschema.api[table_name].require_cookie) values["cookieid"] = cookie_id;
+});
+
 // hook to dynamically pull data using the dbschema api markup
 app.post("/api/*", function(req, res, next) {
   // all requests need a cookie

@@ -1,3 +1,5 @@
+var last_load = {};
+
 $(document).ready(function () {
 
 
@@ -48,12 +50,20 @@ function clearCrudTable() {
 
 // dynamically load data from a query and show results in a table
 function loadTable(table_name, params, draw_table=true, callback=undefined) {
+
   if(typeof(params) == "string") params = JSON.parse(params);
   loadData(table_name, function (results, links, actions, name, schema) {
-    clearCrudTable();
     if(typeof(callback) != "undefined") callback(results);
-    console.log(schema);
-    if(draw_table) populateTable(results, name, $("#ruleTable"), links, actions, schema);
+    if(draw_table) {
+      $("#ruleTable").data("query", table_name);
+      clearCrudTable();
+      populateTable(results, name, $("#ruleTable"), links, actions, schema);
+    }
+    last_load = { table_name: table_name
+      , params: params
+      , draw_table: draw_table
+      , callback: callback
+    }
   }, params);
 }
 
@@ -142,7 +152,9 @@ function populateTable(signals, name, table, links, actions, schema) {
           });
         }
         // Add the remove button
-        $("<button class='btn btn-primary ml-2' onclick=''> X </button>").appendTo(row);
+        let html = "<button class='btn btn-primary ml-2' onclick='deleteRow(\""
+          + name + "\"," + signal[headers[0]] + ")'> X </button>";
+        $(html).appendTo(row);
 
         // On a cell click allow the row to be edited
         row.find("td.edit-cell").click(function (event) {
@@ -257,6 +269,27 @@ function updateRow(table_name, data, index="id") {
     },
     success: function(results) {
       console.log("success");
+    }
+  });
+}
+
+function reloadTable() {
+  loadTable(last_load.table_name, last_load.params, last_load.draw_table, last_load.callback);
+}
+
+// delete a row
+function deleteRow(table_name, id) {
+  let self = this;
+  $.ajax({
+    type: "POST",
+    url: currentURL + "api/delete",
+    data: {
+      "table_name": table_name
+      , "id": id
+    },
+    success: function(results) {
+      reloadTable();
+      toast("Success!", "Row was deleted from the database.");
     }
   });
 }
