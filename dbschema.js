@@ -81,6 +81,10 @@ const dbquery = {
     , require_cookie: false
     , origin: "signaltype"
   }
+  , delete_signal: {
+    query: "delete from signal where id=:id and cookieid=:cookieid"
+    , require_cookie: true
+  }
 };
 
 module.exports = {
