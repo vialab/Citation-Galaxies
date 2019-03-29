@@ -1,19 +1,15 @@
-function Signal(id, cat_id, signal, value=0) {
-  // ensure this category exists
-  if(!sentiment_categories[cat_id]) throw "Category " + cat_id + " does not exist!";
+function Signal(id, cat_id, signal, type_id, parent_id, value=0) {
   // ensure that there are no duplicates (this.id must be unique)
-  if(sentiment_signals[cat_id]) {
-    for(let s of sentiment_signals[cat_id]) {
-      if(id == s.id) throw "Signal " + id + " already exists!";
-    }
-  }
+  if(sentiment_signals[id]) throw "Signal " + id + " already exists!";
   this.signal = signal.trim();
-  this.value = value;
   this.distance = 0;
   this.filters = [];
   this.restrictions = [];
-  this.id = id;
-  this.category = cat_id;
+  this.id = parseInt(id);
+  this.category = parseInt(cat_id);
+  this.typeid = parseInt(type_id);
+  this.parentid = parseInt(parent_id);
+  this.value = parseFloat(value);
 }
 
 let sentiment_signals = {}; // sentiment rules
@@ -23,15 +19,8 @@ let score_data = {};
 let default_color = "#bbb";
 
 $(document).ready(function() {
-  loadData("signalcategory", function(results) {
-      sentiment_signals = {};
-      transformCategoryData(results);
-      loadData("signal", function(signals) {
-        transformSignalData(signals);
-        updateInterface();
-      });
-  });
-  $("#pills-rules-tab").on("click", drawRules);
+  loadCategories();
+  loadSignals();
 });
 
 // Trigger action when the contexmenu is about to be shown
@@ -56,87 +45,23 @@ $(document).bind("mouseup", function (event) {
   }
 });
 
-// draw list of rules on rules page
-function drawRules() {
-  $("#text-selection").val("");
-  $(".rule-list").html("");
-  for(let key of Object.keys(sentiment_signals)) {
-    let $list = $("#"+key+"-rules");
-    $list.append("<ul/>");
-    for(let i=0; i<sentiment_signals[key].length; i++) {
-      $("ul",$list).append($("<li>" + sentiment_signals[key][i].signal
-        + "  <button id='" + key + "-" + i + "' class='close del-rule-btn' \
-        onclick='removeSignal(this);'>&times;</button></li>"));
-    }
-  }
-}
-
-// add a rule to our sentiment rule set
-function addSignal(category_id, draw_rules=false) {
-  $(".custom-menu").hide(100);
-
-  let text = $("#text-selection").val().trim().replace(/<(?:.|\n)*?>/gm, '')
-    , value = sentiment_categories[category_id].value;
-
-  if(text == "") return;
-
-  $.ajax({
-    type: 'POST',
-    url: currentURL + "addsignal",
-    data: { 'text': text
-      , 'value': value
-      , 'category_id': category_id
-    },
-    success: function (data) {
-      sentiment_signals[category_id].push(new Signal(data[0].id, category_id, text, value));
-      toast("Rule Added", text + " (" + sentiment_categories[category_id].name + ")");
-      // reprocess sentiment scores for all of the years
-      for(let year of years) {
-        processSignals(currSearchQuery, year);
-      }
-      if(draw_rules) drawRules();
-    },
-    async: true
-  }, 1000);
-}
-
-// delete a rule
-function removeSignal(elem) {
-  let idx = $(elem).attr("id").split("_")
-  , rules = sentiment_signals[idx[0]][idx[1]];
-
-  $.ajax({
-    type: 'POST',
-    url: currentURL + "removesignal",
-    data: { 'signal_id': rules.id },
-    success: function (data) {
-      toast("Rule Removed", rules.signal + " ("
-        + sentiment_categories[rules.category].name + ")");
-      sentiment_signals[idx[0]].splice(idx[1], 1);
-      drawRules();
-    }
-  });
-}
-
 // given paper citation text, get matching rule counts
 function tagCitationSentiment(articleid, text) {
   let new_text = text, score = 0, n = 0;
   // a tag is a json object that contains signal_idx, location ([start, end]),
   // and value (1, 0, -1)
   for(let key of Object.keys(sentiment_signals)) {
-    let color = "42f465";
-    if(key == "neutral") color = "dbdbdb";
-    if(key == "negative") color = "ffd6d6";
-    for(let i=0; i<sentiment_signals[key].length; i++) {
-      let rule = new RegExp(`(${sentiment_signals[key][i].signal})`, 'ig')
-        , value = sentiment_signals[key][i].value;
-      if(rule.exec(new_text)) {
-        // markup the existence of this rule in the text
-        new_text = new_text.replace(rule, "<span class='sentiment-text'>"
-          + sentiment_signals[key][i].signal + "</span>");
-        score += value; // sum score
-        n++;
-      }
+    let s = sentiment_signals[key];
+    let cat = s.category;
+    let color = sentiment_categories[cat].color;
+    let rule = new RegExp(`(${s.signal})`, 'ig')
+      , value = s.value;
+    if(rule.exec(new_text)) {
+      // markup the existence of this rule in the text
+      new_text = new_text.replace(rule, "<span class='sentiment-text'>"
+        + s.signal + "</span>");
+      score += value; // sum score
+      n++;
     }
   }
   // save the score (average between -1 and +1)
@@ -149,7 +74,7 @@ function tagCitationSentiment(articleid, text) {
 }
 
 // Pre-process the front screen counts for a single year
-function processSignals(query, year, recache=0) {
+function processSignals(query, year, recache=1) {
   // if a request already exists, abort it and request new one
   if(process_queue[year] != undefined) process_queue[year].abort();
   // request
@@ -280,35 +205,86 @@ function updateSentimentRules(callback) {
 function transformCategoryData(results, replace_all=false) {
   if(replace_all) {
     sentiment_categories = {};
-    sentiment_signals = {};
   }
   for(let cat of results) {
     sentiment_categories[cat.id] = { "name": cat.catname
       , "value": cat.score
       , "color": cat.color
     }
-    if(!sentiment_signals[cat.id]) sentiment_signals[cat.id] = [];
   }
 }
 
 // load signal data into json object
 function transformSignalData(results, replace_all) {
-  if(replace_all) {
-    sentiment_signals = {};
-    let cat_list = Object.keys(sentiment_categories);
-    if(cat_list.length == 0) throw "Must load categories before signals!";
-    Object.keys(sentiment_categories).forEach(cat_id => {
-      sentiment_signals[cat_id] = [];
-    });
-  }
+  if(replace_all) sentiment_signals = {};
   for(let signal of results) {
     try {
-      let s = new Signal(signal.id, signal.signalcategoryid, signal.signal, signal.score);
-      sentiment_signals[signal.signalcategoryid].push(s);
+      // use results to instantiate a signal object
+      let s = new Signal(signal.id, signal.signalcategoryid, signal.signal
+                          , signal.signaltypeid, signal.parentid, signal.score);
+      sentiment_signals[signal.id] = s;
     } catch(e) {
+      console.log("Error loading signal: " + e);
       continue;
     }
   }
+}
+
+function loadCategories() {
+  loadData("signalcategory", function(results) {
+      sentiment_signals = {};
+      transformCategoryData(results);
+  });
+}
+
+// load all filters at nonce
+function loadSignals() {
+  loadData("signalbytype", function(signals) {
+    transformSignalData(signals);
+    loadFilters();
+    loadRestrictions();
+    updateInterface();
+  }, {"signaltypeid": 1});
+}
+
+// load all filters at nonce
+function loadFilters() {
+  loadData("signalbytype", function(filters) {
+    for(let s of filters) {
+      try {
+        // use results to instantiate a signal object
+        let s = new Signal(signal.id, signal.signalcategoryid, signal.signal
+                            , signal.signaltypeid, signal.parentid, signal.score);
+        sentiment_signals[signal.id] = s;
+        if(!sentiment_signals[signal.parentid].filters.includes(signal.id)) {
+          sentiment_signals[signal.parentid].filters.push(signal.id);
+        }
+      } catch(e) {
+        console.log("Error loading signal: " + e);
+        continue;
+      }
+    }
+  }, {"signaltypeid":2});
+}
+
+// load all restrictions at once
+function loadRestrictions() {
+  loadData("signalbytype", function(restrictions) {
+    for(let s of restrictions) {
+      try {
+        // use results to instantiate a signal object
+        let s = new Signal(signal.id, signal.signalcategoryid, signal.signal
+                            , signal.signaltypeid, signal.parentid, signal.score);
+        sentiment_signals[signal.id] = s;
+        if(!sentiment_signals[signal.parentid].restrictions.includes(signal.id)) {
+          sentiment_signals[signal.parentid].restrictions.push(signal.id);
+        }
+      } catch(e) {
+        console.log("Error loading signal: " + e);
+        continue;
+      }
+    }
+  }, {"signaltypeid":3});
 }
 
 // redraw all html elements

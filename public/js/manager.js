@@ -10,41 +10,14 @@ $(document).ready(function () {
     $("#ruleForm").submit(function (event) {
         // Prevent the page from reloading
         event.preventDefault();
-
-        // // Get the input from the form
-        // let input = $('#ruleInput').val();
-
-        // // Get the selected value, signal or category
-        // let selectedSignal = $("#ruleForm .form-check-input:checked").val();
-
-        // // Change the url we will access based on the checkbox selected
-        // let requestUrl = currentURL;
-        // if (selectedSignal == "signal") {
-        //     requestUrl += "specificSignals";
-        // } else if (selectedSignal == "category") {
-        //     requestUrl += "specificCategories";
-        // }
-
-        // $.ajax({
-        //     type: 'POST',
-        //     url: requestUrl,
-        //     data: { input: input },
-        //     success: function (signals) {
-        //         let table = $("#ruleTable");
-        //         table.children().remove();
-        //         // Populate the table
-        //         populateTable(signals, table);
-        //     }
-        // });
-
-
-
-
-
-
-
     });
 
+    $(document).mouseup(function(e) {
+      let container = $("#ruleTable");
+      if(!container.is(e.target) && container.has(e.target).length === 0) {
+        deselectCrudRows(false);
+      }
+    })
 });
 
 
@@ -58,7 +31,7 @@ function loadData(url, callback, params={}, _async=true) {
         'values': JSON.stringify(params)
     },
     success: function(results) {
-      callback(results["data"], results["links"], results["actions"], results["name"]);
+      callback(results["data"], results["links"], results["actions"], results["name"], results["schema"]);
     },
     async: _async
   });
@@ -76,14 +49,16 @@ function clearCrudTable() {
 // dynamically load data from a query and show results in a table
 function loadTable(table_name, params, draw_table=true, callback=undefined) {
   if(typeof(params) == "string") params = JSON.parse(params);
-  clearCrudTable();
-  loadData(table_name, function (results, links, actions, name) {
+  loadData(table_name, function (results, links, actions, name, schema) {
+    clearCrudTable();
     if(typeof(callback) != "undefined") callback(results);
-    if(draw_table) populateTable(results, name, $("#ruleTable"), links, actions);
+    console.log(schema);
+    if(draw_table) populateTable(results, name, $("#ruleTable"), links, actions, schema);
   }, params);
 }
 
-function populateTable(signals, name, table, links, actions) {
+function populateTable(signals, name, table, links, actions, schema) {
+  table.html("");
     // Create the header row
     let tableHeader = $("<thead></thead>").appendTo(table);
     let tableBody = $("<tbody></tbody>").appendTo(table);
@@ -92,7 +67,6 @@ function populateTable(signals, name, table, links, actions) {
     // Get the form
     let form = $("<div class='form-group'></div>").appendTo($("#ruleForm"));
 
-
     // Create a array to hold the keys from the json
     // To be used as the header to the table
     let headers = [];
@@ -100,7 +74,7 @@ function populateTable(signals, name, table, links, actions) {
     for (let key in signals[0]) {
         // Used to prevent showing the id row
         if (headers.length != 0) {
-            let element = $("<th>" + key + "</th>");
+            let element = $("<th data-type='" + schema[key] + "'>" + key + "</th>");
             element.appendTo(headerRow);
         }
         headers.push(key);
@@ -108,9 +82,21 @@ function populateTable(signals, name, table, links, actions) {
 
     // Create the form
     for (let i = 1; i < headers.length; i++) {
-        $("<input type='text' class='form-control mr-2'\
-           id='" + headers[i] + "_field'\
-           placeholder='" + headers[i] + "'>").appendTo(form);
+      let html = "<input type='";
+      switch(schema[headers[i]]) {
+        case "integer":
+          html += "number' step='1"
+          break;
+        default:
+          html += "text";
+          break;
+      }
+      html += "' data-type='" + schema[headers[i]];
+      html += "' class='form-control mr-2'\
+         id='" + headers[i] + "_field'\
+         placeholder='" + headers[i] + "'>";
+
+      $(html).appendTo(form);
     }
     $("<button type='submit' class='btn btn-primary'>Submit</button>").appendTo(form);
 
@@ -118,11 +104,18 @@ function populateTable(signals, name, table, links, actions) {
     // Populate the cells
     for (let signal of signals) {
         let signalID = headers[0] + "_" + signal[headers[0]];
-        let row = $("<tr id='" + signalID + "'></tr>");
+        let row = $("<tr id='" + signalID + "' class='edit-row'></tr>");
 
         // For each entry in the json
         for (let i = 1; i < headers.length; i++) {
-            $("<td id='" + headers[i] + "'>" + signal[headers[i]] + "</td>").appendTo(row);
+          let html = "<td id='" + headers[i] + "' class='edit-cell";
+          if(signal[headers[i]]) {
+            html += "'>" + signal[headers[i]];
+          } else {
+            html += " empty'> &lt;empty&gt;";
+          }
+          html += "</td>";
+          $(html).appendTo(row);
         }
         // create link buttons
         if(typeof(links) != "undefined") {
@@ -152,10 +145,9 @@ function populateTable(signals, name, table, links, actions) {
         $("<button class='btn btn-primary ml-2' onclick=''> X </button>").appendTo(row);
 
         // On a cell click allow the row to be edited
-        row.find("td").click(function (event) {
-            editCrudRow(event);
+        row.find("td.edit-cell").click(function (event) {
+          editCrudRow(event);
         });
-
         row.appendTo(tableBody);
     }
 
@@ -175,7 +167,7 @@ function deselectCrudRows(update) {
     let rows = $("#ruleTable > tbody > tr");
     for (let i = 0; i < rows.length; i++) {
         let row = $(rows[i]);
-
+        row.removeClass("editing");
         // If the row is being edited
         if (row.attr("id").includes("_edited")) {
             let row_elements = row.children();
@@ -186,14 +178,16 @@ function deselectCrudRows(update) {
                 // Revert all TD's back to their original values
                 // or update them
                 if (row_element.prop("tagName") == "TD") {
-                    let row_element_id = row_element.attr("id").split("original=")[0];
+                    let row_element_id = row_element.attr("id");
 
                     if (!update) {
-                        let row_element_val = row_element.attr("id").split("original=")[1];
-                        row_element.text(row_element_val);
+                        let row_element_val = row_element.data("original");
+                        if(row_element.hasClass("empty")) {
+                          row_element.text("<empty>");
+                        } else {
+                          row_element.text(row_element_val);
+                        }
                     }
-
-                    row_element.attr("id", row_element_id);
                     row_element.removeAttr("contenteditable");
                 }
             }
@@ -211,41 +205,42 @@ function deselectCrudRows(update) {
 
 // Allow a row to be edited
 function editCrudRow(event) {
-    let selected_row = $(event.target).parent();
-    let row_elements = selected_row.children();
+  let selected_row = $(event.target).parent();
+  let row_elements = selected_row.children();
+  $("td.empty", selected_row).html("")
+  // If the row hasn't been selected for editing already
+  if (!selected_row.attr("id").includes("_edited")) {
+    // Deselect all other rows
+    deselectCrudRows(false);
 
-    // If the row hasn't been selected for editing already
-    if (!selected_row.attr("id").includes("_edited")) {
-        // Deselect all other rows
-        deselectCrudRows(false);
+    // Clone the elements (for restoring if deselected)
+    for (let i = 0; i < row_elements.length - 1; i++) {
+        // Get the element and copy its original value to the id
+        let row_element = $(row_elements[i]);
+        let row_element_value = row_element.text();
+        let row_element_id = row_element.attr("id");
+        row_element.data("original", row_element_value);
+        row_element.attr("id", row_element_id);
 
-        // Clone the elements (for restoring if deselected)
-        for (let i = 0; i < row_elements.length - 1; i++) {
-            // Get the element and copy its original value to the id
-            let row_element = $(row_elements[i]);
-            let row_element_value = row_element.text();
-            let row_element_id = row_element.attr("id") + "original=" + row_element_value;
-            row_element.attr("id", row_element_id);
-
-            // Allow the cell to be edited
-            row_element.attr('contenteditable', 'true');
-        }
-
-        // Flag the row as edited
-        selected_row.attr("id", selected_row.attr("id") + "_edited");
-
-        // Add a button to submit the changes
-        let submit_edit_button = $("<button id='submit_crud_row' class='btn btn-primary ml-2'> ✓ </button>").appendTo(selected_row);
-
-        // When clicked, submit the data and deselect the row
-        submit_edit_button.click(function (event) {
-            deselectCrudRows(true);
-        });
-
-
-        // Focus on the clicked element
-        $(event.target).focus();
+        // Allow the cell to be edited
+        row_element.attr('contenteditable', 'true');
     }
+
+    // Flag the row as edited
+    selected_row.attr("id", selected_row.attr("id") + "_edited");
+    selected_row.addClass("editing");
+
+    // Add a button to submit the changes
+    let submit_edit_button = $("<button id='submit_crud_row' class='btn btn-primary ml-2'> ✓ </button>").appendTo(selected_row);
+
+    // When clicked, submit the data and deselect the row
+    submit_edit_button.click(function (event) {
+        deselectCrudRows(true);
+    });
+
+    // Focus on the clicked element
+    $(event.target).focus();
+  }
 }
 
 // update a table using a datastructure that should remain consistent
