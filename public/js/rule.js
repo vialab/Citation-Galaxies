@@ -35,20 +35,22 @@ function drawSignalList(cat_id) {
   // clear the container
   $container.html("");
   $container.css("background-color", hexToRgba(category.color, 0.5));
-  sentiment_signals[cat_id].forEach((row,i) => {
+  Object.keys(sentiment_signals).forEach(key => {
+    let row = sentiment_signals[key];
+    if(row.category != cat_id) return;
     let $elem = $("<div class='vis-signal'></div>");
     $elem.css("background-color", category.color);
     $elem.append("<h2>" + row.signal + "</h2>");
-    $elem.attr("onclick", "drawSignalVis(" + cat_id + ", " + i + ");");
+    $elem.attr("onclick", "drawSignalVis(" + row.id + ");");
     $container.append($elem);
   });
 }
 
 // draw a vis for a specific signal
-function drawSignalVis(cat_id, sig_idx) {
-  let $container = $("#signal-vis")
-    , category = sentiment_categories[cat_id]
-    , signal = sentiment_signals[cat_id][sig_idx];
+function drawSignalVis(id) {
+  let signal = sentiment_signals[id]
+    , $container = $("#signal-vis")
+    , category = sentiment_categories[signal.category];
   // show the appropriate list
   $("#category-list").hide();
   $("#signal-list").hide();
@@ -57,7 +59,7 @@ function drawSignalVis(cat_id, sig_idx) {
   $("#crumb-list .crumb:gt(1)").remove();
   $("#crumb-list .crumb").removeClass("active");
   $("#crumb-list").append("<li class='crumb active' onclick='drawSignalVis("
-    + cat_id + ", " + sig_idx + ")'><span>"+signal.signal+"</span></li>");
+    + id + ")'><span>"+signal.signal+"</span></li>");
   // clear the container
   $container.html("");
   $container.css("background-color", category.color);

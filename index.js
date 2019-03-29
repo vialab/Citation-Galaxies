@@ -7,6 +7,7 @@ var crypto = require('crypto');
 var master_cookie = "196d2081988549fb86f38cf1944e79a9";
 var app = express();
 var dbschema = require("./dbschema.js");
+var fs = require("fs");
 var named = require("yesql").pg;
 const { exec } = require('child_process');
 const pool = new pg.Pool({
@@ -256,7 +257,8 @@ app.post("/api/*", function(req, res, next) {
       return res.json({"data":result.rows
         , "links": dbschema.api[table_name].links
         , "actions": dbschema.api[table_name].actions
-        ,"name":table_name
+        , "name": table_name
+        , "schema": dbschema.schema[dbschema.api[table_name].origin]
       });
     });
   });
@@ -507,15 +509,15 @@ async function getScores(client, query, values, ruleSet, ruleHash, recache) {
           , new_row = cit;
         new_row["multiscore"] = parseInt(new_row["multiscore"]);
         new_row["score"] = {};
-        Object.keys(ruleSet).forEach(cat_id => {
-          new_row["score"][cat_id] = 0;
-          for(let r of ruleSet[cat_id]) {
-            // signals will be bounded by whitespace
-            if(new RegExp( '\\s' + r.signal + '\\s', 'gi').test(citation_text)) {
-              // found the signal.. now do the calculation
-              new_row["score"][cat_id] += (cit.multiscore*r.value);
-              scores.push(new_row);
-            }
+        Object.keys(ruleSet).forEach(key => {
+          let r = ruleSet[key];
+          if(r.typeid != 1) return;
+          new_row["score"][r.category] = 0;
+          // signals will be bounded by whitespace
+          if(new RegExp( '\\s' + r.signal + '\\s', 'gi').test(citation_text)) {
+            // found the signal.. now do the calculation
+            new_row["score"][r.category] += (cit.multiscore*r.value);
+            scores.push(new_row);
           }
         });
       });

@@ -331,6 +331,10 @@ span.query-text {
   padding: 15px;
 }
 
+.edit-row:not(.editing) .edit-cell.empty {
+  color: lightgray;
+}
+
 @media(max-width: 900px) {
   #navOptions {
     width: 100%;
