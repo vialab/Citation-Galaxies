@@ -7,13 +7,6 @@ $(document).ready(function () {
     having the ability to filter the results
      */
 
-
-    // On submit for the rule CRUD
-    $("#ruleForm").submit(function (event) {
-        // Prevent the page from reloading
-        event.preventDefault();
-    });
-
     $(document).mouseup(function(e) {
       let container = $("#ruleTable");
       if(!container.is(e.target) && container.has(e.target).length === 0) {
@@ -108,8 +101,11 @@ function populateTable(signals, name, table, links, actions, schema) {
 
       $(html).appendTo(form);
     }
-    $("<button type='submit' class='btn btn-primary'>Submit</button>").appendTo(form);
 
+    // create a confirm button
+    let html = "<button type='submit' class='btn btn-primary' \
+      onclick='insertRow(\"" + name + "\")'>Submit</button>";
+    $(html).appendTo(form);
 
     // Populate the cells
     for (let signal of signals) {
@@ -290,6 +286,33 @@ function deleteRow(table_name, id) {
     success: function(results) {
       reloadTable();
       toast("Success!", "Row was deleted from the database.");
+    }
+    , error: function(err) {
+      console.log(err);
+    }
+  });
+}
+
+// insert a new row
+function insertRow(table_name) {
+  let self = this
+    , values = {};
+  $("#ruleForm input").each(function(index) {
+    let field_name = $(this).attr("id").split("_")[0];
+    values[field_name] = $(this).val();
+  });
+
+  $.ajax({
+    type: "POST",
+    url: currentURL + "api/insert",
+    data: {
+      "table_name": table_name
+      , "values": JSON.stringify(values)
+    },
+    success: function(results) {
+      console.log("inserted!");
+      reloadTable();
+      toast("Success!", "Row was inserted to the database.");
     }
   });
 }
