@@ -85,6 +85,20 @@ const dbquery = {
     query: "delete from signal where id=:id and cookieid=:cookieid"
     , require_cookie: true
   }
+  , delete_signalcategory: {
+    query: "delete from signalcategory where id=:id and cookieid=:cookieid"
+    , require_cookie: true
+  }
+  , insert_signalcategory: {
+    query: "insert into signalcategory(catname, score, color, enabled, cookieid) \
+      values(:catname, :score, :color, true, :cookieid)"
+    , require_cookie: true
+  }
+  , insert_signal: {
+    query: "insert into signal(signal, score, signalcategoryid, enabled, cookieid, signaltypeid) \
+      values(:signal, :score, :signalcategoryid, true, :cookieid, 1)"
+    , require_cookie: true
+  }
 };
 
 module.exports = {

@@ -51,7 +51,7 @@ app.get('/years', function(req, res, next) {
         done();
         if(err){
           console.log(err);
-          return res.status(500);
+          return res.sendStatus(500);
         }
         return res.json(result.rows);
       });
@@ -108,7 +108,7 @@ app.post('/queryCounts', function(req, res, next) {
         done();
         if(err) {
           console.log(err);
-          return res.status(500);
+          return res.sendStatus(500);
         }
         let data = res.json(result.rows);
         return data;
@@ -128,7 +128,7 @@ app.post('/paperText', function(req, res, next) {
         done();
         if(err){
           console.log(err);
-          return res.status(500);
+          return res.sendStatus(500);
         }
         return res.json(result.rows);
       });
@@ -171,7 +171,7 @@ app.post('/sectionBoundary', function(req, res, next) {
       done();
       if(err){
         console.log(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
       return res.json(result.rows)
     });
@@ -224,7 +224,7 @@ app.post('/queryCountsPaper', function(req, res, next) {
       done();
       if(err){
         console.log(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
       return res.json(results.rows);
     })
@@ -238,12 +238,13 @@ app.post("/api/delete", function(req, res, next) {
   let cookie_id = req.cookies.cookieName;
   if(master_cookie != "") cookie_id = master_cookie;
 
+  // get the parameters from the request
   let table_name = req.body.table_name;
   let row_id = req.body.id;
   let values = {};
 
   // validate this request
-  if(!Object.keys(dbschema.api).includes(table_name)) return res.status(400);
+  if(!Object.keys(dbschema.api).includes(table_name)) return res.sendStatus(400);
   if(dbschema.api[table_name].require_cookie) values["cookieid"] = cookie_id;
 
   let query = dbschema.api["delete_"+table_name].query;
@@ -254,30 +255,73 @@ app.post("/api/delete", function(req, res, next) {
       done();
       if(err) {
         console.log(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
-      return res.status(200);
+      return res.sendStatus(200);
     });
   });
 });
 
 // hook to dynamically pull data using the dbschema api markup
-app.post("/api/add", function(req, res, next) {
+app.post("/api/insert", function(req, res, next) {
   // all requests need a cookie
   let cookie_id = req.cookies.cookieName;
   if(master_cookie != "") cookie_id = master_cookie;
 
-  let full_url = req.originalUrl.split("/");
-  let table_name = full_url[full_url.length-1];
-
-  if(!Object.keys(dbschema.api).includes(table_name)) {
-    return res.json({});
-  }
-
-  let query = dbschema.api[table_name].query;
+  // get the parameters from the request
+  let table_name = req.body.table_name;
   let values = JSON.parse(req.body.values);
+
+  // validate this request
+  if(!Object.keys(dbschema.api).includes(table_name)) return res.sendStatus(400);
   if(dbschema.api[table_name].require_cookie) values["cookieid"] = cookie_id;
+
+  let query = dbschema.api["insert_"+table_name].query;
+  pool.connect((err, client, done) => {
+    pool.query(named(query)(values), function(err, result) {
+      done();
+      if(err) {
+        console.log(err);
+        return res.sendStatus(500);
+      }
+      return res.sendStatus(200);
+    });
+  });
 });
+
+
+// dynamically update a row in our database -- measures have been taken to keep
+// this function safe from injection (dbschema.js)
+// req.body.data should be a JSON object with an "id" key
+app.post("/api/update", function(req, res, next) {
+  // all requests need a cookie
+  let cookie_id = req.cookies.cookieName;
+  if(master_cookie != "") cookie_id = master_cookie;
+
+  // get the parameters from the request
+  let table_name = req.body.table_name;
+  let row_id = req.body.id;
+  let values = {};
+
+  // validate this request
+  if(!Object.keys(dbschema.api).includes(table_name)) return res.sendStatus(400);
+  if(dbschema.api[table_name].require_cookie) values["cookieid"] = cookie_id;
+
+  let query = dbschema.api["update_"+table_name].query;
+  values["id"] = row_id;// variable should always be called id
+
+  pool.connect((err, client, done) => {
+    pool.query(named(query)(values), function(err, result) {
+      done();
+      if(err) {
+        console.log(err);
+        return res.sendStatus(500);
+      }
+      return res.sendStatus(200);
+    });
+  });
+});
+
 
 // hook to dynamically pull data using the dbschema api markup
 app.post("/api/*", function(req, res, next) {
@@ -300,7 +344,7 @@ app.post("/api/*", function(req, res, next) {
       done();
       if(err) {
         console.log(err);
-        return res.status(500);
+        return res.sendStatus(500);
       }
       return res.json({"data":result.rows
         , "links": dbschema.api[table_name].links
@@ -312,50 +356,6 @@ app.post("/api/*", function(req, res, next) {
   });
 });
 
-// add a rule to be applied to documents
-app.post('/addsignal', function(req, res, next) {
-  var text = req.body.text;
-  var value = req.body.value;
-  var category_id = req.body.category_id;
-  let cookie_id = req.cookies.cookieName;
-  if(master_cookie != "") cookie_id = master_cookie;
-  pool.connect((err, client, done) => {
-    pool.query("insert into signal(signal, score, signalcategoryid, cookieid, enabled) \
-      values($1, $2, $3, $4, true) returning id;"
-      , [text, value, category_id, cookie_id]
-      , function(err, result) {
-        done();
-        if(err) {
-          console.log(err);
-          return res.status(500);
-        }
-        return res.json(result.rows);
-      }
-    );
-  });
-});
-
-
-// pre-process sentiment counts for a specific query
-app.post('/removesignal', function(req, res, next) {
-  let signal_id = req.body.signal_id;
-  let cookie_id = req.cookies.cookieName;
-  if(master_cookie != "") cookie_id = master_cookie;
-  pool.connect((err, client, done) => {
-    pool.query("delete from signal where id=$1 and cookieid=$2;"
-      , [signal_id, cookie_id]
-      , function(err, result) {
-        done();
-        if(err) {
-          console.log(err);
-          return res.status(500);
-        }
-        return res.json({"status": "success", "signal_id": signal_id});
-      }
-    );
-  });
-});
-
 
 // get word2vec results
 app.get('/w2v/similar', function(req, res, next) {
@@ -363,7 +363,7 @@ app.get('/w2v/similar', function(req, res, next) {
   exec(__dirname+"/model/similarity.sh " + word, function(error, stdout, stderr) {
     if(error) {
       console.log("exec error: " + error);
-      return res.status(500);
+      return res.sendStatus(500);
 
     }
     let lines = stdout.split("\n");
@@ -390,49 +390,11 @@ app.get('/search', function(req, res, next) {
   exec(__dirname+"/model/search.sh " + word, function(error, stdout, stderr) {
     if(error) {
       console.log("exec error: " + error);
-      return res.status(500);
+      return res.sendStatus(500);
 
     }
     let lines = JSON.parse(stdout);
     return res.json(lines);
-  });
-});
-
-
-// dynamically update a row in our database -- measures have been taken to keep
-// this function safe from injection (dbschema.js)
-// req.body.data should be a JSON object with an "id" key
-app.post("/update", function(req, res, next) {
-  let data = JSON.parse(req.body.data);
-  let table_name = JSON.parse(req.body.table_name);
-  let index = JSON.parse(req.body.index);
-  // make sure table and respective index column exists
-  if(!dbschema.hasTable(table_name)) return res.status(400);
-  if(!dbschema.hasColumn(table_name, index)) return res.status(400);
-  pool.connect((err, client, done) => {
-    let query = `UPDATE $1~ SET `;
-    let values = [table_name];
-    let columns = Object.keys(data);
-
-    // Make sure all of the columns exist, and generate our query as we go
-    for(let i=0; i<columns; i++) {
-      let key = columns[i];
-      if(key == "id") continue;
-      if(!dbschema.hasColumn(table_name, key)) return res.status(400);
-      if(values.length > 0) query += ", "
-      query += key+" = $" + values.length;
-      values.push(data[key]);
-    }
-    query += " WHERE " + index + " = $" + values.length;
-    values.push(data["id"]); // index column must always exist in "id"
-
-    client.query(query, values, function(err, result) {
-      if(err) {
-        console.log("update error: " + err);
-        return res.status(500);
-      }
-
-    });
   });
 });
 
@@ -512,7 +474,7 @@ app.post('/process/signals', function(req, res, next) {
     }).catch(err => {
       console.log(err);
       done();
-      return res.status(500);
+      return res.sendStatus(500);
     });
   });
 });
