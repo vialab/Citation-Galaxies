@@ -308,7 +308,7 @@ app.post("/api/update", function(req, res, next) {
   if(dbschema.api[table_name].require_cookie) values["cookieid"] = cookie_id;
 
   let query = dbschema.api["update_"+table_name].query;
-  values["id"] = row_id;// variable should always be called id
+  values["id"] = row_id; // variable should always be called id
 
   pool.connect((err, client, done) => {
     pool.query(named(query)(values), function(err, result) {
@@ -338,7 +338,11 @@ app.post("/api/*", function(req, res, next) {
 
   let query = dbschema.api[table_name].query;
   let values = JSON.parse(req.body.values);
+  let parent_col = dbschema.api[table_name].parent;
+  let parent_id = undefined;
+
   if(dbschema.api[table_name].require_cookie) values["cookieid"] = cookie_id;
+  if(typeof(parent_col) != undefined) parent_id = values[parent_col];
   pool.connect((err, client, done) => {
     pool.query(named(query)(values), function(err, result) {
       done();
@@ -351,6 +355,7 @@ app.post("/api/*", function(req, res, next) {
         , "actions": dbschema.api[table_name].actions
         , "name": table_name
         , "schema": dbschema.schema[dbschema.api[table_name].origin]
+        , "parent": {"id": parent_id, "col":parent_col}
       });
     });
   });
