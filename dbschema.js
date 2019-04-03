@@ -57,12 +57,14 @@ const dbquery = {
       where enabled and signaltypeid=2 and parentid=:parentid and cookieid=:cookieid"
     , require_cookie: true
     , origin: "signal"
+    , parent: "parentid"
   }
   , restriction: {
     query: "select id, signalcategoryid, signal, distance, parentid, signaltypeid from signal \
       where enabled and signaltypeid=3 and parentid=:parentid and cookieid=:cookieid"
     , require_cookie: true
     , origin: "signal"
+    , parent: "parentid"
   }
   , signalcategory: {
     query: "select id, catname, score, color from signalcategory where enabled\
@@ -81,12 +83,19 @@ const dbquery = {
     , require_cookie: false
     , origin: "signaltype"
   }
-  , delete_signal: {
-    query: "delete from signal where id=:id and cookieid=:cookieid"
+  , insert_signal: {
+    query: "insert into signal(signal, score, signalcategoryid, enabled, cookieid, signaltypeid) \
+      values(:signal, :score, :signalcategoryid, true, :cookieid, :signaltypeid)"
     , require_cookie: true
   }
-  , delete_signalcategory: {
-    query: "delete from signalcategory where id=:id and cookieid=:cookieid"
+  , update_signal: {
+    query: "update signal set signal=:signal, score=:score, \
+      signalcategoryid=:signalcategoryid, enabled=:enabled, cookieid=:cookieid, \
+      signaltypeid=:signaltypeid where id=:id and cookieid=:cookieid"
+    , require_cookie: true
+  }
+  , delete_signal: {
+    query: "delete from signal where id=:id and cookieid=:cookieid"
     , require_cookie: true
   }
   , insert_signalcategory: {
@@ -94,11 +103,16 @@ const dbquery = {
       values(:catname, :score, :color, true, :cookieid)"
     , require_cookie: true
   }
-  , insert_signal: {
-    query: "insert into signal(signal, score, signalcategoryid, enabled, cookieid, signaltypeid) \
-      values(:signal, :score, :signalcategoryid, true, :cookieid, 1)"
+  , update_signalcategory: {
+    query: "update signalcategory set catname=:catname, score=:score, \
+      color=:color where id=:id and cookieid=:cookieid"
     , require_cookie: true
   }
+  , delete_signalcategory: {
+    query: "delete from signalcategory where id=:id and cookieid=:cookieid"
+    , require_cookie: true
+  }
+
 };
 
 module.exports = {

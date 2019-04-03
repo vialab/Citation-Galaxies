@@ -26,7 +26,8 @@ function loadData(url, callback, params={}, _async=true) {
         'values': JSON.stringify(params)
     },
     success: function(results) {
-      callback(results["data"], results["links"], results["actions"], results["name"], results["schema"]);
+      console.log(results);
+      callback(results["data"], results["links"], results["actions"], results["name"], results["schema"], results["parent"]);
     },
     async: _async
   });
@@ -45,12 +46,12 @@ function clearCrudTable() {
 function loadTable(table_name, params, draw_table=true, callback=undefined) {
 
   if(typeof(params) == "string") params = JSON.parse(params);
-  loadData(table_name, function (results, links, actions, name, schema) {
+  loadData(table_name, function (results, links, actions, name, schema, parent) {
     if(typeof(callback) != "undefined") callback(results);
     if(draw_table) {
       $("#ruleTable").data("query", table_name);
       clearCrudTable();
-      populateTable(results, name, $("#ruleTable"), links, actions, schema);
+      populateTable(results, name, $("#ruleTable"), links, actions, schema, parent);
     }
     last_load = { table_name: table_name
       , params: params
@@ -60,21 +61,25 @@ function loadTable(table_name, params, draw_table=true, callback=undefined) {
   }, params);
 }
 
-function populateTable(signals, name, table, links, actions, schema) {
-  table.html("");
+function populateTable(signals, name, table, links, actions, schema, parent) {
+    table.html("");
+
     // Create the header row
     let tableHeader = $("<thead></thead>").appendTo(table);
     let tableBody = $("<tbody></tbody>").appendTo(table);
     let headerRow = $("<tr></tr>").appendTo(tableHeader);
 
     // Get the form
-    let form = $("<div class='form-group'></div>").appendTo($("#ruleForm"));
+    let form_container = $("#ruleForm");
 
     // Create a array to hold the keys from the json
     // To be used as the header to the table
     let headers = [];
+    let header_example = signals[0];
+    if(signals.length == 0) header_example = schema;
+
     // Populate the header row
-    for (let key in signals[0]) {
+    for (let key in header_example) {
         // Used to prevent showing the id row
         if (headers.length != 0) {
             let element = $("<th data-type='" + schema[key] + "'>" + key + "</th>");
@@ -84,8 +89,9 @@ function populateTable(signals, name, table, links, actions, schema) {
     }
 
     // Create the form
+    let form = $("<div class='row'></div>").appendTo(form_container);
     for (let i = 1; i < headers.length; i++) {
-      let html = "<input type='";
+      let html = "<div class='col-sm-3'><input type='";
       switch(schema[headers[i]]) {
         case "integer":
           html += "number' step='1"
@@ -97,21 +103,28 @@ function populateTable(signals, name, table, links, actions, schema) {
       html += "' data-type='" + schema[headers[i]];
       html += "' class='form-control mr-2'\
          id='" + headers[i] + "_field'\
-         placeholder='" + headers[i] + "'>";
-
+         placeholder='" + headers[i] + "'></div>";
       $(html).appendTo(form);
     }
 
+    // set the parentid in the form if we have one
+    if(parent.id !== undefined) {
+      $("#" + parent.col + "_field").val(parent.id);
+    }
+
     // create a confirm button
-    let html = "<button type='submit' class='btn btn-primary' \
-      onclick='insertRow(\"" + name + "\")'>Submit</button>";
-    $(html).appendTo(form);
+    let html = "<div class='row'><div class='col-sm-12'><button type='submit' class='btn btn-primary' \
+      onclick='insertRow(\"" + name + "\"";
+    if(parent.id !== undefined) {
+      html += ", \"" + parent.col + "\"," + parent.id;
+    }
+    html += ")'>Submit</button></div></div>";
+    $(html).appendTo(form_container);
 
     // Populate the cells
     for (let signal of signals) {
         let signalID = headers[0] + "_" + signal[headers[0]];
         let row = $("<tr id='" + signalID + "' class='edit-row'></tr>");
-
         // For each entry in the json
         for (let i = 1; i < headers.length; i++) {
           let html = "<td id='" + headers[i] + "' class='edit-cell";
@@ -239,7 +252,8 @@ function editCrudRow(event) {
     selected_row.addClass("editing");
 
     // Add a button to submit the changes
-    let submit_edit_button = $("<button id='submit_crud_row' class='btn btn-primary ml-2'> ✓ </button>").appendTo(selected_row);
+    let html = "<button id='submit_crud_row' class='btn btn-primary ml-2' onclick='updateRow'> ✓ </button>";
+    let submit_edit_button = $().appendTo(selected_row);
 
     // When clicked, submit the data and deselect the row
     submit_edit_button.click(function (event) {
@@ -249,24 +263,6 @@ function editCrudRow(event) {
     // Focus on the clicked element
     $(event.target).focus();
   }
-}
-
-// update a table using a datastructure that should remain consistent
-// JSON object that must include an id
-function updateRow(table_name, data, index="id") {
-  if(!data["id"]) throw "Updating a row without an ID is not permitted";
-  $.ajax({
-    type: "POST",
-    url: currentURL + "update",
-    data: {
-      "data": JSON.stringify(data)
-      , "table_name": table_name
-      , "index": index
-    },
-    success: function(results) {
-      console.log("success");
-    }
-  });
 }
 
 function reloadTable() {
@@ -294,11 +290,41 @@ function deleteRow(table_name, id) {
 }
 
 // insert a new row
-function insertRow(table_name) {
+function insertRow(table_name, parent_col, parent_id) {
   let self = this
     , values = {};
+
   $("#ruleForm input").each(function(index) {
     let field_name = $(this).attr("id").split("_")[0];
+    values[field_name] = $(this).val();
+  });
+
+  if(parentid !== undefined) values[parent_col] = parentid;
+
+  $.ajax({
+    type: "POST",
+    url: currentURL + "api/insert",
+    data: {
+      "table_name": table_name
+      , "values": JSON.stringify(values)
+    },
+    success: function(results) {
+      console.log("inserted!");
+      reloadTable();
+      toast("Success!", "Row was inserted to the database.");
+    }
+  });
+}
+
+
+// update a table using a datastructure that should remain consistent
+// JSON object that must include an id
+function updateRow(table_name, id) {
+  let elem = $("#id_"+id)
+    , values = {};
+
+  $(".edit-cell", elem).each(function(index) {
+    let field_name = $(this).attr("id");
     values[field_name] = $(this).val();
   });
 
@@ -312,7 +338,7 @@ function insertRow(table_name) {
     success: function(results) {
       console.log("inserted!");
       reloadTable();
-      toast("Success!", "Row was inserted to the database.");
+      toast("Success!", "Row was updated in the database.");
     }
   });
 }

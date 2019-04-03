@@ -4,3 +4,4 @@ node_modules
 model/venv
 model/vectors
 model/index
+database.ini
