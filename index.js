@@ -362,32 +362,6 @@ app.post("/api/*", function(req, res, next) {
 });
 
 
-// get word2vec results
-app.get('/w2v/similar', function(req, res, next) {
-  var word = req.query.word;
-  exec(__dirname+"/model/similarity.sh " + word, function(error, stdout, stderr) {
-    if(error) {
-      console.log("exec error: " + error);
-      return res.sendStatus(500);
-
-    }
-    let lines = stdout.split("\n");
-    let payload = [];
-    for(let i=1; i<lines.length; i++) {
-      let row = lines[i].split(",");
-      if(row.length < 1 && row[0] != "") {
-        continue;
-      }
-      let temp = {};
-      temp["word"] = row[0];
-      temp["score"] = row[1];
-      payload.push(temp);
-    }
-    return res.json(payload);
-  });
-});
-
-
 // get search engine results
 app.get('/search', function(req, res, next) {
   // var word = Buffer.from(req.body.data).toString("base64");
