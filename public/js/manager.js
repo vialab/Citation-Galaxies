@@ -26,7 +26,7 @@ function loadData(url, callback, params={}, _async=true) {
         'values': JSON.stringify(params)
     },
     success: function(results) {
-      console.log(results);
+      // console.log(results);
       callback(results["data"], results["links"], results["actions"], results["name"], results["schema"], results["parent"]);
     },
     async: _async

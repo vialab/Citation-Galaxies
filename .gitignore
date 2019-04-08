@@ -5,3 +5,6 @@ model/venv
 model/vectors
 model/index
 database.ini
+citations.csv
+citation_percent.csv
+articles.csv

@@ -6,8 +6,8 @@ var sentenceRangeBelow = 0;
 //Can use d3.interpolateViridis for viridis
 //I quite like interpolateRdBu
 var colors = d3.interpolateBlues;
-var seperations;
-var seperationLabels;
+var seperations = [];
+var seperationLabels = [];
 
 var miniSquares = []; //All the mini, heatmapped, square's ids (hitbox)
 var miniSquaresObjects = []; //All the mini, heatmapped, sqaure's (box)
@@ -46,6 +46,7 @@ var yearResults = {}; //Place to store the results from the year
 var yearResultsRequests = []; //Place to store the requests made to the server
 
 var currentURL = "http://localhost:5432/"; //The url to access the backend
+var processURL = "http://localhost:5431/"; //The url to access the backend
 
 var currSearchQuery = ""; //The current search query
 
@@ -177,7 +178,7 @@ function changeLabel(choice) {
   for (var i = 0; i < years.length; i++) {
       if (filteredYearCounts[years[i]['articleyear']] != undefined) {
           $(svgContainers[i + 1].node()).empty();
-          drawColumn(years[i]['articleyear'], 80, 64, currBoxHeight, svgContainers[i + 1], filteredYearPercents[years[i]['articleyear']][currentLabel], filteredYearCounts[years[i]['articleyear']][currentLabel]);
+          drawColumn(years[i]['articleyear'], 80, 64, currBoxHeight, svgContainers[i + 1]);
       }
   }
 
@@ -193,30 +194,6 @@ function changeLabel(choice) {
 
 //Draws the first column (the paper on the home screen)
 function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
-    //Filter for dropshadows
-    var filter = svgContainer.append("defs").append("filter")
-        .attr("id", "dropshadowInitial")
-        .attr("height", "130%");
-    filter.append("feOffset")
-        .attr("result", "offOut")
-        .attr("in", "SourceGraphic")
-        .attr("dx", 0)
-        .attr("dy", 2);
-    filter.append("feColorMatrix")
-        .attr("result", "matrixOut")
-        .attr("in", "offOut")
-        .attr("type", "matrix")
-        .attr("values", "0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0");
-    filter.append("feGaussianBlur")
-        .attr("result", "blurOut")
-        .attr("in", "matrixOut")
-        .attr("stdDeviation", 2);
-    filter.append("feBlend")
-        .attr("in", "SourceGraphic")
-        .attr("in2", "blurOut")
-        .attr("mode", "normal");
-
-
     //Values are used to determine padding of the lines in the paper
     var lineSizeY = 3;
     var minLinePadding = 12;
@@ -240,7 +217,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
         .attr("xy", 3)
         .attr("width", sizex)
         .attr("height", sizey)
-        .attr("filter", "url(#dropshadowInitial)")
+        .attr("filter", "url(#dropshadowSquare)")
         .style("fill", d3.rgb(248, 249, 250));
 
     //Draw the lines with padding needed
@@ -334,31 +311,8 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
 }
 
 //Draw the column on the main screen
-function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svgContainer, currentPercents, currentData) {
+function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svgContainer) {
   $("#container-"+label).removeClass("temp-load");
-  //Filter for dropshadows
-  var filter = svgContainer.append("defs").append("filter")
-      .attr("id", "dropshadowSquare")
-      .attr("height", "130%");
-  filter.append("feOffset")
-      .attr("result", "offOut")
-      .attr("in", "SourceGraphic")
-      .attr("dx", 0)
-      .attr("dy", 2);
-  filter.append("feColorMatrix")
-      .attr("result", "matrixOut")
-      .attr("in", "offOut")
-      .attr("type", "matrix")
-      .attr("values", "0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0");
-  filter.append("feGaussianBlur")
-      .attr("result", "blurOut")
-      .attr("in", "matrixOut")
-      .attr("stdDeviation", 2);
-  filter.append("feBlend")
-      .attr("in", "SourceGraphic")
-      .attr("in2", "blurOut")
-      .attr("mode", "normal");
-
   //Year container
   var verticalContainer = svgContainer.append("rect")
       .attr("x", 3)
@@ -403,33 +357,36 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
 
   var lineColorIndex = 0;
   var total = 0;
-  for (var i = 0; i < currentPercents.length; i++) {
+  var n_increments = 100/currIncrement;
+  for (var i = 0; i < n_increments; i++) {
       //Percent used for box color
-      var percent = currentPercents[i];
-      var miniSquareColor = colors(percent);
-
-      //Get the color of the box, and update the line colors on the papre glyph
-      var rgb = miniSquareColor.split(",");
-      lineColors[Math.floor(lineColorIndex)][0].push(parseInt(rgb[0].substring(4, rgb[0].length)));
-      lineColors[Math.floor(lineColorIndex)][1].push(parseInt(rgb[1]));
-      lineColors[Math.floor(lineColorIndex)][2].push(parseInt(rgb[2].substring(0, rgb[2].length - 1)));
-
-      var redNew = 0;
-      var greenNew = 0;
-      var blueNew = 0;
-      for (var j = 0; j < lineColors[Math.floor(lineColorIndex)][0].length; j++) {
-          redNew += lineColors[Math.floor(lineColorIndex)][0][j];
-          greenNew += lineColors[Math.floor(lineColorIndex)][1][j];
-          blueNew += lineColors[Math.floor(lineColorIndex)][2][j];
-      }
-      redNew /= lineColors[Math.floor(lineColorIndex)][0].length;
-      greenNew /= lineColors[Math.floor(lineColorIndex)][0].length;
-      blueNew /= lineColors[Math.floor(lineColorIndex)][0].length;
-
-      var lineColor = "rgb(" + redNew + "," + greenNew + "," + blueNew + ")"
-      for (var j = 0; j < paperGlyphLines[Math.floor(lineColorIndex)][0].length; j++) {
-          paperGlyphLines[Math.floor(lineColorIndex)][0][j].style('stroke', lineColor);
-      }
+      // var percent = currentPercents[i];
+      // var miniSquareColor = colors(percents);
+      // var currData = null;
+      // var currData = currentData[i];
+      //
+      // //Get the color of the box, and update the line colors on the papre glyph
+      // var rgb = miniSquareColor.split(",");
+      // lineColors[Math.floor(lineColorIndex)][0].push(parseInt(rgb[0].substring(4, rgb[0].length)));
+      // lineColors[Math.floor(lineColorIndex)][1].push(parseInt(rgb[1]));
+      // lineColors[Math.floor(lineColorIndex)][2].push(parseInt(rgb[2].substring(0, rgb[2].length - 1)));
+      //
+      // var redNew = 0;
+      // var greenNew = 0;
+      // var blueNew = 0;
+      // for (var j = 0; j < lineColors[Math.floor(lineColorIndex)][0].length; j++) {
+      //     redNew += lineColors[Math.floor(lineColorIndex)][0][j];
+      //     greenNew += lineColors[Math.floor(lineColorIndex)][1][j];
+      //     blueNew += lineColors[Math.floor(lineColorIndex)][2][j];
+      // }
+      // redNew /= lineColors[Math.floor(lineColorIndex)][0].length;
+      // greenNew /= lineColors[Math.floor(lineColorIndex)][0].length;
+      // blueNew /= lineColors[Math.floor(lineColorIndex)][0].length;
+      //
+      // var lineColor = "rgb(" + redNew + "," + greenNew + "," + blueNew + ")"
+      // for (var j = 0; j < paperGlyphLines[Math.floor(lineColorIndex)][0].length; j++) {
+      //     paperGlyphLines[Math.floor(lineColorIndex)][0][j].style('stroke', lineColor);
+      // }
 
       //Create the ID for the miniSquare's hitbox
       var miniSquareHitboxID = "minSqrHB_" + label + "_" + i.toString();
@@ -439,14 +396,14 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
       if (currBoxHeight < 15) {
           boxText = "";
       }
-      drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeY, miniSquareColor, currentData[i], miniSquareHitboxID, label, i);
-      total += currentData[i];
+      drawColumnSquare(svgContainer, locationX, locationY, miniSquareSizeX, miniSquareSizeY, miniSquareHitboxID, label, i);
+      // total += currentData[i];
 
 
 
       //Increment the main box's location
       locationY += miniSquareSizeY + currBoxPadding;
-      lineColorIndex += (lineColors.length / currentPercents.length);
+      // lineColorIndex += (lineColors.length / currentPercents.length);
   }
 
   verticalContainer.attr("height", locationY); //Change the height to be the max allowed
@@ -486,85 +443,25 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
 //Draws the indiviual squares on the main screen
 //Requires the container, location, size, color, text to put on, and the id for the box
 //ID must be in the format xxx_year_numOfBox for selection to work
-function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, miniSquareColor, labelData, miniSquareID, year, idx) {
+function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, miniSquareID, year, idx) {
     //Draw square
-    miniSquaresObjects.push(svgContainer.append("rect")
-        .attr("x", locationX)
-        .attr("y", locationY)
+    let rect_g = svgContainer.append("g")
+      .attr("transform", "translate(" + locationX + ", " + locationY + ")")
+      .attr("id", "box-group-" + year + "-" + idx);
+    miniSquaresObjects.push(rect_g.append("rect")
         .attr("width", sizeX)
         .attr("height", sizeY)
         .attr("id", miniSquareID)
-        .style("fill", miniSquareColor)
+        .style("fill", "rgba(0,0,0,0)")
         .attr("class", year+" minsqr box-"+idx));
 
-
-    //Used to change the text color if the background is too dark
-    var percentLabelColor = "#FFFFFF";
-    if (tinycolor(miniSquareColor).isLight()) {
-        percentLabelColor = d3.rgb(69, 74, 80);
-    }
-
-    if (currBoxHeight >= 15) {
-        //Draw the hit amount label
-        miniSquareText.push(svgContainer.append("text")
-            .attr("x", locationX + (sizeX / 2))
-            .attr("y", locationY + (sizeY * 0.5) + 6)
-            .attr("text-anchor", "middle")
-            .attr("id", labelData)
-            .style("fill", percentLabelColor)
-            .style("font-size", "13px")
-            .text(shortenVal(labelData)));
-    }
-
-
     //The mini square's hitbox to select it
-    var miniSquareHitbox = svgContainer.append("rect")
-        .attr("x", locationX)
-        .attr("y", locationY)
+    var miniSquareHitbox = rect_g.append("rect")
         .attr("width", sizeX)
         .attr("height", sizeY)
         .style("fill", "rgba(0,0,0,0)")
-        .attr("id", miniSquareID);
-
-    miniSquareHitbox.on("mouseover", function () {
-
-        d3.select("#tooltip").transition()
-            .duration(300)
-            .style("opacity", .9);
-        d3.select("#tooltip").html(shortenVal(labelData))
-            .style("left", (d3.event.pageX) + "px")
-            .style("top", (d3.event.pageY - 28) + "px");
-    }).on("mouseout", function () {
-        d3.select("#tooltip").transition()
-            .duration(500)
-            .style("opacity", 0);
-    });
-
-
-
-    //Allow the mini squares to call the main squares function since they cover it
-    miniSquareHitbox.on("click", function () {
-        d3.event.stopPropagation();
-
-        //If shift is pressed, dont process the selection - else do
-        var shiftPressed = false;
-        if (d3.event.shiftKey) {
-            shiftPressed = true;
-        }
-
-        //Prune the id string of the clicked item (minSqrHB_YEAR_NUM) to get NUM
-        var tmp = (d3.event.target.id.substring(d3.event.target.id.indexOf("_") + 1, d3.event.target.id.length))
-        //MultipleSelection() deals with having a variety of selections, and when to process them
-        //multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + seperationLabels[parseInt(tmp.substring(tmp.indexOf("_") + 1, d3.event.target.id.length))].text(), false, shiftPressed, d3.select("#" + d3.event.target.id));
-        multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + (tmp.substring(tmp.indexOf("_") + 1, tmp.length) * currIncrement).toString() + "%-" + ((parseInt(tmp.substring(tmp.indexOf("_") + 1, tmp.length)) + 1) * currIncrement).toString() + "%", false, shiftPressed, d3.select("#" + d3.event.target.id));
-
-        //Switch to the papers if shift is not pressed
-        if (shiftPressed == false) {
-            switchToPapers(selections);
-        }
-    });
-
-
+        .attr("id", miniSquareID)
+        .attr("class", "hit-box");
 }
 
 //Draws or removes a border around a object
@@ -712,6 +609,7 @@ function switchToHome() {
 function prepContainers(increment) {
     svgContainers = [];
     d3.select("#homeRow").remove();
+    seperationChange(increment);
     var homeRow = d3.select("#pills-home").append("div").attr("id", "homeRow");
     let distChart = homeRow.append("div").attr("id", "distChart").attr("class", "nopadding ");
     let yearCols = homeRow.append("div").attr("id", "years").attr("class", "nopadding ");
@@ -722,20 +620,47 @@ function prepContainers(increment) {
                 maxFirstContainerSize = 11;
             }
             let dist_chart_width = 257;
-            svgContainers.push(distChart.append("svg")
+
+            let svg = distChart.append("svg")
               .attr("width", dist_chart_width)
-              .attr("height", maxFirstContainerSize * 75)
-            );
+              .attr("height", maxFirstContainerSize * 75);
+
+            let filter = svg.append("defs").append("filter")
+                .attr("id", "dropshadowSquare")
+                .attr("height", "130%");
+
+            filter.append("feOffset")
+                .attr("result", "offOut")
+                .attr("in", "SourceGraphic")
+                .attr("dx", 0)
+                .attr("dy", 2);
+            filter.append("feColorMatrix")
+                .attr("result", "matrixOut")
+                .attr("in", "offOut")
+                .attr("type", "matrix")
+                .attr("values", "0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0");
+            filter.append("feGaussianBlur")
+                .attr("result", "blurOut")
+                .attr("in", "matrixOut")
+                .attr("stdDeviation", 2);
+            filter.append("feBlend")
+                .attr("in", "SourceGraphic")
+                .attr("in2", "blurOut")
+                .attr("mode", "normal");
+
+            svgContainers.push(svg);
+            let numOfLines = 100/increment;
+            drawFirstColumn(110, numOfLines * 16, 80, svg, numOfLines);
         }
-        svgContainers.push(yearCols.append("div")
+        let svg = yearCols.append("div")
           .attr("class", "col-xs-* nopadding temp-load")
           .attr("height", 785)
           .attr("id", "container-"+years[i].articleyear)
           .append("svg")
             .attr("width", 87)
-            .attr("id", "svg-"+years[i].articleyear)
-        );
-
+            .attr("id", "svg-"+years[i].articleyear);
+        svgContainers.push(svg);
+        drawColumn(years[i]["articleyear"], 80, 64, currBoxHeight, svg);
     }
 }
 
@@ -746,6 +671,8 @@ function getYears() {
         url: currentURL + "years",
         success: function (data) {
             years = data;
+            prepContainers(currIncrement);
+            getAllYears(true);
         },
         async: true
     });
@@ -951,8 +878,8 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
             filterYearResults(increment, year);
 
             //Draw the column
-            changeSquaresColors();
-            drawColumn(year, 80, 64, currBoxHeight, svgContainers[index], filteredYearPercents[year][currentLabel], filteredYearCounts[year][currentLabel]);
+            // changeSquaresColors();
+            drawColumn(year, 80, 64, currBoxHeight, svgContainers[index]);
             //Adapt the selection from the previous query
             adaptSelection(year);
 
@@ -1007,6 +934,124 @@ function drawHome(increment) {
     }
 }
 
+// Remake of previous filterYearResults
+// This now uses a mini server which retains the data in RAM for processing
+function getAllYears(draw = false, callback) {
+    $.ajax({
+      type: 'POST',
+      url: processURL + "count",
+      data: JSON.stringify({ "increment": currIncrement }),
+      success: function (results) {
+        let data = JSON.parse(results);
+        if(draw) drawAllYears(data);
+        if(typeof(callback) !== "undefined") callback(data);
+      }
+    });
+}
+
+function getFilteredYears(word, draw = false, callback) {
+  $.ajax({
+    type: 'POST',
+    url: processURL + "query",
+    data: JSON.stringify({
+      "query": word
+      , "increment": currIncrement
+      , "rangeLeft": sentenceRangeAbove
+      , "rangeRight": sentenceRangeBelow
+    }),
+    success: function (results) {
+      let data = JSON.parse(results);
+      if(draw) drawAllYears(data);
+      if(typeof(callback) !== "undefined") callback(data);
+    }
+  });
+}
+
+// Draw all of the boxes in the prepared containers all at once using new database
+function drawAllYears(data) {
+  d3.select("#clearAllButton").classed('disabled', false);
+  d3.select("#incrementButton").classed('disabled', false);
+  d3.select("#viewByButton").classed('disabled', false);
+  d3.select("#normByButton").classed('disabled', false);
+  // prepContainers(currIncrement);
+  let all_max = 0;
+  Object.keys(data).forEach(year => {
+    if(data[year]["max"] > all_max) {
+      all_max = data[year]["max"];
+    }
+  });
+  Object.keys(data).forEach(year => {
+    let max = data[year]["max"];
+    Object.keys(data[year]["content"]).forEach(box_id => {
+      let freq = data[year]["content"][box_id];
+      // Used to change the text color if the background is too dark
+      let group = d3.select("#box-group-"+year+"-"+box_id);
+      let rect = group.select(".minsqr");
+      let miniSquareColor = colors(freq/all_max);
+      if(currentNorm == 1) {
+        miniSquareColor = colors(freq/max);
+      }
+      rect.style("fill", miniSquareColor);
+      let percentLabelColor = "#FFFFFF";
+      if (tinycolor(miniSquareColor).isLight()) {
+          percentLabelColor = d3.rgb(69, 74, 80);
+      }
+
+      if (currBoxHeight >= 15) {
+          // Draw the hit amount label
+          group.append("text")
+              .attr("x", function(d, i){
+                    return (64/2);
+                })
+                .attr("y", function(d, i){
+                    return (64/2);
+                })
+              .attr("text-anchor", "middle")
+              .style("fill", percentLabelColor)
+              .style("font-size", "13px")
+              .text(shortenVal(freq));
+      }
+    });
+  });
+
+  // miniSquareHitbox.on("mouseover", function () {
+  //
+  //     d3.select("#tooltip").transition()
+  //         .duration(300)
+  //         .style("opacity", .9);
+  //     d3.select("#tooltip").html(shortenVal(labelData))
+  //         .style("left", (d3.event.pageX) + "px")
+  //         .style("top", (d3.event.pageY - 28) + "px");
+  // }).on("mouseout", function () {
+  //     d3.select("#tooltip").transition()
+  //         .duration(500)
+  //         .style("opacity", 0);
+  // });
+
+  //Allow the mini squares to call the main squares function since they cover it
+  // miniSquareHitbox.on("click", function () {
+  //     d3.event.stopPropagation();
+  //
+  //     //If shift is pressed, dont process the selection - else do
+  //     var shiftPressed = false;
+  //     if (d3.event.shiftKey) {
+  //         shiftPressed = true;
+  //     }
+  //
+  //     //Prune the id string of the clicked item (minSqrHB_YEAR_NUM) to get NUM
+  //     var tmp = (d3.event.target.id.substring(d3.event.target.id.indexOf("_") + 1, d3.event.target.id.length))
+  //     //MultipleSelection() deals with having a variety of selections, and when to process them
+  //     //multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + seperationLabels[parseInt(tmp.substring(tmp.indexOf("_") + 1, d3.event.target.id.length))].text(), false, shiftPressed, d3.select("#" + d3.event.target.id));
+  //     multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + (tmp.substring(tmp.indexOf("_") + 1, tmp.length) * currIncrement).toString() + "%-" + ((parseInt(tmp.substring(tmp.indexOf("_") + 1, tmp.length)) + 1) * currIncrement).toString() + "%", false, shiftPressed, d3.select("#" + d3.event.target.id));
+  //
+  //     //Switch to the papers if shift is not pressed
+  //     if (shiftPressed == false) {
+  //         switchToPapers(selections);
+  //     }
+  // });
+}
+
+
 //Show toast notification
 function toast(title, text) {
     $(".toast-header .mr-auto").html(title);
@@ -1017,6 +1062,11 @@ function toast(title, text) {
 //Run the search for the desired query
 //TODO - prevent SQL injections
 function searchForQuery(query) {
+    prepContainers(currIncrement);
+    if(query == "") {
+      getAllYears(true);
+      return;
+    }
     query = query.replace(/[^a-zA-Z ]/g, "").split(" ");
     for (var i = 0; i < query.length; i++) {
         query[i] = query[i].toLowerCase();
@@ -1032,22 +1082,8 @@ function searchForQuery(query) {
     }
     var boundariesByPaper = {};
     indexToSortPapersOn = -1;
-    drawHome(currIncrement);
-}
-
-//Poll the progress of a background process until it is done
-function pollProcessProgress(process_name, callback) {
-    process_queue[process_name] = setInterval(function () {
-        $.ajax({
-            type: 'GET',
-            url: currentURL + "poll?process=" + process_name.serialize(),
-            success: function (data) {
-                clearInterval(process_queue[process_name]);
-            },
-            async: true
-        });
-    }, 1000);
-    return;
+    // drawHome(currIncrement);
+    getFilteredYears(currSearchQuery, true);
 }
 
 $(document).ready(function () {
