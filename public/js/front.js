@@ -52,6 +52,7 @@ var currSearchQuery = ""; //The current search query
 
 var process_queue = {}; //process queue of intervals
 var overlay_sentiment = false; // flag to immediately show sentiment results
+var front_data = {};
 
 //Used to change the increment on the main screen
 function seperationChange(increment) {
@@ -74,18 +75,67 @@ function seperationChange(increment) {
     currIncrement = increment;
 }
 
+function changeIncrement(increment) {
+  selections = [];
+  currIncrement = increment;
+  searchForQuery(currSearchQuery);
+}
+
 //Change the normalization, update the colors and display them
 //Could use some optimization however
 function normalizationChange(value) {
-    if (value != currentNorm) {
-        d3.select("#normByItem" + currentNorm.toString()).classed('active', false);
-        currentNorm = value;
-        for (var i = 0; i < years.length; i++) {
-            filterYearResults(currIncrement, years[i]['articleyear']);
+    // if (value != currentNorm) {
+    //     d3.select("#normByItem" + currentNorm.toString()).classed('active', false);
+    //     currentNorm = value;
+    //     for (var i = 0; i < years.length; i++) {
+    //         filterYearResults(currIncrement, years[i]['articleyear']);
+    //     }
+    //     changeSquaresColors();
+    //     d3.select("#normByItem" + currentNorm.toString()).classed('active', true);
+    // }
+    currentNorm = value;
+    let line_color = {};
+    let all_max = 0;
+    Object.keys(front_data).forEach(year => {
+      if(front_data[year]["max"] > all_max) {
+        all_max = front_data[year]["max"];
+      }
+    });
+    Object.keys(front_data).forEach(year => {
+      let max = front_data[year]["max"];
+      Object.keys(front_data[year]["content"]).forEach(box_id => {
+        let freq = front_data[year]["content"][box_id];
+        // Used to change the text color if the background is too dark
+        let group = d3.select("#box-group-"+year+"-"+box_id);
+        let rect = group.select(".minsqr");
+        let miniSquareColor = colors(freq/all_max);
+        if(currentNorm == 1) {
+          miniSquareColor = colors(freq/max);
         }
-        changeSquaresColors();
-        d3.select("#normByItem" + currentNorm.toString()).classed('active', true);
-    }
+        rect.style("fill", miniSquareColor);
+        let percentLabelColor = "#FFFFFF";
+        if (tinycolor(miniSquareColor).isLight()) {
+            percentLabelColor = d3.rgb(69, 74, 80);
+        }
+        group.select("text").style("fill", percentLabelColor);
+        if(line_color[box_id]) line_color[box_id].push(colors(freq/max));
+        else line_color[box_id] = [colors(freq/max)];
+      });
+    });
+    Object.keys(line_color).forEach(key => {
+      let r = 0, g = 0, b = 0;
+      for(let i=0; i < line_color[key].length; i++) {
+        let rgb = line_color[key][i].replace("rgb(", "").replace(",", "")
+          .replace(")", "").split(" ");
+        r += parseInt(rgb[0]);
+        g += parseInt(rgb[1]);
+        b += parseInt(rgb[2]);
+      }
+      r /= line_color[key].length;
+      g /= line_color[key].length;
+      b /= line_color[key].length;
+      d3.selectAll(".line-"+key).style("stroke", "rgb(" + r + "," + g + "," + b + ")");
+    });
 }
 
 //Remove all database requests
@@ -236,13 +286,15 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
             .attr("y1", locationY) // y position of the first end of the line
             .attr("x2", locationXEnd) // x position of the second end of the line
             .attr("y2", locationY)
-            .attr('stroke-width', lineSizeY);
+            .attr('stroke-width', lineSizeY)
+            .attr("class", "line-"+j);
         var line2 = svgContainer.append("line") // attach a line
             .style("stroke", color) // colour the line
             .attr("x1", locationXEnd - 0.7) // x position of the first end of the line
             .attr("y1", locationY) // y position of the first end of the  line
             .attr("x2", locationXEnd + 70) // x position of the second end of the line
             .attr("y2", lineLocationEnd)
+            .attr("class", "line-"+j)
             .attr('stroke-width', lineSizeY);
         var line3 = svgContainer.append("line") // attach a line
             .style("stroke", color) // colour the line
@@ -250,6 +302,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
             .attr("y1", lineLocationEnd) // y position of the first end of the line
             .attr("x2", locationXEnd + 85) // x position of the second end of the line
             .attr("y2", lineLocationEnd)
+            .attr("class", "line-"+j)
             .attr('stroke-width', lineSizeY);
         //Seperation labels used to describe the area of the paper shown
         var sepLabel = svgContainer.append("text")
@@ -275,17 +328,18 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
             }
 
             //Go through all minisquares, if they're on the same line get their year and run it through the selection function
-            for (var j = 0; j < miniSquares.length; j++) {
-                if (d3.event.target.id.substring(d3.event.target.id.indexOf("_") + 1, d3.event.target.id.length) == miniSquares[j].substring(miniSquares[j].substring(9, miniSquares[j].length - 1).indexOf("_") + 10, miniSquares[j].length)) {
-                    var currSelection = miniSquares[j].substring(9, miniSquares[j].substring(9, miniSquares[j].length - 1).indexOf("_") + 9) + ": " + d3.select("#" + d3.event.target.id).text();
-                    multipleSelection(currSelection, true, shiftPressed, d3.select("#" + miniSquares[j]));
-                }
-
-            }
+            $(".minsqr.box-" + d3.event.target.id.split("_")[1]).each(function(i) {
+              let id = $(this).attr("id").split("_");
+              let year = id[1];
+              let from = parseInt(id[2]) * currIncrement;
+              let to = (parseInt(id[2])+1) * currIncrement;
+              let selection = year+"-"+from+"-"+to;
+              multipleSelection(selection, true, shiftPressed, d3.select("#"+$(this).attr("id")));
+            });
 
             //Switch to the papers if shift wasnt pressed
             if (shiftPressed == false) {
-                switchToPapers(selections);
+                switchToPapers();
             }
         })
 
@@ -329,6 +383,7 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
       .attr("x", (containerSizeW / 2) + 3)
       .attr("y", 21)
       .attr("text-anchor", "middle")
+      .attr("class", "title-year")
       .style("fill", d3.rgb(108, 117, 125))
       .text(label);
 
@@ -347,6 +402,7 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
       .attr("x", (containerSizeW / 2) + 3)
       .attr("y", 21)
       .attr("text-anchor", "middle")
+      .attr("class", "title-total")
       .style("font-size", "12px")
       .style("fill", d3.rgb(108, 117, 125))
       .text(0);
@@ -359,35 +415,6 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
   var total = 0;
   var n_increments = 100/currIncrement;
   for (var i = 0; i < n_increments; i++) {
-      //Percent used for box color
-      // var percent = currentPercents[i];
-      // var miniSquareColor = colors(percents);
-      // var currData = null;
-      // var currData = currentData[i];
-      //
-      // //Get the color of the box, and update the line colors on the papre glyph
-      // var rgb = miniSquareColor.split(",");
-      // lineColors[Math.floor(lineColorIndex)][0].push(parseInt(rgb[0].substring(4, rgb[0].length)));
-      // lineColors[Math.floor(lineColorIndex)][1].push(parseInt(rgb[1]));
-      // lineColors[Math.floor(lineColorIndex)][2].push(parseInt(rgb[2].substring(0, rgb[2].length - 1)));
-      //
-      // var redNew = 0;
-      // var greenNew = 0;
-      // var blueNew = 0;
-      // for (var j = 0; j < lineColors[Math.floor(lineColorIndex)][0].length; j++) {
-      //     redNew += lineColors[Math.floor(lineColorIndex)][0][j];
-      //     greenNew += lineColors[Math.floor(lineColorIndex)][1][j];
-      //     blueNew += lineColors[Math.floor(lineColorIndex)][2][j];
-      // }
-      // redNew /= lineColors[Math.floor(lineColorIndex)][0].length;
-      // greenNew /= lineColors[Math.floor(lineColorIndex)][0].length;
-      // blueNew /= lineColors[Math.floor(lineColorIndex)][0].length;
-      //
-      // var lineColor = "rgb(" + redNew + "," + greenNew + "," + blueNew + ")"
-      // for (var j = 0; j < paperGlyphLines[Math.floor(lineColorIndex)][0].length; j++) {
-      //     paperGlyphLines[Math.floor(lineColorIndex)][0][j].style('stroke', lineColor);
-      // }
-
       //Create the ID for the miniSquare's hitbox
       var miniSquareHitboxID = "minSqrHB_" + label + "_" + i.toString();
       miniSquares.push(miniSquareHitboxID); //Store the minisquare's id
@@ -424,18 +451,18 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
           removeAllSelections();
       }
 
-      for (var i = 0; i < miniSquares.length; i++) {
-          var tmp = miniSquares[i].split("_");
-          if (tmp[1] == label) {
-              var currSelection = tmp[1] + ": " + (parseInt(tmp[2]) * currIncrement) + "%-" + ((parseInt(tmp[2]) * currIncrement) + currIncrement) + "%";
-              //MultipleSelection() deals with having a variety of selections, and when to process them
-              multipleSelection(currSelection, true, shiftPressed, d3.select("#" + miniSquares[i]));
-          }
-      }
+      $("."+label+".minsqr").each(function(i) {
+        let id = $(this).attr("id").split("_");
+        let year = id[1];
+        let from = parseInt(id[2]) * currIncrement;
+        let to = (parseInt(id[2])+1) * currIncrement;
+        let selection = year+"-"+from+"-"+to;
+        multipleSelection(selection, true, shiftPressed, d3.select("#"+$(this).attr("id")));
+      });
 
       //Switch to the papers if shift is not pressed
       if (shiftPressed == false) {
-          switchToPapers(selections);
+          switchToPapers();
       }
   });
 }
@@ -610,6 +637,15 @@ function prepContainers(increment) {
     svgContainers = [];
     d3.select("#homeRow").remove();
     seperationChange(increment);
+
+    if ((100 / increment) * (64 + 10) > 740) {
+        currBoxPadding = 100 / (100 / increment);
+        currBoxHeight = 640 / (100 / increment);
+    } else {
+        currBoxHeight = 64;
+        currBoxPadding = 10;
+    }
+
     var homeRow = d3.select("#pills-home").append("div").attr("id", "homeRow");
     let distChart = homeRow.append("div").attr("id", "distChart").attr("class", "nopadding ");
     let yearCols = homeRow.append("div").attr("id", "years").attr("class", "nopadding ");
@@ -969,34 +1005,24 @@ function getFilteredYears(word, draw = false, callback) {
 
 // Draw all of the boxes in the prepared containers all at once using new database
 function drawAllYears(data) {
+  // save the drawn data for later
+  front_data = data;
   d3.select("#clearAllButton").classed('disabled', false);
   d3.select("#incrementButton").classed('disabled', false);
   d3.select("#viewByButton").classed('disabled', false);
   d3.select("#normByButton").classed('disabled', false);
-  // prepContainers(currIncrement);
+
   let all_max = 0;
   Object.keys(data).forEach(year => {
-    if(data[year]["max"] > all_max) {
-      all_max = data[year]["max"];
-    }
-  });
-  Object.keys(data).forEach(year => {
     let max = data[year]["max"];
+    let total = 0;
     Object.keys(data[year]["content"]).forEach(box_id => {
       let freq = data[year]["content"][box_id];
+      total += freq;
       // Used to change the text color if the background is too dark
       let group = d3.select("#box-group-"+year+"-"+box_id);
       let rect = group.select(".minsqr");
-      let miniSquareColor = colors(freq/all_max);
-      if(currentNorm == 1) {
-        miniSquareColor = colors(freq/max);
-      }
-      rect.style("fill", miniSquareColor);
-      let percentLabelColor = "#FFFFFF";
-      if (tinycolor(miniSquareColor).isLight()) {
-          percentLabelColor = d3.rgb(69, 74, 80);
-      }
-
+      rect.attr("data-freq", shortenVal(freq));
       if (currBoxHeight >= 15) {
           // Draw the hit amount label
           group.append("text")
@@ -1004,51 +1030,55 @@ function drawAllYears(data) {
                     return (64/2);
                 })
                 .attr("y", function(d, i){
-                    return (64/2);
+                    return (currBoxHeight/2);
                 })
               .attr("text-anchor", "middle")
-              .style("fill", percentLabelColor)
               .style("font-size", "13px")
               .text(shortenVal(freq));
       }
     });
+    let column = d3.select("#svg-"+year);
+    column.select(".title-total").text(shortenVal(total));
   });
 
-  // miniSquareHitbox.on("mouseover", function () {
-  //
-  //     d3.select("#tooltip").transition()
-  //         .duration(300)
-  //         .style("opacity", .9);
-  //     d3.select("#tooltip").html(shortenVal(labelData))
-  //         .style("left", (d3.event.pageX) + "px")
-  //         .style("top", (d3.event.pageY - 28) + "px");
-  // }).on("mouseout", function () {
-  //     d3.select("#tooltip").transition()
-  //         .duration(500)
-  //         .style("opacity", 0);
-  // });
+  // fill the square colors using selected norm
+  normalizationChange(currentNorm);
+
+  $(".hit-box").on("mouseover", function (e) {
+
+      d3.select(".tooltip").transition()
+          .duration(300)
+          .style("opacity", .9);
+      let labelData = $(this).siblings("rect").data("freq");
+      d3.select(".tooltip").html(shortenVal(labelData));
+      $(".tooltip").css({
+        "left": (e.pageX) + "px"
+        , "top": (e.pageY) + "px"
+      });
+  }).on("mouseout", function () {
+      d3.select(".tooltip").transition()
+          .duration(500)
+          .style("opacity", 0);
+  });
 
   //Allow the mini squares to call the main squares function since they cover it
-  // miniSquareHitbox.on("click", function () {
-  //     d3.event.stopPropagation();
-  //
-  //     //If shift is pressed, dont process the selection - else do
-  //     var shiftPressed = false;
-  //     if (d3.event.shiftKey) {
-  //         shiftPressed = true;
-  //     }
-  //
-  //     //Prune the id string of the clicked item (minSqrHB_YEAR_NUM) to get NUM
-  //     var tmp = (d3.event.target.id.substring(d3.event.target.id.indexOf("_") + 1, d3.event.target.id.length))
-  //     //MultipleSelection() deals with having a variety of selections, and when to process them
-  //     //multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + seperationLabels[parseInt(tmp.substring(tmp.indexOf("_") + 1, d3.event.target.id.length))].text(), false, shiftPressed, d3.select("#" + d3.event.target.id));
-  //     multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + (tmp.substring(tmp.indexOf("_") + 1, tmp.length) * currIncrement).toString() + "%-" + ((parseInt(tmp.substring(tmp.indexOf("_") + 1, tmp.length)) + 1) * currIncrement).toString() + "%", false, shiftPressed, d3.select("#" + d3.event.target.id));
-  //
-  //     //Switch to the papers if shift is not pressed
-  //     if (shiftPressed == false) {
-  //         switchToPapers(selections);
-  //     }
-  // });
+  $(".hit-box").on("click", function (e) {
+      //If shift is pressed, dont process the selection - else do
+      var shiftPressed = e.shiftKey;
+
+      //Prune the id string of the clicked item (minSqrHB_YEAR_NUM) to get NUM
+      var id = $(this).attr("id").split("_");
+      let from = parseInt(id[2]) * currIncrement;
+      let to = (parseInt(id[2])+1) * currIncrement;
+      let label = id[1] +"-" + from + "-" + to;
+      //MultipleSelection() deals with having a variety of selections, and when to process them
+      //multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + seperationLabels[parseInt(tmp.substring(tmp.indexOf("_") + 1, d3.event.target.id.length))].text(), false, shiftPressed, d3.select("#" + d3.event.target.id));
+      multipleSelection(label, false, shiftPressed, d3.select(this));
+      //Switch to the papers if shift is not pressed
+      if (shiftPressed == false) {
+          switchToPapers();
+      }
+  });
 }
 
 

@@ -112,7 +112,6 @@
     <div id="container" class="d-flex flex-column">
         <div class="tab-content" id="pills-tabContent">
             <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
-                <div id="tooltip" class="tooltip" style="opacity: 0"></div>
                 <!-- Buttons on home pane -->
                 <div class="container-fluid">
                   <div class="row" style="padding: 0 0 10px 0;">
@@ -127,10 +126,10 @@
                                   Increment By
                               </button>
                               <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                                  <a class="dropdown-item" id="changeIncrementItem1" href="#" onclick="drawHome(1);">1%</a>
-                                  <a class="dropdown-item" id="changeIncrementItem2" href="#" onclick="drawHome(10);">10%</a>
-                                  <a class="dropdown-item" id="changeIncrementItem3" href="#" onclick="drawHome(25);">25%</a>
-                                  <a class="dropdown-item" id="changeIncrementItem4" href="#" onclick="drawHome(50);">50%</a>
+                                  <a class="dropdown-item" id="changeIncrementItem1" href="#" onclick="changeIncrement(1);">1%</a>
+                                  <a class="dropdown-item" id="changeIncrementItem2" href="#" onclick="changeIncrement(10);">10%</a>
+                                  <a class="dropdown-item" id="changeIncrementItem3" href="#" onclick="changeIncrement(25);">25%</a>
+                                  <a class="dropdown-item" id="changeIncrementItem4" href="#" onclick="changeIncrement(50);">50%</a>
                               </div>
                           </div>
 
@@ -159,6 +158,8 @@
                                   <a class="dropdown-item" id="normByItem1" href="#" onclick="normalizationChange(1);">Within years</a>
                               </div>
                           </div>
+
+                          <button class="btn btn-outline-secondary filterOption" id="viewPapersButton" type="button" onclick="switchToPapers(selections);">View Papers</button>
 
                           <button class="btn btn-outline-secondary filterOption disabled" id="clearAllButton"
                               data-toggle="modal" data-target="#clearAllModal" type="button">Clear All

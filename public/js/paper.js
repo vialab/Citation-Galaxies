@@ -322,7 +322,7 @@ function changePaperSort(indexToSortOn) {
     //Change sorting index
     indexToSortPapersOn = indexToSortOn;
     //Draw new papers
-    drawPapers(selections);
+    drawPapers();
 }
 
 //Sorts the papers using the global value to sort on for the papers
@@ -352,8 +352,49 @@ function sortPapers(indexToSortOn, sortedArray) {
     }
 }
 
+// Draws all the papers -- rewritten
+// instead of holding everything on the client
+// retrieve from the server only what we need, as we need it
+function drawPapers() {
+  d3.select("#paperRow").remove();
+  paperRow = d3.select("#pills-papers").append("div").attr("class", "row");
+
+  paperRequests.push($.ajax({
+      type: 'POST',
+      url: processURL + "papers",
+      data: JSON.stringify({
+        'selections': selections
+        , "query": currSearchQuery
+        , "increment": currIncrement
+        , "rangeLeft": sentenceRangeAbove
+        , "rangeRight": sentenceRangeBelow
+      }),
+      success: function (data) {
+        let results = JSON.parse(data);
+        let papers = results["papers"];
+        let all_max = results["max"];
+        Object.keys(papers).forEach(key => {
+          let divContainer = paperRow.append("div").attr("class", "col-xs-* partialpadding"); //Append a column for each paper
+          let svgContainer = divContainer.append("svg").attr("class", "paper-thumbnail")
+            .attr("width", 115).attr("height", 168); //Container for paper to go into
+          paperText[key] = [{'articleyear': 1}];
+          let activeLines = [];
+          let activeLinesPercents = [];
+          let lines = papers[key]["content"];
+          Object.keys(lines).forEach(i => {
+            activeLines.push(lines[i] > 0);
+            activeLinesPercents.push(lines[i]/all_max);
+          });
+          drawPaper(110, 160, activeLines, activeLinesPercents, svgContainer, key, false);
+        });
+      },
+      async: true,
+      timeout: 600000
+  }));
+}
+
 //Draws all the papers
-function drawPapers(titles) {
+function drawPapers2() {
     //Remove old row
     d3.select("#paperRow").remove();
     //Append a row for all the papers
@@ -361,9 +402,9 @@ function drawPapers(titles) {
 
     paperData = {};
     //Loop through all selections
-    for (var i = 0; i < titles.length; i++) {
+    for (var i = 0; i < selections.length; i++) {
         //Split the selection into: Left Bounds, Right Bounds and Year
-        var titlesSplit = titles[i].split(":");
+        var titlesSplit = selections[i].split("-");
         var year = titlesSplit[0].substring(0, titlesSplit[0].length);
 
         titlesSplit = titlesSplit[1].trim().split("-");
@@ -527,7 +568,7 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
 
         var line = svgContainer.append("line") // attach a line
             .style("stroke", color) // colour the line
-            .attr("x1", locationXStart) // x position of the first end of the line
+              .attr("x1", locationXStart) // x position of the first end of the line
             .attr("y1", locationY) // y position of the first end of the line
             .attr("x2", locationXEnd) // x position of the second end of the line
             .attr("y2", locationY)
@@ -592,7 +633,7 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
     //Allows only one popup at a time - if a popup other than the one clicked is active, it is hidden
     $(squareHitBox.node()).on('click', function (e) {
         let article_id = $(this).attr("id").split("_")[0];
-        setPopoverContent(article_id)
+        // setPopoverContent(article_id)
         // enable popovers as we need them
         let $popover = $(this).popover({
           html: true
@@ -682,7 +723,7 @@ function cycleVisibility(item) {
     }
 }
 
-function switchToPapers(sections) {
+function switchToPapers() {
     //Clear the previous paper requests
     clearRequests(false, true);
 
@@ -702,7 +743,7 @@ function switchToPapers(sections) {
     d3.select("#paperSortButton").style("display", null); //Unhide sort button for papers
 
     $('#pills-papers-tab').tab('show');
-    executeAsync(function () { drawPapers(sections); }, 500);
+    executeAsync(function () { drawPapers(); }, 500);
 }
 
 
