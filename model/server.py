@@ -67,6 +67,9 @@ def do_search():
 def do_query():
     data = loads(request.body.read())
     query = data["query"]
+    left_bound = int(data["rangeLeft"])
+    right_bound = int(data["rangeRight"])
+    query = data["query"]
     sql = """select *, count(*) as count from (
         		select wordSearch.articleid as articleID
                     , wordSearch.articleyear
@@ -83,17 +86,13 @@ def do_query():
             order by wordCitationJoin.articleid
 	"""
     df = run_query(sql, data=(query,))
-    bins = [0]
-    labels = []
     increment = int(data["increment"])
-    total = 0
-    n = 0
-    while total < 100:
-        total += increment
-        bins.append(total)
-        labels.append(str(n))
-        n += 1
+    bins, labels = get_bins(increment)
 
+    df["leftdist"] = df["wordsentence"] - df["citationsentence"]
+    df["rightdist"] = df["citationsentence"] - df["wordsentence"]
+    df = df.query("(leftdist >= 0 and leftdist <= " + str(left_bound)
+        + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
     distribution = df[["articleyear", "percent"]]
     distribution["bin"] = pd.cut(df["percent"], bins=bins, labels=labels)
     distribution = distribution.groupby(["articleyear", "bin"]).count()
@@ -118,20 +117,13 @@ def do_query():
 @enable_cors
 def do_count():
     data = loads(request.body.read())
-    bins = [0]
-    labels = []
     increment = int(data["increment"])
-    total = 0
-    n = 0
-    while total < 100:
-        total += increment
-        bins.append(total)
-        labels.append(str(n))
-        n += 1
+    bins, labels = get_bins(increment)
 
     distribution = citations[["articleyear", "percent"]].copy(deep=True)
     distribution["bin"] = pd.cut(distribution["percent"], bins=bins, labels=labels)
     distribution = distribution.groupby(["articleyear", "bin"]).count()
+    distribution.fillna(0, inplace=True)
     distribution = distribution.to_dict()
     sorted = {}
     for key in distribution["percent"]:
@@ -142,8 +134,69 @@ def do_count():
         sorted[year]["content"][str(key[1])] = x
         if x > sorted[year]["max"]:
             sorted[year]["max"] = x
-
     return dumps(sorted)
+
+
+@route("/papers", method=["POST"])
+@enable_cors
+def do_papers():
+    data = loads(request.body.read())
+    query = data["query"]
+    # now create a pandas query based off of the ranges
+    filter = ""
+    years = []
+    range_list = data["selections"]
+    for i, range in enumerate(range_list):
+        if i > 0:
+            filter += " or "
+        r = range.split("-")
+        if r[0] not in years:
+            years.append(int(r[0]))
+        filter += "(articleyear == " + r[0] + " and percent >= " + r[1] + " and percent <= " + r[2] + ")"
+
+    if len(query) > 0:
+        left_bound = int(data["rangeLeft"])
+        right_bound = int(data["rangeRight"])
+        sql = """select *, count(*) as count from (
+            		select wordSearch.articleid as articleID
+                        , wordSearch.articleyear
+            			, wordSearch.sentencenum as wordSentence
+            			, citationSearch.sentencenum as citationSentence
+            			, ((( CAST(wordSearch.startlocationpaper as float)
+            				+wordSearch.endlocationpaper)/2)
+            				/wordSearch.articleCharCount) * 100 as percent
+            		from wordsearch, citationsearch
+            		where wordsearch.articleid = citationsearch.articleid
+                    and wordSearch.lemma = ANY(%s) and wordSearch.articleYear = ANY(%s)
+                ) as wordCitationJoin
+                group by wordSentence, citationSentence, articleyear, articleid, percent
+                order by wordCitationJoin.articleid
+    	"""
+        # first filter by the query again.. this probably could be improved
+        df = run_query(sql, data=(query,years))
+    else:
+        df = citations.copy(deep=True)
+
+    increment = int(data["increment"])
+    bins, labels = get_bins(increment)
+    # now we can select our ranges and group by article
+    df = df.query(filter)
+    df["bin"] = pd.cut(df["percent"], bins=bins, labels=labels)
+    df = df.groupby(["articleid", "articleyear", "bin"]).count()
+    max = df["percent"].max()
+    df.fillna(0, inplace=True)
+    df = df.to_dict()
+
+    sorted = {}
+    for key in df["percent"]:
+        articleid = str(key[0])
+        if articleid not in sorted:
+            sorted[articleid] = { "content": {}, "max": 0, "year": str(key[1]) }
+        x = df["percent"][key]
+        sorted[articleid]["content"][str(key[2])] = x
+        if x > sorted[articleid]["max"]:
+            sorted[articleid]["max"] = x
+    return dumps({"max":max, "papers":sorted})
 
 
 ## support postgres database stuff
@@ -206,6 +259,19 @@ def run_query(sql, data=(), is_update=False):
         if conn is not None:
             conn.close()
     return results
+
+
+def get_bins(increment):
+    bins = [0]
+    labels = []
+    total = 0
+    n = 0
+    while total < 100:
+        total += increment
+        bins.append(total)
+        labels.append(str(n))
+        n += 1
+    return bins, labels
 
 
 conn = connect()

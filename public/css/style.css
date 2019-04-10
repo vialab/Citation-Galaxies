@@ -226,6 +226,7 @@ div.tooltip {
 #filterQueryOptions .filterOption {
   margin: 5px 5px;
   flex: 1;
+  white-space: nowrap;
 }
 
 #filterQueryOptions .filterOption button {
@@ -334,6 +335,8 @@ span.query-text {
 .edit-row:not(.editing) .edit-cell.empty {
   color: lightgray;
 }
+
+
 
 @media(max-width: 900px) {
   #navOptions {
