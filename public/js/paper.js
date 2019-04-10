@@ -634,6 +634,7 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
     $(squareHitBox.node()).on('click', function (e) {
         let article_id = $(this).attr("id").split("_")[0];
         // setPopoverContent(article_id)
+        getPopoverContent(article_id)
         // enable popovers as we need them
         let $popover = $(this).popover({
           html: true
@@ -746,13 +747,53 @@ function switchToPapers() {
     executeAsync(function () { drawPapers(); }, 500);
 }
 
+function getPopoverContent(articleid) {
+  $.ajax({
+    type: "GET"
+    , url: processURL+"paper?id="+articleid
+    , success: function(results) {
+      let data = JSON.parse(results);
+      console.log(data);
+      let popover = d3.select("#popover_text");
+      popover.html("");
+      popover.append("h2").text(data['articletitle']
+        + " (" + data['articleyear'] + ") (" + articleid + ") ("
+        + data['journaltitle'] + ")");
+
+      var listEntry = popover.append("ul").attr("class", "list-group citation-text");
+      data["paragraphs"].forEach(p => {
+        let full_text = p.text;
+        listEntry = listEntry.append("li").attr("class", "list-group-item");
+        // markup search query words in this paragraph
+        if(currSearchQuery.length > 0) {
+          for(let query of currSearchQuery) {
+            full_text = full_text.replace(query, "<span class='query-text'>"+query+"</span>");
+          }
+        }
+        let citations = [];
+        p.citations.forEach(c => {
+          let start = c.startlocationpaper - p.start;
+          let end = c.endlocationpaper - p.start;
+          let citation_text = p.text.substr(start, end);
+          if(!citations.includes(citation_text)) {
+            full_text = full_text.replace(citation_text
+              , "<span class='citation'>"+citation_text+"</span>");
+            citations.push(citation_text);
+          }
+        });
+        // use the markup text
+        listEntry.html(full_text);
+      });
+    }
+  });
+}
+
 
 function setPopoverContent(articleid) {
   //Append the relevant paper data in the popover
   var popover = d3.select("#popover_text");
   popover.html("");
   popover.append("h2").text(paperText[articleid][0]['articletitle'] + " (" + paperText[articleid][0]['articleyear'] + ") (" + articleid + ") (" + paperText[articleid][0]['journaltitle'] + ")");
-  popover.append("h6").text("Boundaries are: " + boundariesByPaper[articleid][0] + " above and " + boundariesByPaper[articleid][1] + " below");
 
   //Append each reference context
   for (var i = 0; i < paperData[articleid].length; i++) {
@@ -770,73 +811,7 @@ function setPopoverContent(articleid) {
       }
       var endTextIndex = paperData[articleid][i][0][9][1]; //Index for the end of the context
 
-      // var tempLocations = []; //Holds the citation and word(s) locations
-      //Pushes the citation
-      // tempLocations.push([paperData[articleid][i][0][3] - 1,
-      // paperData[articleid][i][0][4],
-      //     true]);
-      // //and the word(s) location(s)
-      // for (var j = 0; j < paperData[articleid][i].length; j++) { //Loops length of query times
-      //     tempLocations.push([paperData[articleid][i][j][1],
-      //     paperData[articleid][i][j][2],
-      //         false]);
-      // }
-
-      //Sorts the locations so that the item occuring first in the text is highlighted first, as not to go backward in the text
-      // for (var j = 0; j < tempLocations.length; j++) {
-      //     for (var k = j + 1; k < tempLocations.length; k++) {
-      //         if (tempLocations[j][0] > tempLocations[k][0]) {
-      //             var temp = tempLocations[j];
-      //             tempLocations[j] = tempLocations[k];
-      //             tempLocations[k] = temp;
-      //         }
-      //     }
-      // }
-
       tempText += '"';
-
-      //Loop through the locations
-      //Works by getting text before word/citation, then adding the word/citation
-      //Loops until all data is in
-      // for (var j = 0; j < tempLocations.length; j++) {
-      //     if (tempLocations[j][0] != lastSplitIndex) {
-      //         //End location of the item
-      //         var tempEndIndex = tempLocations[j][0];
-      //         //A fix if the word starts at a space
-      //         if (paperText[articleid][0]['papertext'][tempEndIndex] == ' ') {
-      //             tempEndIndex += 1;
-      //         }
-      //
-      //         //Get all the text before the item
-      //         tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, tempEndIndex);
-      //     }
-      //
-      //     //If the value is true, it is a citation, and span it a different color
-      //     //else, just use mark for yellow
-      //     if (tempLocations[j][2] == true) {
-      //         tempText += "<span style='background-color: #9DC4DF'>";
-      //     } else {
-      //         tempText += "<mark>";
-      //     }
-      //     //Get the word/citation
-      //     tempText += paperText[articleid][0]['papertext'].substring(tempLocations[j][0], tempLocations[j][1] + 1);
-      //     if (tempLocations[j][2] == true) {
-      //         tempText += "</span>";
-      //     } else {
-      //         tempText += "</mark>";
-      //     }
-      //     lastSplitIndex = tempLocations[j][1] + 1;
-      // }
-      // //Add the rest of the context's data
-      // tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, endTextIndex + 1);
-
-      /***********************************************************************
-       Replace all the commented out code above so that we can play with
-       the raw code (sentiment scoring). The mark up is now based off of text
-       matching, as opposed to index based sub strings.
-
-       JAY250220191 << identifying this change with this made up ID
-      ***********************************************************************/
 
       // Mark up current search query and citations within each paragraph..
       let full_text = paperText[articleid][0]['papertext']

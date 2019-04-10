@@ -183,7 +183,7 @@ def do_papers():
     df = df.query(filter)
     df["bin"] = pd.cut(df["percent"], bins=bins, labels=labels)
     df = df.groupby(["articleid", "articleyear", "bin"]).count()
-    max = df["percent"].max()
+    max = df["percent"].max().item()
     df.fillna(0, inplace=True)
     df = df.to_dict()
 
@@ -197,6 +197,63 @@ def do_papers():
         if x > sorted[articleid]["max"]:
             sorted[articleid]["max"] = x
     return dumps({"max":max, "papers":sorted})
+
+
+@route("/paper", method="GET")
+@enable_cors
+def do_paper():
+    article_id = request.query["id"]
+    df = citations[citations["articleid"] == article_id]
+    query = """select distinct id
+        , startlocationpaper
+        , endlocationpaper from paragraph
+        where articleid_id=%s
+        and ("""
+
+    values = [article_id]
+    df_text = run_query("""select id
+        , papertext
+        , charcount
+        , articletitle
+        , articleyear
+        , journaltitle
+        from article where id=%s""", tuple(values)).to_dict(orient="records")[0]
+    locations = []
+    added_first = False
+    # collect the distinct paragraphs that we need that we can then use to chop
+    # I guess there's an assumption here that our bounds stay within paragraphs
+    for i, row in df.iterrows():
+        location = (row["startlocationpaper"], row["endlocationpaper"])
+        if location in locations:
+            continue
+        if added_first:
+            query += " or "
+        query += "(startlocationpaper <= %s and endlocationpaper >= %s)"
+        values.append(row["startlocationpaper"])
+        values.append(row["endlocationpaper"])
+        locations.append(location)
+        added_first = True
+    query += """) order by startlocationpaper"""
+    df_loc = run_query(query, tuple(values))
+
+    # now that we have all the text that has citations, organize them and assign
+    # citations to each based on location
+    paragraphs = []
+    for i, row in df_loc.iterrows():
+        start = row["startlocationpaper"].item()
+        end = row["endlocationpaper"].item()
+        text = df_text["papertext"][start:end]
+        cit = df.query("startlocationpaper >= " + str(start) + " and endlocationpaper <= " + str(end))
+        temp = {
+            "start": start
+            , "end": end
+            , "text": text
+            , "citations": cit.to_dict(orient="records")
+        }
+        paragraphs.append(temp)
+    del df_text["papertext"] # don't send the whole text over
+    df_text["paragraphs"] = paragraphs
+    return dumps(df_text)
 
 
 ## support postgres database stuff
@@ -276,6 +333,7 @@ def get_bins(increment):
 
 conn = connect()
 citations = pd.read_csv("./model/citation_percent.csv", encoding="utf-8")
+citations.rename(columns={"Unnamed: 0":"id"}, inplace=True)
 # citations = pd.read_csv("./model/citations.csv", encoding="utf-8")
 # articles = pd.read_csv("./model/articles.csv", encoding="utf-8")
 # articles.rename(columns={ "id": "articleid" }, inplace=True)
