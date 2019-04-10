@@ -56,6 +56,7 @@ var front_data = {};
 
 //Used to change the increment on the main screen
 function seperationChange(increment) {
+  seperations = [];
     //Generate new seperation screen
     for (var i = 0; i < 100; i += increment) {
         seperations.push(i.toString() + "%-" + (i + increment).toString() + "%");
@@ -69,7 +70,6 @@ function seperationChange(increment) {
             d3.select("#changeIncrementItem" + i.toString()).classed('active', true);
         }
     }
-
 
     //Update the current increment
     currIncrement = increment;
@@ -93,6 +93,8 @@ function normalizationChange(value) {
     //     changeSquaresColors();
     //     d3.select("#normByItem" + currentNorm.toString()).classed('active', true);
     // }
+    $(".norm-change").removeClass("active");
+    $("#normByItem"+value).addClass("active");
     currentNorm = value;
     let line_color = {};
     let all_max = 0;
