@@ -46,20 +46,60 @@ def do_similarity():
 @route("/search", method="GET")
 def do_search():
     # data = request.json
+    # regex pattern: \bword1\W+(?:\w+\W+){0,2}?word2\b | need reverse words too
+    # matches word1 near word2 with at most two words between them
     data = request.query
     q = qp.parse(data["word"])
-
     results = []
-    # with ix.searcher() as searcher:
-    n = None
-    if "limit" in data:
-        n = int(data["limit"])
-    hits = searcher.search(q, limit=n)
-    for hit in hits:
-        h = dict(hit)
-        results.append({"id":h["id"]})
-    response.content_type = "application/json"
+    with ix.searcher() as searcher:
+        n = None
+        if "limit" in data:
+            n = int(data["limit"])
+        hits = searcher.search(q, limit=n)
+        for hit in hits:
+            h = dict(hit)
+            results.append({"0id":h["id"]})
+        response.content_type = "application/json"
     return dumps(results)
+
+
+@route("/process/signals", method="POST")
+@enable_cors
+def do_process_rules():
+    data = loads(request.body.read())
+    signals = data["signals"]
+    increment = data["increment"]
+    loaded = data["loaded_articles"]
+    df = citations
+    if len(loaded) > 0:
+        df = citations[citations["id"].isin(loaded)]
+    # recursively get all counts for each signal>filter>restriction
+    # this is easy because filters and restrictions have same structure :)
+    processed = {}
+    agg = Aggregator(increment)
+    for id, signal in signals.items():
+        df_signal = agg.aggregate_signals(df, signal)
+        processed[id] = agg.aggregate_years(df_signal)
+    # aggregate year data for front ui display
+    # each year is json which has categories as keys, as well as a supplemental
+    # total_value (array for each bin) and max_value (int)
+    ui = {}
+    for key in processed:
+        for year in processed[key]:
+            y_data = processed[key][year]
+            cat_id = signals[key]["category"]
+            if year not in ui:
+                ui[year] = { "total_value": [0]*int(100/increment)
+                    , "max_value": 0 }
+            if cat_id not in ui[year]:
+                ui[year][cat_id] = { "value": [0]*int(100/increment) }
+            if y_data["max"] > ui[year]["max_value"]:
+                ui[year]["max_value"] = y_data["max"]
+            for i in y_data["content"]:
+                ui[year][cat_id]["value"][int(i)] += y_data["content"][i]
+                ui[year]["total_value"][int(i)] += y_data["content"][i]
+
+    return dumps({"front_data": ui, "signal_scores": agg.p})
 
 
 @route("/query", method=["POST"])
@@ -67,6 +107,8 @@ def do_search():
 def do_query():
     data = loads(request.body.read())
     query = data["query"]
+    increment = data["increment"]
+    agg = Aggregator(increment)
     left_bound = int(data["rangeLeft"])
     right_bound = int(data["rangeRight"])
     query = data["query"]
@@ -83,34 +125,18 @@ def do_query():
                 and wordSearch.lemma = ANY(%s)
             ) as wordCitationJoin
             group by wordSentence, citationSentence, articleyear, articleid, percent
-            order by wordCitationJoin.articleid
+            order by wordCitationJoin.articleid, wordCitationJoin.percent
 	"""
     df = run_query(sql, data=(query,))
-    increment = int(data["increment"])
-    bins, labels = get_bins(increment)
+    df["id"] = np.arange(df.shape[0])
 
     df["leftdist"] = df["wordsentence"] - df["citationsentence"]
     df["rightdist"] = df["citationsentence"] - df["wordsentence"]
     df = df.query("(leftdist >= 0 and leftdist <= " + str(left_bound)
         + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
-    distribution = df[["articleyear", "percent"]]
-    distribution["bin"] = pd.cut(df["percent"], bins=bins, labels=labels)
-    distribution = distribution.groupby(["articleyear", "bin"]).count()
-    distribution.fillna(0, inplace=True)
-    distribution = distribution.to_dict()
+    sorted = agg.aggregate_years(df[["articleyear", "percent"]], increment)
 
-    sorted = {}
-    for key in distribution["percent"]:
-        year = str(key[0])
-        if year not in sorted:
-            sorted[year] = { "content": {}, "max": 0 }
-        x = distribution["percent"][key]
-        sorted[year]["content"][str(key[1])] = x
-        if x > sorted[year]["max"]:
-            sorted[year]["max"] = x
-
-    return dumps(sorted)
-
+    return dumps({"agg":sorted, "nunique":df["id"].unique().tolist()})
 
 
 @route("/count", method=["POST"])
@@ -121,20 +147,9 @@ def do_count():
     bins, labels = get_bins(increment)
 
     distribution = citations[["articleyear", "percent"]].copy(deep=True)
-    distribution["bin"] = pd.cut(distribution["percent"], bins=bins, labels=labels)
-    distribution = distribution.groupby(["articleyear", "bin"]).count()
-    distribution.fillna(0, inplace=True)
-    distribution = distribution.to_dict()
-    sorted = {}
-    for key in distribution["percent"]:
-        year = str(key[0])
-        if year not in sorted:
-            sorted[year] = { "content": {}, "max": 0 }
-        x = distribution["percent"][key]
-        sorted[year]["content"][str(key[1])] = x
-        if x > sorted[year]["max"]:
-            sorted[year]["max"] = x
-    return dumps(sorted)
+    agg = Aggregator(increment)
+    sorted = agg.aggregate_years(distribution)
+    return dumps({"agg":sorted, "nunique":citations["id"].unique().tolist()})
 
 
 @route("/papers", method=["POST"])
@@ -330,10 +345,60 @@ def get_bins(increment):
         n += 1
     return bins, labels
 
+class Aggregator():
+    def __init__(self, _increment):
+        self.increment = _increment
+        self.p = {}
+
+    def aggregate_signals(self, df, signal):
+        id = str(signal["id"])
+        w = signal["signal"]
+        base = df[df["context"].str.contains(w)]
+        if id not in self.p:
+            agg = self.aggregate_years(base)
+            self.p[id] = 0
+            for key in agg:
+                self.p[id] += agg[key]["total"]
+
+        filtered = None
+        for fid, filter in signal["filters"]:
+            new_base = self.aggregate_signals(base, filter)
+            if filtered is None:
+                filtered = new_base
+            else:
+                filtered = pd.concat([filted, new_base]).drop_duplicates().reset_index(drop=True)
+
+        if filtered is None:
+            filtered = base
+        for rid, restriction in signal["restrictions"]:
+            new_base = self.aggregate_signals(base, restriction)
+            filtered = filtered[~filtered.index.isin(new_base.index)]
+        return filtered
+
+    def aggregate_years(self, distribution):
+        bins, labels = get_bins(self.increment)
+        distribution["bin"] = pd.cut(distribution["percent"], bins=bins, labels=labels)
+        distribution = distribution.groupby(["articleyear", "bin"]).count()
+        distribution.fillna(0, inplace=True)
+        distribution = distribution.to_dict()
+        sorted = {}
+        for key in distribution["percent"]:
+            year = str(key[0])
+            if year not in sorted:
+                sorted[year] = { "content": {}, "max": 0, "total": 0 }
+            x = distribution["percent"][key]
+            sorted[year]["content"][str(key[1])] = x
+            sorted[year]["total"] += x
+            if x > sorted[year]["max"]:
+                sorted[year]["max"] = x
+        return sorted
+
 
 conn = connect()
-citations = pd.read_csv("./model/citation_percent.csv", encoding="utf-8")
-citations.rename(columns={"Unnamed: 0":"id"}, inplace=True)
+# citations = pd.read_csv("./model/citation_percent.csv", encoding="utf-8")
+citations = pd.read_pickle("./model/citation_context.pkl")
+citations["id"] = np.arange(citations.shape[0])
+# citations.rename(columns={"Unnamed: 0":"id"}, inplace=True)
 # citations = pd.read_csv("./model/citations.csv", encoding="utf-8")
 # articles = pd.read_csv("./model/articles.csv", encoding="utf-8")
 # articles.rename(columns={ "id": "articleid" }, inplace=True)

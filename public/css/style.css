@@ -218,6 +218,10 @@ div.tooltip {
   margin-right: 20px;
 }
 
+a.disabled {
+  pointer-events: none;
+}
+
 #filterQueryOptions  {
     display:flex;
     justify-content: flex-end;
@@ -336,7 +340,9 @@ span.query-text {
   color: lightgray;
 }
 
-
+g text {
+  pointer-events: none;
+}
 
 @media(max-width: 900px) {
   #navOptions {

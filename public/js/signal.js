@@ -16,12 +16,8 @@ let sentiment_signals = {}; // sentiment rules
 let sentiment_categories = {}; // categories (+/-)
 let scores = {}; // pre-processed scores for all docs
 let score_data = {};
+let signal_scores = {};
 let default_color = "#bbb";
-
-$(document).ready(function() {
-  loadCategories();
-  loadSignals();
-});
 
 // Trigger action when the contexmenu is about to be shown
 $(document).bind("mouseup", function (event) {
@@ -143,7 +139,7 @@ function drawSentimentColumn(year) {
   // iterate for each incremental block in this column
   for(let i=0; i<100/currIncrement; i++) {
     let $box = $("." + ([year,"minsqr","box-"+i].join(".")))
-      , minsqr = d3.select($box[0])
+      , minsqr = d3.select("#box-group-"+year+"-"+i)
       , box_width = $box.width()
       , box_height = $box.height()
       , svgContainer = d3.select("#svg-"+year)
@@ -155,8 +151,8 @@ function drawSentimentColumn(year) {
         svgContainer.append("rect")
           .attr("width", box_width)
           .attr("height", box_height)
-          .attr("x", minsqr.attr("x"))
-          .attr("y", minsqr.attr("y"))
+          .attr("x", minsqr.attr("dx"))
+          .attr("y", minsqr.attr("dy"))
           .attr("class", "sentiment overlay-"+year)
           .style("fill", default_color)
           .style("opacity", 0.5);
@@ -165,40 +161,23 @@ function drawSentimentColumn(year) {
       // for each of the categories listed by user
       for(let cat of cat_list) {
         // draw a proportional square for this category/square
+        if(!score_data[year][cat]) continue;
         let cat_width = (score_data[year][cat]["value"][i]/total_val) * box_width;
         x_offset += cat_width;
+        let ratio = score_data[year][cat]["value"][i] / score_data[year]["max_value"];
         svgContainer.append("rect")
           .attr("width", cat_width)
           .attr("height", box_height)
-          .attr("x", parseFloat(minsqr.attr("x"))+box_width-x_offset)
-          .attr("y", minsqr.attr("y"))
+          .attr("x", parseFloat(minsqr.attr("dx"))+box_width-x_offset)
+          .attr("y", minsqr.attr("dy"))
           .attr("class", "sentiment overlay-"+year)
           .style("fill", sentiment_categories[cat].color)
-          .style("opacity", (filteredYearPercents[year][1][i] * 0.6)+0.3);
+          .style("opacity", (ratio * 0.6)+0.3);
       }
   }
   if(overlay_sentiment) {
     $(".sentiment").show();
   }
-}
-
-
-// override the sentiment of all references to a single paper [UNUSED]
-function overrideSentiment(value) {
-   // var len = inTextSelection.length; for(var i = 0; i < len; i++){
-   //   selectPaperViewBoundary(inTextSelection[0]);
-   // }
-   let article_id = $(this).data("id");
-   scores[article_id] = value;
-}
-
-// master update of sentiment rules.. pulls categories and signals
-// as well as populates anything using Either
-function updateSentimentRules(callback) {
-  sentiment_categories = {};
-  sentiment_signals = {};
-
-  // any errors would result into no updates on the interface
 }
 
 // load category data into json object
@@ -230,20 +209,22 @@ function transformSignalData(results, replace_all) {
   }
 }
 
-function loadCategories() {
+function loadCategories(callback) {
   loadData("signalcategory", function(results) {
       sentiment_signals = {};
       transformCategoryData(results);
+      if(typeof(callback) != "undefined") callback();
   });
 }
 
 // load all filters at nonce
-function loadSignals() {
+function loadSignals(callback) {
   loadData("signalbytype", function(signals) {
     transformSignalData(signals);
     loadFilters();
     loadRestrictions();
     updateInterface();
+    if(typeof(callback) != "undefined") callback();
   }, {"signaltypeid": 1});
 }
 
@@ -324,5 +305,73 @@ function getSimilarWords(word, callback) {
       callback(results);
     }
     , async: true
+  });
+}
+
+// process our signals wrt our current search query
+function processAllSignals() {
+    $.ajax({
+      type: 'POST',
+      url: processURL + "process/signals",
+      data: JSON.stringify({
+        "increment": currIncrement
+        , "loaded_articles": loaded_articles
+        , "signals": sentiment_signals
+      }),
+      success: function (results) {
+        let data = JSON.parse(results);
+        score_data = data["front_data"];
+        signal_scores = data["signal_scores"];
+        Object.keys(score_data).forEach(year => {
+          drawSentimentColumn(year);
+        });
+        $("#changeLabelItem2").removeClass("disabled");
+        createVisualization(transformScores(), categoryClick);
+      }
+      , error: function(err) {
+        console.log(err);
+      }
+    });
+}
+
+// filter our signal list by either a category, parentid, or both
+function filterSignals(category, pid) {
+  let filtered_data = sentiment_signals;
+  // filter by a category
+  if(typeof(category) != "undefined") {
+    let acc = {};
+    Object.keys(filtered_data).forEach(key => {
+      if(filtered_data[key].category == category) {
+        acc[key] = filtered_data[key];
+      }
+    });
+    filtered_data = acc;
+  }
+  // filter by a specific parent signal
+  if(typeof(pid) != "undefined") {
+    // get a recursive list of children keys
+    let signal = filtered_data[pid];
+    let keys = getAllChildrenKeys(signal);
+    let acc = {};
+    keys.push(pid);
+    Object.keys(filtered_data).forEach(key => {
+      if(keys.includes(key)) {
+        acc[key] = filtered_data[key];
+      }
+    });
+    filtered_data = acc;
+  }
+  return filtered_data;
+}
+
+function getAllChildrenKeys(signal) {
+  let children = signal.filters.concat(signal.restrictions);
+  let keys = [];
+  for(let child of children) {
+    keys.push(child.id);
+    keys = keys.concat(getAllChildrenKeys(child));
+  }
+  return keys.filter( (value, index, self) => {
+    return self.indexOf(value) === index;
   });
 }

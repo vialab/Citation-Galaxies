@@ -49,7 +49,7 @@ var currentURL = "http://localhost:5432/"; //The url to access the backend
 var processURL = "http://localhost:5431/"; //The url to access the backend
 
 var currSearchQuery = ""; //The current search query
-
+var loaded_articles = [];
 var process_queue = {}; //process queue of intervals
 var overlay_sentiment = false; // flag to immediately show sentiment results
 var front_data = {};
@@ -98,11 +98,13 @@ function normalizationChange(value) {
     currentNorm = value;
     let line_color = {};
     let all_max = 0;
+    // get the max across all data
     Object.keys(front_data).forEach(year => {
       if(front_data[year]["max"] > all_max) {
         all_max = front_data[year]["max"];
       }
     });
+    // draw the squares with the respective box/text color
     Object.keys(front_data).forEach(year => {
       let max = front_data[year]["max"];
       Object.keys(front_data[year]["content"]).forEach(box_id => {
@@ -124,6 +126,7 @@ function normalizationChange(value) {
         else line_color[box_id] = [colors(freq/max)];
       });
     });
+    // bubble out to the overall paper vis and color the lines respectively
     Object.keys(line_color).forEach(key => {
       let r = 0, g = 0, b = 0;
       for(let i=0; i < line_color[key].length; i++) {
@@ -476,6 +479,8 @@ function drawColumnSquare(svgContainer, locationX, locationY, sizeX, sizeY, mini
     //Draw square
     let rect_g = svgContainer.append("g")
       .attr("transform", "translate(" + locationX + ", " + locationY + ")")
+      .attr("dx", locationX)
+      .attr("dy", locationY)
       .attr("id", "box-group-" + year + "-" + idx);
     miniSquaresObjects.push(rect_g.append("rect")
         .attr("width", sizeX)
@@ -975,19 +980,27 @@ function drawHome(increment) {
 // Remake of previous filterYearResults
 // This now uses a mini server which retains the data in RAM for processing
 function getAllYears(draw = false, callback) {
-    $.ajax({
-      type: 'POST',
-      url: processURL + "count",
-      data: JSON.stringify({ "increment": currIncrement }),
-      success: function (results) {
-        let data = JSON.parse(results);
-        if(draw) drawAllYears(data);
-        if(typeof(callback) !== "undefined") callback(data);
+  $("#changeLabelItem2").addClass("disabled");
+  $.ajax({
+    type: 'POST',
+    url: processURL + "count",
+    data: JSON.stringify({ "increment": currIncrement }),
+    success: function (results) {
+      let data = JSON.parse(results);
+      loaded_articles = data["nunique"];
+      if(draw) {
+        drawAllYears(data["agg"]);
+        loadCategories(function() {
+          loadSignals(processAllSignals);
+        });
       }
-    });
+      if(typeof(callback) !== "undefined") callback(data["agg"]);
+    }
+  });
 }
 
 function getFilteredYears(word, draw = false, callback) {
+  $("#changeLabelItem2").addClass("disabled");
   $.ajax({
     type: 'POST',
     url: processURL + "query",
@@ -999,8 +1012,12 @@ function getFilteredYears(word, draw = false, callback) {
     }),
     success: function (results) {
       let data = JSON.parse(results);
-      if(draw) drawAllYears(data);
-      if(typeof(callback) !== "undefined") callback(data);
+      loaded_articles = data["nunique"];
+      if(draw) {
+        drawAllYears(data["agg"]);
+        processAllSignals();
+      }
+      if(typeof(callback) !== "undefined") callback(data["agg"]);
     }
   });
 }
@@ -1117,6 +1134,7 @@ function searchForQuery(query) {
     // drawHome(currIncrement);
     getFilteredYears(currSearchQuery, true);
 }
+
 
 $(document).ready(function () {
     $(".toast").toast({ "delay": 2000 });

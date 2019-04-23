@@ -8,3 +8,5 @@ database.ini
 citations.csv
 citation_percent.csv
 articles.csv
+citations.pkl
+citation_context.pkl
