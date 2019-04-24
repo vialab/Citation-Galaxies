@@ -30,9 +30,16 @@ def get_model():
     model = Word2Vec.load("./model/vectors/word2vec.model")
     return model
 
-@route("/similarity", method="GET")
+
+@route("/similar", method="GET")
+@enable_cors
 def do_similarity():
-    word_list = w2v.wv.most_similar(request.query["word"])
+    n = 10
+    if "n" in request.query:
+        n = request.query["n"]
+    word_list = w2v.wv.most_similar(request.query["word"], topn=n)
+    if word_list is None:
+        word_list = []
     results = []
     for word in word_list:
         temp = {}
@@ -43,7 +50,28 @@ def do_similarity():
     return dumps(results)
 
 
+@route("/predict", method="GET")
+@enable_cors
+def do_related():
+    n = 10
+    if "n" in request.query:
+        n = request.query["n"]
+    word_list = w2v.predict_output_word(request.query["context"].split(","), topn=n)
+    if word_list is None:
+        return dumps({})
+    results = []
+    for word in word_list:
+        temp = {}
+        temp["word"] = word[0]
+        temp["score"] = str(word[1])
+        results.append(temp)
+    response.content_type = "application/json"
+    return dumps(results)
+
+
+
 @route("/search", method="GET")
+@enable_cors
 def do_search():
     # data = request.json
     # regex pattern: \bword1\W+(?:\w+\W+){0,2}?word2\b | need reverse words too
