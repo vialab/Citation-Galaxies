@@ -3,6 +3,7 @@ import pandas as pd
 import pandas.io.sql as sqlio
 import numpy as np
 import bottle
+import base64
 from sqlalchemy import text
 from base64 import b64decode
 from json import loads, dumps
@@ -96,38 +97,49 @@ def do_search():
 def do_process_rules():
     data = loads(request.body.read())
     signals = data["signals"]
+    query = data["query"]
     increment = data["increment"]
     loaded = data["loaded_articles"]
     df = citations
-    if len(loaded) > 0:
-        df = citations[citations["id"].isin(loaded)]
-    # recursively get all counts for each signal>filter>restriction
-    # this is easy because filters and restrictions have same structure :)
-    processed = {}
-    agg = Aggregator(increment)
-    for id, signal in signals.items():
-        df_signal = agg.aggregate_signals(df, signal)
-        processed[id] = agg.aggregate_years(df_signal)
-    # aggregate year data for front ui display
-    # each year is json which has categories as keys, as well as a supplemental
-    # total_value (array for each bin) and max_value (int)
-    ui = {}
-    for key in processed:
-        for year in processed[key]:
-            y_data = processed[key][year]
-            cat_id = signals[key]["category"]
-            if year not in ui:
-                ui[year] = { "total_value": [0]*int(100/increment)
-                    , "max_value": 0 }
-            if cat_id not in ui[year]:
-                ui[year][cat_id] = { "value": [0]*int(100/increment) }
-            if y_data["max"] > ui[year]["max_value"]:
-                ui[year]["max_value"] = y_data["max"]
-            for i in y_data["content"]:
-                ui[year][cat_id]["value"][int(i)] += y_data["content"][i]
-                ui[year]["total_value"][int(i)] += y_data["content"][i]
-
-    return dumps({"front_data": ui, "signal_scores": agg.p})
+    signal_key = base64.b64encode(dumps(signals).encode())
+    query_key = base64.b64encode(dumps(query).encode())
+    ruleKey = str(increment).encode() + b"_" + signal_key + b"_" + query_key
+    ruleHash = base64.b64encode(ruleKey).decode("utf-8");
+    cache = run_query("select querydata from querycache where queryid=%s", data=(ruleHash,))
+    if cache.shape[0] > 0:
+        payload = base64.b64decode(cache["querydata"].values[0])
+    else:
+        if len(loaded) > 0:
+            df = citations[citations["id"].isin(loaded)]
+        # recursively get all counts for each signal>filter>restriction
+        # this is easy because filters and restrictions have same structure :)
+        processed = {}
+        agg = Aggregator(increment)
+        for id, signal in signals.items():
+            df_signal = agg.aggregate_signals(df, signal)
+            processed[id] = agg.aggregate_years(df_signal)
+        # aggregate year data for front ui display
+        # each year is json which has categories as keys, as well as a supplemental
+        # total_value (array for each bin) and max_value (int)
+        ui = {}
+        for key in processed:
+            for year in processed[key]:
+                y_data = processed[key][year]
+                cat_id = signals[key]["category"]
+                if year not in ui:
+                    ui[year] = { "total_value": [0]*int(100/increment)
+                        , "max_value": 0 }
+                if cat_id not in ui[year]:
+                    ui[year][cat_id] = { "value": [0]*int(100/increment) }
+                if y_data["max"] > ui[year]["max_value"]:
+                    ui[year]["max_value"] = y_data["max"]
+                for i in y_data["content"]:
+                    ui[year][cat_id]["value"][int(i)] += y_data["content"][i]
+                    ui[year]["total_value"][int(i)] += y_data["content"][i]
+        payload = dumps({"front_data": ui, "signal_scores": agg.p})
+        encoded = base64.b64encode(payload.encode()).decode("utf-8")
+        run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(ruleHash, encoded))
+    return payload
 
 
 @route("/query", method=["POST"])
@@ -140,31 +152,41 @@ def do_query():
     left_bound = int(data["rangeLeft"])
     right_bound = int(data["rangeRight"])
     query = data["query"]
-    sql = """select *, count(*) as count from (
-        		select wordSearch.articleid as articleID
-                    , wordSearch.articleyear
-        			, wordSearch.sentencenum as wordSentence
-        			, citationSearch.sentencenum as citationSentence
-        			, ((( CAST(wordSearch.startlocationpaper as float)
-        				+wordSearch.endlocationpaper)/2)
-        				/wordSearch.articleCharCount) * 100 as percent
-        		from wordsearch, citationsearch
-        		where wordsearch.articleid = citationsearch.articleid
-                and wordSearch.lemma = ANY(%s)
-            ) as wordCitationJoin
-            group by wordSentence, citationSentence, articleyear, articleid, percent
-            order by wordCitationJoin.articleid, wordCitationJoin.percent
-	"""
-    df = run_query(sql, data=(query,))
-    df["id"] = np.arange(df.shape[0])
+    query_key = base64.b64encode(dumps(query).encode())
+    ruleKey = str(increment).encode() + b"_" + query_key
+    ruleHash = base64.b64encode(ruleKey).decode("utf-8");
+    cache = run_query("select querydata from querycache where queryid=%s", data=(ruleHash,))
+    if cache.shape[0] > 0:
+        # we have made this query before!
+        payload = base64.b64decode(cache["querydata"].values[0])
+    else:
+        sql = """select *, count(*) as count from (
+            		select wordSearch.articleid as articleID
+                        , wordSearch.articleyear
+            			, wordSearch.sentencenum as wordSentence
+            			, citationSearch.sentencenum as citationSentence
+            			, ((( CAST(wordSearch.startlocationpaper as float)
+            				+wordSearch.endlocationpaper)/2)
+            				/wordSearch.articleCharCount) * 100 as percent
+            		from wordsearch, citationsearch
+            		where wordsearch.articleid = citationsearch.articleid
+                    and wordSearch.lemma = ANY(%s)
+                ) as wordCitationJoin
+                group by wordSentence, citationSentence, articleyear, articleid, percent
+                order by wordCitationJoin.articleid, wordCitationJoin.percent
+    	"""
+        df = run_query(sql, data=(query,))
+        df["id"] = np.arange(df.shape[0])
 
-    df["leftdist"] = df["wordsentence"] - df["citationsentence"]
-    df["rightdist"] = df["citationsentence"] - df["wordsentence"]
-    df = df.query("(leftdist >= 0 and leftdist <= " + str(left_bound)
-        + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
-    sorted = agg.aggregate_years(df[["articleyear", "percent"]], increment)
-
-    return dumps({"agg":sorted, "nunique":df["id"].unique().tolist()})
+        df["leftdist"] = df["wordsentence"] - df["citationsentence"]
+        df["rightdist"] = df["citationsentence"] - df["wordsentence"]
+        df = df.query("(leftdist >= 0 and leftdist <= " + str(left_bound)
+            + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
+        sorted = agg.aggregate_years(df[["articleyear", "percent"]])
+        payload = dumps({"agg":sorted, "nunique":df["id"].unique().tolist()})
+        encoded = base64.b64encode(payload.encode()).decode("utf-8")
+        run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(ruleHash, encoded))
+    return payload
 
 
 @route("/count", method=["POST"])
@@ -332,6 +354,28 @@ def connect():
     finally:
         return conn
 
+def run_update(sql, data=()):
+    try:
+        # read database configuration
+        params = config()
+        # connect to the PostgreSQL database
+        conn = psycopg2.connect(**params)
+        # create a new cursor
+        cur = conn.cursor()
+        # execute the UPDATE  statement
+        cur.execute(sql, data)
+        # get the number of updated rows
+        updated_rows = cur.rowcount
+        # Commit the changes to the database
+        conn.commit()
+        # Close communication with the PostgreSQL database
+        cur.close()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
+    finally:
+        if conn is not None:
+            conn.close()
+    return updated_rows
 
 def run_query(sql, data=(), is_update=False):
     results = pd.DataFrame()
@@ -372,6 +416,7 @@ def get_bins(increment):
         labels.append(str(n))
         n += 1
     return bins, labels
+
 
 class Aggregator():
     def __init__(self, _increment):

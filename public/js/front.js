@@ -696,7 +696,7 @@ function prepContainers(increment) {
             drawFirstColumn(110, numOfLines * 16, 80, svg, numOfLines);
         }
         let svg = yearCols.append("div")
-          .attr("class", "col-xs-* nopadding temp-load")
+          .attr("class", "col-xs-* nopadding year-container temp-load")
           .attr("height", 785)
           .attr("id", "container-"+years[i].articleyear)
           .append("svg")
@@ -1031,6 +1031,7 @@ function drawAllYears(data) {
   d3.select("#viewByButton").classed('disabled', false);
   d3.select("#normByButton").classed('disabled', false);
 
+  $(".year-container").hide();
   let all_max = 0;
   Object.keys(data).forEach(year => {
     let max = data[year]["max"];
@@ -1058,6 +1059,7 @@ function drawAllYears(data) {
     });
     let column = d3.select("#svg-"+year);
     column.select(".title-total").text(shortenVal(total));
+    $("#container-" + year).show();
   });
 
   // fill the square colors using selected norm

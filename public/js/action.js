@@ -14,6 +14,8 @@ function getSimilarWords(word, callback) {
 function findSimilar(elem) {
   let $elem = $(elem).parent();
   let signal = $("#signal", $elem).html();
+  let $sel = getCategorySelect();
+  $sel.val($("#signalcategoryid", $elem).html());
   getSimilarWords(signal, function(results) {
     let $modal = $("#generic-modal");
     $(".modal-title", $modal).html("Similar words to \"" + signal + "\" by usage");
@@ -28,10 +30,10 @@ function findSimilar(elem) {
       let html = "<tr><td><div class='input-group-text'>\
         <input type='checkbox' class='similar-word' data-word='" + o.word
         + "'></div></td><td>" + o.word + "</td><td>" + (o.score*100).toFixed(2)
-        + "</td></tr>";
+        + "</td><td>" + $sel[0].outerHTML + "</td></tr>";
       $tbody.append(html);
     }
-
+    $sel.attr("id", "select-all-category");
     let $table = $(`<table class='table'>
       <thead>
         <tr>
@@ -42,6 +44,7 @@ function findSimilar(elem) {
           </th>
           <th>Word</th>
           <th>Similarity (%)</th>
+          <th>` + $sel[0].outerHTML + `</th>
         </tr>
       </thead>
     </table>`);
@@ -50,6 +53,10 @@ function findSimilar(elem) {
 
     $("#select-all-similar").change(function() {
       $(".similar-word").prop("checked", this.checked);
+    });
+
+    $("#select-all-category").change(function() {
+      $(".sel-cat").val($(this).val());
     })
 
     $(".modal-footer").html("");
@@ -86,5 +93,18 @@ function findPrediction(elem) {
 }
 
 function addSimilarSignals(type) {
-  console.log($(".similar-word:checked"));
+  $(".similar-word:checked").each(function() {
+    let $row = $(this).closest("tr");
+    let values = {
+      "score": 1
+      , "signalcategoryid": $(".sel-cat", $row).val()
+      , "signaltypeid": type
+    };
+    values["signal"] = $(this).data("word");
+    postInsert("signal", values, function() {
+      reloadTable();
+      toast("Success!", "New signal was inserted!");
+    });
+  });
+  // :signal, :score, :signalcategoryid, true, :cookieid, :signaltypeid
 }

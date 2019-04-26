@@ -296,6 +296,17 @@ function updateCategoryInterface() {
   });
 }
 
+// create a generic select input of categories
+function getCategorySelect() {
+  let $sel = $("<select class='sel-cat'></select>")
+  Object.keys(sentiment_categories).forEach( id => {
+    let cat = sentiment_categories[id];
+    $sel.append(" \
+      <option value='" + id + "'>" + cat.name + "</option>");
+  });
+  return $sel;
+}
+
 // process our signals wrt our current search query
 function processAllSignals() {
     $.ajax({
@@ -305,6 +316,7 @@ function processAllSignals() {
         "increment": currIncrement
         , "loaded_articles": loaded_articles
         , "signals": sentiment_signals
+        , "query": currSearchQuery
       }),
       success: function (results) {
         let data = JSON.parse(results);

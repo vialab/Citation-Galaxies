@@ -301,21 +301,12 @@ function insertRow(table_name, parent_col, parent_id) {
 
   if(parentid !== undefined) values[parent_col] = parentid;
 
-  $.ajax({
-    type: "POST",
-    url: currentURL + "api/insert",
-    data: {
-      "table_name": table_name
-      , "values": JSON.stringify(values)
-    },
-    success: function(results) {
-      console.log("inserted!");
-      reloadTable();
-      toast("Success!", "Row was inserted to the database.");
-    }
+  postInsert(table_name, values, function(results) {
+    console.log("inserted!");
+    reloadTable();
+    toast("Success!", "Row was inserted to the database.");
   });
 }
-
 
 // update a table using a datastructure that should remain consistent
 // JSON object that must include an id
@@ -328,6 +319,14 @@ function updateRow(table_name, id) {
     values[field_name] = $(this).val();
   });
 
+  postInsert(table_name, values, function(results) {
+    console.log("inserted!");
+    reloadTable();
+    toast("Success!", "Row was updated in the database.");
+  })
+}
+
+function postInsert(table_name, values, callback) {
   $.ajax({
     type: "POST",
     url: currentURL + "api/insert",
@@ -335,10 +334,6 @@ function updateRow(table_name, id) {
       "table_name": table_name
       , "values": JSON.stringify(values)
     },
-    success: function(results) {
-      console.log("inserted!");
-      reloadTable();
-      toast("Success!", "Row was updated in the database.");
-    }
+    success: callback
   });
 }

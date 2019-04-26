@@ -44,7 +44,7 @@
 .nopadding {
     padding: 0 0 0 0 !important;
     float: none;
-    margin: 0 auto;
+    margin: 0 0;
 }
 
 .partialpadding {
@@ -176,6 +176,7 @@ div.tooltip {
   flex: 4 4 auto;
   display: flex;
   overflow-x: scroll;
+  justify-content: left;
 }
 
 .custom-menu {
@@ -342,6 +343,11 @@ span.query-text {
 
 g text {
   pointer-events: none;
+}
+
+.modal-dialog {
+  width: auto;
+  max-width: 960px; // Optional, maximum width
 }
 
 @media(max-width: 900px) {
