@@ -9,15 +9,12 @@ var b = {
 };
 
 // Total size of all segments; we set this later, after loading the data.
-var totalSize = 0;
-
-// Use d3.text and d3.csvParseRows so that we do not need to have a header
-// row, and can receive the csv as an array of arrays.
-// d3.text("visit-sequences.csv", function(text) {
-//   var csv = d3.csvParseRows(text);
-//   var json = buildHierarchy(csv);
-//   createVisualization(json);
-// });
+var total_size = 0;
+var arc = d3.arc()
+    .startAngle(function(d) { return d.x0; })
+    .endAngle(function(d) { return d.x1; })
+    .innerRadius(function(d) { return Math.sqrt(d.y0); })
+    .outerRadius(function(d) { return Math.sqrt(d.y1); });
 
 // Main function to draw and set up the visualization, once we have the data.
 function createVisualization(json, clicked) {
@@ -26,17 +23,11 @@ function createVisualization(json, clicked) {
       .attr("width", width)
       .attr("height", height)
       .append("svg:g")
-      .attr("id", "container")
-      .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+        .attr("id", "container")
+        .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
   var partition = d3.partition()
       .size([2 * Math.PI, radius * radius]);
-
-  var arc = d3.arc()
-      .startAngle(function(d) { return d.x0; })
-      .endAngle(function(d) { return d.x1; })
-      .innerRadius(function(d) { return Math.sqrt(d.y0); })
-      .outerRadius(function(d) { return Math.sqrt(d.y1); });
 
   // Basic setup of page elements.
   initializeBreadcrumbTrail();
@@ -57,47 +48,72 @@ function createVisualization(json, clicked) {
   // For efficiency, filter nodes to keep only those large enough to see.
   var nodes = partition(root).descendants()
       .filter(function(d) {
-          return (d.x1 - d.x0 > 0.005); // 0.005 radians = 0.29 degrees
+          return (d.x1 - d.x0 > 0.00005); // 0.005 radians = 0.29 degrees
       });
 
   var path = vis.data([json]).selectAll("path")
-      .data(nodes)
-      .enter().append("svg:path")
-      // .attr("display", function(d) { return d.depth ? null : "none"; })
-      .attr("d", arc)
-      .attr("fill-rule", "evenodd")
-      .attr("id", function(d) {
-        if(d.data.name=="root") return "root-path";
-        return "";
-      })
-      .style("fill", getSBColor)
-      .style("opacity", 1)
-      .on("mouseover", mouseover)
-      .on("click", clicked);
+    .data(nodes)
+    .enter().append("svg:path")
+    // .attr("display", function(d) { return d.depth ? null : "none"; })
+    .attr("d", arc)
+    .attr("fill-rule", "evenodd")
+    .attr("id", function(d) {
+      if(d.data.name=="root") return "root-path";
+      return "";
+    })
+    .style("fill", getSBColor)
+    .style("opacity", 1)
+    .on("mouseover", mouseover)
+    .on("click", clicked);
 
   // Add the mouseleave handler to the bounding circle.
-  d3.select("#container").on("mouseleave", mouseleave);
+  d3.select("#chart").on("mouseleave", mouseleave);
 
   // Get total size of the tree = value of root node from partition.
-  // totalSize = path.datum().value;
+  // total_size = path.datum().value;
  };
 
 // Fade all but the current sequence, and show it in the breadcrumb trail.
 function mouseover(d) {
-
-  var percentage = (100 * d.value / totalSize).toPrecision(3);
-  var percentageString = percentage + "%";
+  if(d.depth == 0) {
+    mouseleave();
+    return;
+  }
+  let catid = d.data.catid;
+  if(!d.open) {
+    d.open = true;
+    let path = d3.selectAll("path").filter(function(d) {
+      return d.data.catid == catid && d.depth == 2;
+    });
+    path.each(function(d, i) {
+      let n = d.parent.children.length;
+      let px0 = d.parent.x0;
+      let px1 = d.parent.x1;
+      let dx = (px1 - px0)/n;
+      if(typeof(d.ix0) == "undefined") {
+        d.ix0 = d.x0;
+        d.ix1 = d.x1;
+      }
+      d.x0 = px0 + (dx * (i));
+      d.x1 = px0 + (dx * (i+1));
+      d.open = true;
+    });
+    path.transition()
+      .duration(750)
+      .attrTween("d", arcTween);
+  }
+  let percentage = (100 * d.value / total_size).toPrecision(3);
+  let percentageString = percentage + "%";
   if (percentage < 0.1) {
     percentageString = "< 0.1%";
   }
-
   d3.select("#percentage")
       .text(percentageString);
 
   d3.select("#explanation")
       .style("visibility", "");
 
-  var sequenceArray = d.ancestors().reverse();
+  let sequenceArray = d.ancestors().reverse();
   sequenceArray.shift(); // remove root node from the array
   updateBreadcrumbs(sequenceArray, percentageString);
 
@@ -105,7 +121,7 @@ function mouseover(d) {
   d3.selectAll("path")
       .style("opacity", 0.3);
 
-  var vis = d3.select("g#container");
+  let vis = d3.select("g#container");
   vis.select("defs").remove();
   let grad = vis.append("defs").append("linearGradient")
     .attr("id", "grad")
@@ -123,9 +139,24 @@ function mouseover(d) {
       .style("opacity", 1);
 }
 
+function arcTween(d) {
+  var i = d3.interpolate({x0: d.ix0, x1: d.ix1}, d);
+  return function(t) {
+    return arc(i(t));
+  };
+}
+
 // Restore everything to full opacity when moving off the visualization.
 function mouseleave(d) {
-
+  let path = d3.selectAll("path").filter(function(d) {
+    return d.open && d.depth == 2;
+  });
+  path.each(function(d, i) {
+    delete d.open;
+  });
+  path.transition()
+    .duration(750)
+    .attrTween("d", arcTween);
   // Hide the breadcrumb trail
   d3.select("#trail")
       .style("visibility", "hidden");
@@ -369,7 +400,8 @@ function buildHierarchy(csv) {
 function transformScores(filtered_data=sentiment_signals) {
   let csv = [];
   let cat_size = {};
-  totalSize = loaded_articles.length;
+  let total_cat = 0;
+  total_size = loaded_articles.length;
   Object.keys(filtered_data).forEach(key => {
     let signal = filtered_data[key];
     let id = signal.id.toString();
@@ -383,6 +415,8 @@ function transformScores(filtered_data=sentiment_signals) {
       cat_size[signal.category] = 0;
     }
     cat_size[signal.category] += signal_scores[signal.id];
+    total_cat += signal_scores[signal.id];
   });
+  csv.push(["untagged", total_size - cat_size, 0, "", "untagged"]);
   return buildHierarchy(csv);
 }
