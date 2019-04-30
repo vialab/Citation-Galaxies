@@ -326,7 +326,7 @@ function processAllSignals() {
           drawSentimentColumn(year);
         });
         $("#changeLabelItem2").removeClass("disabled");
-        createVisualization(transformScores(), categoryClick);
+        createVisualization(transformScores());
       }
       , error: function(err) {
         console.log(err);
