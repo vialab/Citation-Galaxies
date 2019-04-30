@@ -1,77 +1,200 @@
-height// Dimensions of sunburst.
-var width = 750;
-var height = 600;
-var radius = Math.min(width, height) / 2;
-
+// Total size of all segments; we set this later, after loading the data.
+let total_size = 0, total_tagged = 0;
+let node;
+let svg;
+const width = 750;
+const height = 600;
+const radius = (Math.min(width, height) / 2);
+const x = d3.scaleLinear().range([0, 2 * Math.PI]);
+const y = d3.scaleLinear().range([0, radius]);
+const partition = d3.partition();
+const arc = d3.arc()
+  .startAngle(d => Math.max(0, Math.min(2 * Math.PI, x(d.x0))))
+  .endAngle(d => Math.max(0, Math.min(2 * Math.PI, x(d.x1))))
+  .innerRadius(d => Math.max(0, y(d.y0)))
+  .outerRadius(d => Math.max(0, y(d.y1)));
 // Breadcrumb dimensions: width, height, spacing, width of tip/tail.
-var b = {
-  w: 75, h: 30, s: 3, t: 10
+const b = {
+  w: 100, h: 30, s: 3, t: 10
 };
 
-// Total size of all segments; we set this later, after loading the data.
-var total_size = 0;
-var arc = d3.arc()
-    .startAngle(function(d) { return d.x0; })
-    .endAngle(function(d) { return d.x1; })
-    .innerRadius(function(d) { return Math.sqrt(d.y0); })
-    .outerRadius(function(d) { return Math.sqrt(d.y1); });
-
-// Main function to draw and set up the visualization, once we have the data.
-function createVisualization(json, clicked) {
-  d3.select("#chart svg").remove();
-  var vis = d3.select("#chart").append("svg:svg")
-      .attr("width", width)
-      .attr("height", height)
-      .append("svg:g")
-        .attr("id", "container")
-        .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
-
-  var partition = d3.partition()
-      .size([2 * Math.PI, radius * radius]);
-
-  // Basic setup of page elements.
+function createVisualization(json) {
   initializeBreadcrumbTrail();
-  drawLegend();
-  d3.select("#togglelegend").on("click", toggleLegend);
 
-  // Bounding circle underneath the sunburst, to make it easier to detect
-  // when the mouse leaves the parent g.
-  vis.append("svg:circle")
-      .attr("r", radius)
-      .style("opacity", 0);
+  svg = d3.select("#chart")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + (height / 2) + ")");
 
-  // Turn the data into a d3 hierarchy and calculate the sums.
-  var root = d3.hierarchy(json)
-      .sum(function(d) { return d.size; })
-      .sort(function(a, b) { return b.value - a.value; });
+  let nodes = d3.hierarchy(json).sum(d => d.size);
+  let gSlices = svg.selectAll("g")
+    .data(partition(nodes).descendants(), d => (d.data.id) )
+    .enter()
+      .append("g");
 
-  // For efficiency, filter nodes to keep only those large enough to see.
-  var nodes = partition(root).descendants()
-      .filter(function(d) {
-          return (d.x1 - d.x0 > 0.00005); // 0.005 radians = 0.29 degrees
-      });
+  gSlices.exit().remove();
 
-  var path = vis.data([json]).selectAll("path")
-    .data(nodes)
-    .enter().append("svg:path")
-    // .attr("display", function(d) { return d.depth ? null : "none"; })
-    .attr("d", arc)
+  gSlices.append("path")
     .attr("fill-rule", "evenodd")
     .attr("id", function(d) {
       if(d.data.name=="root") return "root-path";
-      return "";
+      return "bite-"+d.data.name;
     })
     .style("fill", getSBColor)
     .style("opacity", 1)
-    .on("mouseover", mouseover)
-    .on("click", clicked);
+    .on("click", click)
+    .on("mouseover", mouseover);
 
-  // Add the mouseleave handler to the bounding circle.
+  gSlices.append("text")
+         .attr("dy", ".35em")
+         .text(function (d) { return d.parent ? d.data.signal : "" })
+         .attr("id", function (d) { return "bite-text-" + d.data.name })
+         .attr("fill", "#fff");
+
+  svg.selectAll("path")
+     .transition("update")
+     .duration(750).attrTween("d", arcTweenPath);
+
+  svg.selectAll("text")
+     .transition("update")
+     .duration(750)
+     .attrTween("transform", arcTweenText)
+     .attr("text-anchor", function (d) {
+       return d.textAngle > 180 ? "start" : "end"
+     })
+     .attr("dx", function (d) {
+       return d.textAngle > 180 ? 27: 27
+     })
+     .attr("opacity", function (e) {
+      return e.x1 - e.x0 > 0.01 ? 1 : 0
+    });
+
+  d3.select("#percentage")
+    .text(((total_tagged/total_size) * 100).toFixed(2)+"%");
+  // fill the root node with its distribution
+  fillRootDistribution(svg, (total_tagged/total_size)*100);
+  d3.select("#root-path").style("fill", "url(#grad)");
   d3.select("#chart").on("mouseleave", mouseleave);
+}
 
-  // Get total size of the tree = value of root node from partition.
-  // total_size = path.datum().value;
- };
+function fillRootDistribution(svg, percentage) {
+  // fill the root node with its distribution
+  svg.select("defs").remove();
+  let grad = svg.append("defs").append("linearGradient")
+    .attr("id", "grad")
+    .attr("x1", "0%")
+    .attr("x2", "0%")
+    .attr("y1", "100%").attr("y2", "0%");
+  grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 1));
+  grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 0.5));
+  d3.select("#root-path").style("fill", "url(#grad)");
+}
+
+function fillDonutSlice(d) {
+  if(d.depth < 2) return;
+  // fill the root node with its distribution
+  let g = d3.select(this.parentNode);
+  g.select("defs").remove();
+  let grad = g.append("defs").append("linearGradient")
+    .attr("id", "bite-grad-"+d.data.name)
+    .attr("x1", "0%")
+    .attr("x2", "0%")
+    .attr("y1", "100%").attr("y2", "0%");
+  let percentage = (100 * d.value / total_size).toPrecision(3);
+  grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 1));
+  grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 0.5));
+
+  let ang = ((x((d.x0 + d.x1) / 2) - Math.PI / 2) / Math.PI * 180);
+  let textAngle = (ang > 90) ? 180 + ang : ang;
+  grad.attr("gradientTransform", "rotate(" + textAngle + ")");
+  d3.select(this).style("fill", "url(#bite-grad-" + d.data.name + ")");
+}
+
+function arcTweenText(a, i) {
+  var oi = d3.interpolate({ x0: (a.x0s ? a.x0s : 0), x1: (a.x1s ? a.x1s : 0), y0: (a.y0s ? a.y0s : 0), y1: (a.y1s ? a.y1s : 0) }, a)
+
+  function tween(t) {
+    var b = oi(t)
+    var ang = ((x((b.x0 + b.x1) / 2) - Math.PI / 2) / Math.PI * 180)
+
+    b.textAngle = (ang > 90) ? 180 + ang : ang
+    a.centroid = arc.centroid(b)
+
+    return 'translate(' + arc.centroid(b) + ')rotate(' + b.textAngle + ')'
+  }
+  return tween
+}
+
+function arcTweenPath(a, i) {
+  var oi = d3.interpolate({ x0: (a.x0s ? a.x0s : 0), x1: (a.x1s ? a.x1s : 0), y0: (a.y0s ? a.y0s : 0), y1: (a.y1s ? a.y1s : 0) }, a)
+
+  function tween(t) {
+    var b = oi(t)
+
+    a.x0s = b.x0
+    a.x1s = b.x1
+    a.y0s = b.y0
+    a.y1s = b.y1
+
+    return arc(b)
+  }
+  if (i == 0 && node) {
+
+    var xd = d3.interpolate(x.domain(), [node.x0, node.x1])
+    var yd = d3.interpolate(y.domain(), [node.y0, 1])
+    var yr = d3.interpolate(y.range(), [node.y0 ? 40 : 0, radius])
+
+    return function (t) {
+      x.domain(xd(t))
+      y.domain(yd(t)).range(yr(t))
+
+      return tween(t)
+    }
+  } else {
+    // first build
+    return tween
+  }
+}
+
+function click(d) {
+  node = d
+  const total = d.x1 - d.x0
+
+  svg.selectAll('path')
+     .transition('click')
+     .duration(750)
+     .attrTween('d', arcTweenPath);
+
+  svg.selectAll('text')
+     .transition('click')
+     .attr('opacity', 1)
+     .duration(750)
+     .attrTween('transform', function (d, i) {
+       return arcTweenText(d)
+      })
+     .attr('text-anchor', function (d) {
+       return d.textAngle > 180 ? 'start' : 'end'
+     })
+     .attr('dx', function (d) {
+       if(d.data.name.length > 3) {
+         return d.textAngle > 180 ? -23 : 23
+       }
+       return d.textAngle > 180 ? -13 : 13
+     })
+     .attr('opacity', function (e) {
+       // hide & show text
+       if (e.x0 >= d.x0 && e.x1 <= (d.x1 + 0.0000000000000001)) {
+         const arcText = d3.select(this.parentNode).select('text')
+         arcText.attr('visibility', function(d) {
+           return (d.x1 - d.x0) / total < 0.01 ? 'hidden' : 'visible'
+         })
+       } else {
+         return 0
+       }
+     })
+ }
 
 // Fade all but the current sequence, and show it in the breadcrumb trail.
 function mouseover(d) {
@@ -80,27 +203,28 @@ function mouseover(d) {
     return;
   }
   let catid = d.data.catid;
-  if(!d.open) {
+  if(!d.open && d.depth != 1) {
     d.open = true;
     let path = d3.selectAll("path").filter(function(d) {
-      return d.data.catid == catid && d.depth == 2;
+      return d.data.catid == catid && d.depth > 1;
     });
     path.each(function(d, i) {
       let n = d.parent.children.length;
       let px0 = d.parent.x0;
       let px1 = d.parent.x1;
       let dx = (px1 - px0)/n;
-      if(typeof(d.ix0) == "undefined") {
-        d.ix0 = d.x0;
-        d.ix1 = d.x1;
-      }
+      d.ix0 = d.x0;
+      d.ix1 = d.x1;
       d.x0 = px0 + (dx * (i));
       d.x1 = px0 + (dx * (i+1));
       d.open = true;
     });
+
     path.transition()
-      .duration(750)
-      .attrTween("d", arcTween);
+      .duration(200)
+      .attrTween("d", arcTweenPath);
+
+    updateDonutLabels();
   }
   let percentage = (100 * d.value / total_size).toPrecision(3);
   let percentageString = percentage + "%";
@@ -121,29 +245,22 @@ function mouseover(d) {
   d3.selectAll("path")
       .style("opacity", 0.3);
 
-  let vis = d3.select("g#container");
-  vis.select("defs").remove();
-  let grad = vis.append("defs").append("linearGradient")
-    .attr("id", "grad")
-    .attr("x1", "0%")
-    .attr("x2", "0%")
-    .attr("y1", "100%").attr("y2", "0%");
-  grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 1));
-  grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 0.5));
-  d3.select("#root-path").style("fill", "url(#grad)");
   // Then highlight only those that are an ancestor of the current segment.
-  vis.selectAll("path")
-      .filter(function(node) {
-                return (sequenceArray.indexOf(node) >= 0);
-              })
-      .style("opacity", 1);
-}
+  let path = d3.selectAll("path")
+      .filter(function(b) {
+          return b.data.catid == d.data.catid;
+        });
 
-function arcTween(d) {
-  var i = d3.interpolate({x0: d.ix0, x1: d.ix1}, d);
-  return function(t) {
-    return arc(i(t));
-  };
+  path.style("opacity", function(node) {
+    if(sequenceArray.indexOf(node) >= 0) return 1;
+    else return 0.7;
+  });
+
+  // path.each(fillDonutSlice);
+
+  // fill the root node with its distribution
+  let svg = d3.select("#chart svg");
+  fillRootDistribution(svg, percentage);
 }
 
 // Restore everything to full opacity when moving off the visualization.
@@ -152,11 +269,19 @@ function mouseleave(d) {
     return d.open && d.depth == 2;
   });
   path.each(function(d, i) {
+    let dx0 = d.x0;
+    let dx1 = d.x1;
+    d.x0 = d.ix0;
+    d.x1 = d.ix1;
+    d.ix0 = dx0;
+    d.ix1 = dx1;
     delete d.open;
   });
-  path.transition()
-    .duration(750)
-    .attrTween("d", arcTween);
+  path.transition("update")
+    .duration(200)
+    .attrTween("d", arcTweenPath);
+
+  updateDonutLabels();
   // Hide the breadcrumb trail
   d3.select("#trail")
       .style("visibility", "hidden");
@@ -167,31 +292,16 @@ function mouseleave(d) {
   // Transition each segment to full opacity and then reactivate it.
   d3.selectAll("path")
       .transition()
-      .duration(1000)
+      .duration(200)
       .style("opacity", 1)
       .on("end", function() {
-              d3.select(this).on("mouseover", mouseover);
-            });
+          d3.select(this).on("mouseover", mouseover);
+        });
 
-  d3.select("#explanation")
-      .style("visibility", "hidden");
-}
+  d3.select("#percentage")
+      .text(((total_tagged/total_size) * 100).toFixed(2)+"%");
 
-// what happens when something is clicked?
-function categoryClick(d) {
-  if(d.data.name == "root") return;
-  let filtered_data = filterSignals(d.data.catid);
-  createVisualization(transformScores(filtered_data), signalClick);
-}
-
-function signalClick(d) {
-  if(d.data.name.includes("cat")) return;
-  if(d.data.name == "root") {
-    createVisualization(transformScores(), categoryClick);
-    return;
-  }
-  let filtered_data = filterSignals(undefined, d.data.name);
-  createVisualization(transformScores(filtered_data, signalClick));
+  fillRootDistribution(d3.select("#chart svg"), (total_tagged/total_size)*100);
 }
 
 function initializeBreadcrumbTrail() {
@@ -222,10 +332,11 @@ function breadcrumbPoints(d, i) {
 
 function getSBColor(d) {
   if(d.data.name == "root") return hexToRGBA("#5687d1");
+  if(d.data.name == "untagged") return hexToRGBA("#bbb");
   if(d.data.name.includes("cat")) {
     let catid = parseInt(d.data.name.replace("cat", ""));
     let alpha = 1.0 - (0.1 * (d.depth-1));
-    // we are a category, return category colors
+    // we are a category, return category getSBColor
     return hexToRGBA(sentiment_categories[catid].color, alpha);
   } else {
     let parent = d.parent;
@@ -236,7 +347,7 @@ function getSBColor(d) {
     let alpha = 1.0 - (0.2 * (d.depth-1));
     return hexToRGBA(sentiment_categories[catid].color, alpha);
   }
-  return colors(d.data.name);
+  return getSBColor(d.data.name);
 }
 
 function hexToRGBA(hex, A=1.0){
@@ -251,6 +362,16 @@ function hexToRGBA(hex, A=1.0){
           + A.toString() + ')';
     }
     throw new Error('Bad Hex');
+}
+
+function updateDonutLabels() {
+  d3.select("#chart svg").selectAll("text")
+     .transition("update")
+     .duration(200)
+     .attrTween("transform", arcTweenText)
+     .attr("opacity", function (e) {
+      return e.x1 - e.x0 > 0.01 ? 1 : 0
+    });
 }
 
 // Update the breadcrumb trail to show the current sequence and percentage.
@@ -303,48 +424,6 @@ function updateBreadcrumbs(nodeArray, percentageString) {
 
 }
 
-function drawLegend() {
-
-  // Dimensions of legend item: width, height, spacing, radius of rounded rect.
-  var li = {
-    w: 75, h: 30, s: 3, r: 3
-  };
-
-  var legend = d3.select("#legend").append("svg:svg")
-      .attr("width", li.w)
-      .attr("height", d3.keys(colors).length * (li.h + li.s));
-
-  var g = legend.selectAll("g")
-      .data(d3.entries(colors))
-      .enter().append("svg:g")
-      .attr("transform", function(d, i) {
-              return "translate(0," + i * (li.h + li.s) + ")";
-           });
-
-  g.append("svg:rect")
-      .attr("rx", li.r)
-      .attr("ry", li.r)
-      .attr("width", li.w)
-      .attr("height", li.h)
-      .style("fill", function(d) { return d.value; });
-
-  g.append("svg:text")
-      .attr("x", li.w / 2)
-      .attr("y", li.h / 2)
-      .attr("dy", "0.35em")
-      .attr("text-anchor", "middle")
-      .text(function(d) { return d.key; });
-}
-
-function toggleLegend() {
-  var legend = d3.select("#legend");
-  if (legend.style("visibility") == "hidden") {
-    legend.style("visibility", "");
-  } else {
-    legend.style("visibility", "hidden");
-  }
-}
-
 // Take a 2-column CSV and transform it into a hierarchical structure suitable
 // for a partition layout. The first column is a sequence of step names, from
 // root to leaf, separated by hyphens. The second column is a count of how
@@ -364,13 +443,19 @@ function buildHierarchy(csv) {
     var currentNode = root;
     for (var j = 0; j < parts.length; j++) {
       var children = currentNode["children"];
-      var nodeName = parts[j];
+      var nodeID = parts[j];
       var childNode;
+      var nodeName;
+      if(nodeID.includes("cat")) {
+        nodeName = sentiment_categories[parseInt(nodeID.replace("cat", ""))].name;
+      } else {
+        nodeName = csv[i][3];
+      }
       if (j + 1 < parts.length) {
         // Not yet at the end of the sequence; move down the tree.
         var foundChild = false;
         for (var k = 0; k < children.length; k++) {
-          if (children[k]["name"] == nodeName) {
+          if (children[k]["name"] == nodeID) {
             childNode = children[k];
             foundChild = true;
             break;
@@ -378,15 +463,15 @@ function buildHierarchy(csv) {
         }
         // If we don't already have a child node for this branch, create it.
         if (!foundChild) {
-          childNode = {"name": nodeName, "children": []
-            , "catid": catid, "signal":signal};
+          childNode = {"name": nodeID, "children": []
+            , "catid": catid, "signal": nodeName};
           children.push(childNode);
         }
         currentNode = childNode;
       } else {
        	// Reached the end of the sequence; create a leaf node.
-       	childNode = {"name": nodeName, "size": size
-          , "catid": catid, "signal":signal};
+       	childNode = {"name": nodeID, "size": size
+          , "catid": catid, "signal":nodeName};
        	children.push(childNode);
       }
     }
@@ -400,7 +485,6 @@ function buildHierarchy(csv) {
 function transformScores(filtered_data=sentiment_signals) {
   let csv = [];
   let cat_size = {};
-  let total_cat = 0;
   total_size = loaded_articles.length;
   Object.keys(filtered_data).forEach(key => {
     let signal = filtered_data[key];
@@ -415,8 +499,8 @@ function transformScores(filtered_data=sentiment_signals) {
       cat_size[signal.category] = 0;
     }
     cat_size[signal.category] += signal_scores[signal.id];
-    total_cat += signal_scores[signal.id];
+    total_tagged += signal_scores[signal.id];
   });
-  csv.push(["untagged", total_size - cat_size, 0, "", "untagged"]);
+  // csv.push(["untagged", total_size - total_tagged, 0, "", "untagged"]);
   return buildHierarchy(csv);
 }

@@ -188,6 +188,7 @@
             <div class="tab-pane fade" id="pills-rules" role="tabpanel" aria-labelledby="pills-rules-tab">
               <div id="vis-container">
                 <button class="btn btn-primary" onclick="processAllSignals();">Reprocess</button>
+                <button class="btn btn-primary" onclick="createVisualization(transformScores());">Redraw</button>
                 <!-- <ul id="crumb-list">
                   <li class="crumb active" onclick="drawCategoryList();"><span>Categories</span>&nbsp;</li>
                 </ul>
@@ -197,7 +198,7 @@
                 <div id="main">
                   <div id="sequence"></div>
                   <div id="chart">
-                    <div id="explanation" style="visibility: hidden;">
+                    <div id="explanation">
                       <span id="percentage"></span><br/>
                       of citations are matched with this set of signals
                     </div>
