@@ -53,3 +53,8 @@
 #percentage {
   font-size: 2.5em;
 }
+
+.bite-clone {
+  pointer-events: none;
+  opacity: 1 !important;
+}

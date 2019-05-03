@@ -26,13 +26,17 @@ function createVisualization(json) {
     .attr("width", width)
     .attr("height", height)
     .append("g")
-    .attr("transform", "translate(" + width / 2 + "," + (height / 2) + ")");
+      .attr("transform", "translate(" + width / 2 + "," + (height / 2) + ")")
+      .attr("id", "donut-container");
 
   let nodes = d3.hierarchy(json).sum(d => d.size);
   let gSlices = svg.selectAll("g")
     .data(partition(nodes).descendants(), d => (d.data.id) )
     .enter()
-      .append("g");
+      .append("g")
+      .attr("id", function(d) {
+        return "bite-group-" + d.data.name;
+      });
 
   gSlices.exit().remove();
 
@@ -81,12 +85,13 @@ function createVisualization(json) {
 
 function fillRootDistribution(svg, percentage) {
   // fill the root node with its distribution
-  svg.select("defs").remove();
-  let grad = svg.append("defs").append("linearGradient")
-    .attr("id", "grad")
-    .attr("x1", "0%")
-    .attr("x2", "0%")
-    .attr("y1", "100%").attr("y2", "0%");
+  svg.select("#root-grad").remove();
+  let grad = svg.append("defs").attr("id", "root-grad")
+    .append("linearGradient")
+      .attr("id", "grad")
+      .attr("x1", "0%")
+      .attr("x2", "0%")
+      .attr("y1", "100%").attr("y2", "0%");
   grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 1));
   grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 0.5));
   d3.select("#root-path").style("fill", "url(#grad)");
@@ -94,22 +99,53 @@ function fillRootDistribution(svg, percentage) {
 
 function fillDonutSlice(d) {
   if(d.depth < 2) return;
-  // fill the root node with its distribution
-  let g = d3.select(this.parentNode);
-  g.select("defs").remove();
-  let grad = g.append("defs").append("linearGradient")
-    .attr("id", "bite-grad-"+d.data.name)
-    .attr("x1", "0%")
-    .attr("x2", "0%")
-    .attr("y1", "100%").attr("y2", "0%");
-  let percentage = (100 * d.value / total_size).toPrecision(3);
-  grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 1));
-  grad.append("stop").attr("offset", percentage+"%").style("stop-color", hexToRGBA("#5687d1", 0.5));
+  let $path = $("#bite-"+d.data.name).clone();
+  let path = d3.select($path);
+  path.on("mouseover", null);
+  path.on("mouseleave", null);
 
-  let ang = ((x((d.x0 + d.x1) / 2) - Math.PI / 2) / Math.PI * 180);
-  let textAngle = (ang > 90) ? 180 + ang : ang;
-  grad.attr("gradientTransform", "rotate(" + textAngle + ")");
-  d3.select(this).style("fill", "url(#bite-grad-" + d.data.name + ")");
+  let percentage = 1.0 - (d.value / d.parent.value);
+  let new_arc = d3.arc()
+    .startAngle(d => Math.max(0, Math.min(2 * Math.PI, x(d.x0))))
+    .endAngle(d => Math.max(0, Math.min(2 * Math.PI, x(d.x1))))
+    .innerRadius(d => Math.max(0, y(d.y0)))
+    .outerRadius(function(d) {
+      let offset = (y(d.y1)-y(d.y0)) * percentage;
+      return Math.max(0, y(d.y1)-offset);
+    });
+  $path.attr("d", new_arc(d));
+
+  let $parent = $("#bite-group-"+d.data.name);
+  $path.attr("id", "#bite-clone-"+d.data.name);
+  $path.addClass("bite-clone");
+  $path.css("fill", getSBColor(d));
+  $parent.prepend($path);
+  // fill the root node with its distribution
+  // let $defs = $("#bite-grads");
+  // if($defs.length == 0) {
+  //   d3.select("#chart svg")
+  //     .append("defs")
+  //     .attr("id", "bite-grads")
+  // }
+  // let grad = d3.select("#bite-grads").append("linearGradient")
+  //   .attr("id", "bite-grad-"+d.data.name)
+  //   .attr("class", "bite-grad")
+  //   .attr("x1", "0%")
+  //   .attr("x2", "0%")
+  //   .attr("y1", "100%").attr("y2", "0%");
+  // let percentage = (100 * d.value / total_size).toPrecision(3);
+  // // let percentage = 50;
+  // grad.append("stop")
+  //   .attr("offset", percentage+"%")
+  //   .style("stop-color", getSBColor(d, 1));
+  // grad.append("stop")
+  //   .attr("offset", percentage+"%")
+  //   .style("stop-color", getSBColor(d, 0.5));
+  //
+  // let ang = ((x((d.x0 + d.x1) / 2) - Math.PI / 2) / Math.PI * 180) + 90;
+  // let textAngle = (ang > 90) ? 270 + ang : ang;
+  // grad.attr("gradientTransform", "rotate(" + textAngle + ")");
+  // d3.select(this).style("fill", "url(#bite-grad-" + d.data.name + ")");
 }
 
 function arcTweenText(a, i) {
@@ -131,25 +167,22 @@ function arcTweenPath(a, i) {
   var oi = d3.interpolate({ x0: (a.x0s ? a.x0s : 0), x1: (a.x1s ? a.x1s : 0), y0: (a.y0s ? a.y0s : 0), y1: (a.y1s ? a.y1s : 0) }, a)
 
   function tween(t) {
-    var b = oi(t)
-
+    var b = oi(t);
     a.x0s = b.x0
     a.x1s = b.x1
     a.y0s = b.y0
     a.y1s = b.y1
-
     return arc(b)
   }
   if (i == 0 && node) {
 
     var xd = d3.interpolate(x.domain(), [node.x0, node.x1])
     var yd = d3.interpolate(y.domain(), [node.y0, 1])
-    var yr = d3.interpolate(y.range(), [node.y0 ? 40 : 0, radius])
+    var yr = d3.interpolate(y.range(), [node.y0 ? 100 : 0, radius])
 
     return function (t) {
       x.domain(xd(t))
       y.domain(yd(t)).range(yr(t))
-
       return tween(t)
     }
   } else {
@@ -178,7 +211,7 @@ function click(d) {
        return d.textAngle > 180 ? 'start' : 'end'
      })
      .attr('dx', function (d) {
-       if(d.data.name.length > 3) {
+       if(d.data.signal.length > 3) {
          return d.textAngle > 180 ? -23 : 23
        }
        return d.textAngle > 180 ? -13 : 13
@@ -205,7 +238,7 @@ function mouseover(d) {
   let catid = d.data.catid;
   if(!d.open && d.depth != 1) {
     d.open = true;
-    let path = d3.selectAll("path").filter(function(d) {
+    let path = d3.selectAll("path:not(.bite-clone)").filter(function(d) {
       return d.data.catid == catid && d.depth > 1;
     });
     path.each(function(d, i) {
@@ -222,6 +255,9 @@ function mouseover(d) {
 
     path.transition()
       .duration(200)
+      .on("end", function(d) {
+        fillDonutSlice(d);
+      })
       .attrTween("d", arcTweenPath);
 
     updateDonutLabels();
@@ -246,17 +282,15 @@ function mouseover(d) {
       .style("opacity", 0.3);
 
   // Then highlight only those that are an ancestor of the current segment.
-  let path = d3.selectAll("path")
+  let path = d3.selectAll("path:not(.bite-clone)")
       .filter(function(b) {
           return b.data.catid == d.data.catid;
         });
 
   path.style("opacity", function(node) {
-    if(sequenceArray.indexOf(node) >= 0) return 1;
-    else return 0.7;
+    if(sequenceArray.indexOf(node) >= 0) return 0.8;
+    else return 0.6;
   });
-
-  // path.each(fillDonutSlice);
 
   // fill the root node with its distribution
   let svg = d3.select("#chart svg");
@@ -265,6 +299,7 @@ function mouseover(d) {
 
 // Restore everything to full opacity when moving off the visualization.
 function mouseleave(d) {
+  $(".bite-clone").remove();
   let path = d3.selectAll("path").filter(function(d) {
     return d.open && d.depth == 2;
   });
@@ -280,7 +315,7 @@ function mouseleave(d) {
   path.transition("update")
     .duration(200)
     .attrTween("d", arcTweenPath);
-
+  d3.selectAll(".bite-clone").remove();
   updateDonutLabels();
   // Hide the breadcrumb trail
   d3.select("#trail")
@@ -300,6 +335,8 @@ function mouseleave(d) {
 
   d3.select("#percentage")
       .text(((total_tagged/total_size) * 100).toFixed(2)+"%");
+
+  d3.selectAll("path").style("fill", getSBColor);
 
   fillRootDistribution(d3.select("#chart svg"), (total_tagged/total_size)*100);
 }
@@ -330,12 +367,12 @@ function breadcrumbPoints(d, i) {
   return points.join(" ");
 }
 
-function getSBColor(d) {
+function getSBColor(d, alpha_override=null) {
   if(d.data.name == "root") return hexToRGBA("#5687d1");
   if(d.data.name == "untagged") return hexToRGBA("#bbb");
   if(d.data.name.includes("cat")) {
     let catid = parseInt(d.data.name.replace("cat", ""));
-    let alpha = 1.0 - (0.1 * (d.depth-1));
+    let alpha = alpha_override ? alpha_override : (1.0 - (0.1 * (d.depth-1)));
     // we are a category, return category getSBColor
     return hexToRGBA(sentiment_categories[catid].color, alpha);
   } else {
@@ -344,10 +381,10 @@ function getSBColor(d) {
       parent = parent.parent;
     }
     let catid = parseInt(parent.data.name.replace("cat", ""));
-    let alpha = 1.0 - (0.2 * (d.depth-1));
+    let alpha = alpha_override ? alpha_override : (1.0 - (0.2 * (d.depth-1)));
     return hexToRGBA(sentiment_categories[catid].color, alpha);
   }
-  return getSBColor(d.data.name);
+  return hexToRGBA("#000", 0.5);
 }
 
 function hexToRGBA(hex, A=1.0){
@@ -362,6 +399,16 @@ function hexToRGBA(hex, A=1.0){
           + A.toString() + ')';
     }
     throw new Error('Bad Hex');
+}
+
+function cloneSelection(appendTo, toCopy, times) {
+    toCopy.each(function() {
+        for (var i = 0; i < times; i++) {
+            var clone = svg.node().appendChild(this.cloneNode(true));
+            d3.select(clone).attr("class", "clone").attr("id", "clone-" + i);
+        }
+    });
+    return appendTo.selectAll('.clone');
 }
 
 function updateDonutLabels() {
