@@ -357,8 +357,8 @@ function sortPapers(indexToSortOn, sortedArray) {
 // retrieve from the server only what we need, as we need it
 function drawPapers() {
   d3.select("#paperRow").remove();
-  paperRow = d3.select("#pills-papers").append("div").attr("class", "row");
-
+  paperRow = d3.select("#pills-papers").append("div").attr("class", "row transition");
+  minimizeDivider();
   paperRequests.push($.ajax({
       type: 'POST',
       url: processURL + "papers",
@@ -727,11 +727,10 @@ function cycleVisibility(item) {
 function switchToPapers() {
     //Clear the previous paper requests
     clearRequests(false, true);
-
     //Allows the user access to the papers page once they've selected an item
-    if (document.getElementById("pills-papers-tab").classList.contains('disabled')) {
-        document.getElementById("pills-papers-tab").classList.remove("disabled");
-    }
+    // if (document.getElementById("pills-papers-tab").classList.contains('disabled')) {
+    //     document.getElementById("pills-papers-tab").classList.remove("disabled");
+    // }
     d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
 
     //Remove the paper row - append a message about the slow computation time, and run the search for the papers

@@ -70,9 +70,21 @@
 }
 
 #container {
-    padding: 15px 50px;
+    padding: 15px 0px;
     margin: 0 auto;
     justify-content: space-evenly;
+}
+
+#pills-home {
+  margin: 0px 50px;
+}
+
+#pills-papers .row {
+  margin: 0 0;
+  width: 100%;
+  padding: 0px 50px;
+  height: 340px;
+  overflow: scroll;
 }
 
 #searchButtonContainer {
@@ -108,6 +120,11 @@ svg text {
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+.transition {
+  -webkit-transition: all .2s;
+  transition: all .2s;
 }
 
 .dropdown-item:active {
