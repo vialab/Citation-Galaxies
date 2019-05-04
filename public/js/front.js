@@ -1137,6 +1137,24 @@ function searchForQuery(query) {
     getFilteredYears(currSearchQuery, true);
 }
 
+function maximizeDivider() {
+  setDivider($("#mainNav").height() + 100);
+}
+
+function minimizeDivider() {
+  setDivider($(window).height()-100);
+}
+
+function setDivider(pageY) {
+  let $div = $("#window-divider");
+  $div.offset({
+      top: pageY
+  });
+  let offset = $(window).height()-pageY-$div.height()-1;
+  $("#sunburst-container").height(offset);
+  offset = pageY-$("#pills-papers .row").offset().top;
+  $("#pills-papers .row").height(offset);
+}
 
 $(document).ready(function () {
     $(".toast").toast({ "delay": 2000 });
@@ -1149,4 +1167,44 @@ $(document).ready(function () {
     } else {
       $("#pills-rules-tab").hide();
     }
+
+    minimizeDivider();
+    var $dragging = null;
+
+    $(document).on("mousemove", function(e) {
+        if ($dragging) {
+          if(e.pageY <= $("#mainNav").height() + 100) return;
+          if(e.pageY >= $(window).height()-100) return;
+          let offset = $(window).height()-$dragging.offset().top-$dragging.height()-1;
+          $("#sunburst-container").height(offset);
+          offset = e.pageY-$("#pills-papers .row").offset().top;
+          $("#pills-papers .row").height(offset);
+          $dragging.offset({
+              top: e.pageY
+          });
+        }
+    });
+
+    $("#window-divider").on("mousedown", function (e) {
+      if(e.target !== this) return;
+      $dragging = $(e.target);
+      $("#sunburst-container").removeClass("transition")
+      $("#window-divider").removeClass("transition");
+      $("#pills-papers .row").removeClass("transition");
+      $("#sunburst-container").css("overflow", "visible");
+      $("#pills-papers .row").css("overflow", "visible");
+    });
+
+    $(document).on("mouseup", function (e) {
+      if($dragging) {
+        $("#sunburst-container").addClass("transition")
+        $("#window-divider").addClass("transition");
+        $("#pills-papers .row").addClass("transition");
+        $("#sunburst-container").css("overflow", "scroll");
+        $("#pills-papers .row").css("overflow", "scroll");
+        let offset = $(window).height()-$dragging.offset().top-$dragging.height()-1;
+        $("#sunburst-container").height(offset);
+        $dragging = null;
+      }
+    });
 });

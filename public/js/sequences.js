@@ -1,5 +1,5 @@
 // Total size of all segments; we set this later, after loading the data.
-let total_size = 0, total_tagged = 0;
+let total_size = 0, total_tagged = 0, clicked_cat = null, clicked_depth = null;
 let node;
 let svg;
 const width = 750;
@@ -19,6 +19,7 @@ const b = {
 };
 
 function createVisualization(json) {
+  $("#sunburst").show();
   initializeBreadcrumbTrail();
 
   svg = d3.select("#chart")
@@ -192,41 +193,18 @@ function arcTweenPath(a, i) {
 }
 
 function click(d) {
+  if(d.data.name == "root") clicked_cat = null;
+  else clicked_cat = d.data.catid;
+
   node = d
   const total = d.x1 - d.x0
+  mouseleave();
 
-  svg.selectAll('path')
+  svg.selectAll('path:not(.bite-clone)')
      .transition('click')
-     .duration(750)
+     .on("end", updateDonutLabels())
+     .duration(200)
      .attrTween('d', arcTweenPath);
-
-  svg.selectAll('text')
-     .transition('click')
-     .attr('opacity', 1)
-     .duration(750)
-     .attrTween('transform', function (d, i) {
-       return arcTweenText(d)
-      })
-     .attr('text-anchor', function (d) {
-       return d.textAngle > 180 ? 'start' : 'end'
-     })
-     .attr('dx', function (d) {
-       if(d.data.signal.length > 3) {
-         return d.textAngle > 180 ? -23 : 23
-       }
-       return d.textAngle > 180 ? -13 : 13
-     })
-     .attr('opacity', function (e) {
-       // hide & show text
-       if (e.x0 >= d.x0 && e.x1 <= (d.x1 + 0.0000000000000001)) {
-         const arcText = d3.select(this.parentNode).select('text')
-         arcText.attr('visibility', function(d) {
-           return (d.x1 - d.x0) / total < 0.01 ? 'hidden' : 'visible'
-         })
-       } else {
-         return 0
-       }
-     })
  }
 
 // Fade all but the current sequence, and show it in the breadcrumb trail.
@@ -256,11 +234,13 @@ function mouseover(d) {
     path.transition()
       .duration(200)
       .on("end", function(d) {
+        d3.select(this.parentNode).select("text")
+          .transition(200)
+          .attrTween("transform", arcTweenText)
+          .attr("opacity", 1);
         fillDonutSlice(d);
       })
       .attrTween("d", arcTweenPath);
-
-    updateDonutLabels();
   }
   let percentage = (100 * d.value / total_size).toPrecision(3);
   let percentageString = percentage + "%";
@@ -301,7 +281,7 @@ function mouseover(d) {
 function mouseleave(d) {
   $(".bite-clone").remove();
   let path = d3.selectAll("path").filter(function(d) {
-    return d.open && d.depth == 2;
+    return d.open && d.depth > 1;
   });
   path.each(function(d, i) {
     let dx0 = d.x0;
@@ -313,10 +293,10 @@ function mouseleave(d) {
     delete d.open;
   });
   path.transition("update")
+    .on("end", updateDonutLabels())
     .duration(200)
     .attrTween("d", arcTweenPath);
   d3.selectAll(".bite-clone").remove();
-  updateDonutLabels();
   // Hide the breadcrumb trail
   d3.select("#trail")
       .style("visibility", "hidden");
@@ -413,12 +393,15 @@ function cloneSelection(appendTo, toCopy, times) {
 
 function updateDonutLabels() {
   d3.select("#chart svg").selectAll("text")
-     .transition("update")
-     .duration(200)
-     .attrTween("transform", arcTweenText)
-     .attr("opacity", function (e) {
+    .transition("update")
+    .duration(200)
+    .attrTween("transform", arcTweenText)
+    .attr("opacity", function (e) {
+      if(clicked_cat != null) {
+        if(e.data.catid != clicked_cat) return 0;
+      }
       return e.x1 - e.x0 > 0.01 ? 1 : 0
-    });
+  });
 }
 
 // Update the breadcrumb trail to show the current sequence and percentage.
