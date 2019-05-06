@@ -79,12 +79,25 @@
   margin: 0px 50px;
 }
 
-#pills-papers .row {
+#pills-papers #papers-container {
   margin: 0 0;
   width: 100%;
-  padding: 0px 50px;
+  padding: 0 0;
   height: 340px;
   overflow: scroll;
+}
+
+#papers-container .row {
+  margin: 5px;
+  width: 100%;
+}
+
+#papers-container .papers-row {
+  margin-bottom: 25px;
+}
+
+#papers-container h2 {
+  margin: 0 auto;
 }
 
 #searchButtonContainer {

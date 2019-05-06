@@ -283,6 +283,7 @@ def do_papers():
     df["bin"] = pd.cut(df["percent"], bins=bins, labels=labels)
     df = df.merge(citations[["articleid", "journaltitle", "journalid"]], on="articleid", how="left")
     df = df.groupby(["articleid", "articleyear", "journaltitle", "journalid", "bin"]).size().reset_index(name="refcount")
+    df = df.sort_values(["refcount"], ascending=False)
     max = df["refcount"].max().item()
     years = sorted(df["articleyear"].unique().tolist())
     records = df.to_dict(orient="records")

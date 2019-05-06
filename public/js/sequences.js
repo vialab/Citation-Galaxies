@@ -21,7 +21,7 @@ const b = {
 function createVisualization(json) {
   $("#sunburst").show();
   initializeBreadcrumbTrail();
-
+  d3.select("#chart svg").remove();
   svg = d3.select("#chart")
     .append("svg")
     .attr("width", width)
