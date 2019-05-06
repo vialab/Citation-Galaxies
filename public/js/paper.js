@@ -345,7 +345,9 @@ function sortPapers(indexToSortOn, sortedArray) {
 // retrieve from the server only what we need, as we need it
 function drawPapers() {
   d3.select("#paperRow").remove();
-  paperRow = d3.select("#pills-papers").append("div").attr("class", "row transition");
+  paperRow = d3.select("#pills-papers").append("div")
+    .attr("class", "row transition")
+    .attr("id", "papers-container");
   minimizeDivider();
   paperRequests.push($.ajax({
       type: 'POST',
@@ -362,10 +364,24 @@ function drawPapers() {
         console.log(results);
         let papers = results["papers"];
         let all_max = results["max"];
+        for(let y of results.years) {
+          let yearRow = paperRow.append("div")
+            .attr("class", "row papers-row")
+            .attr("id", "papers-row-" + y);
+          yearRow.append("div").attr("class", "row col-sm-12")
+            .append("h2").text(y);
+          yearRow.append("div").attr("class", "row col-sm-12 papers");
+        }
         Object.keys(papers).forEach(key => {
-          let divContainer = paperRow.append("div").attr("class", "col-xs-* partialpadding"); //Append a column for each paper
-          let svgContainer = divContainer.append("svg").attr("class", "paper-thumbnail")
-            .attr("width", 115).attr("height", 168); //Container for paper to go into
+          let container_id = "#papers-row-" + papers[key].year;
+          //Append a column for each paper
+          let divContainer = d3.select(container_id + " .papers")
+            .append("div")
+              .attr("class", "col-xs-* partialpadding");
+          //Container for paper to go into
+          let svgContainer = divContainer.append("svg")
+            .attr("class", "paper-thumbnail")
+            .attr("width", 115).attr("height", 168);
           paperText[key] = [{'articleyear': 1}];
           let activeLines = [];
           let activeLinesPercents = [];
@@ -374,7 +390,7 @@ function drawPapers() {
             activeLines.push(lines[i] > 0);
             activeLinesPercents.push(lines[i]/all_max);
           });
-          // drawPaper(110, 160, activeLines, activeLinesPercents, svgContainer, key, false);
+          drawPaper(110, 160, activeLines, activeLinesPercents, svgContainer, key, false);
         });
       },
       async: true,

@@ -1138,11 +1138,11 @@ function searchForQuery(query) {
 }
 
 function maximizeDivider() {
-  setDivider($("#mainNav").height() + 100);
+  setDivider($("#mainNav").height() + 16);
 }
 
 function minimizeDivider() {
-  setDivider($(window).height()-100);
+  setDivider($(window).height()-25);
 }
 
 function setDivider(pageY) {
@@ -1152,8 +1152,8 @@ function setDivider(pageY) {
   });
   let offset = $(window).height()-pageY-$div.height()-1;
   $("#sunburst-container").height(offset);
-  offset = pageY-$("#pills-papers .row").offset().top;
-  $("#pills-papers .row").height(offset);
+  offset = pageY-$("#papers-container").offset().top;
+  $("#papers-container").height(offset);
 }
 
 $(document).ready(function () {
@@ -1173,12 +1173,12 @@ $(document).ready(function () {
 
     $(document).on("mousemove", function(e) {
         if ($dragging) {
-          if(e.pageY <= $("#mainNav").height() + 100) return;
-          if(e.pageY >= $(window).height()-100) return;
+          if(e.pageY <= $("#mainNav").height() + 16) return;
+          if(e.pageY >= $(window).height()-25) return;
           let offset = $(window).height()-$dragging.offset().top-$dragging.height()-1;
           $("#sunburst-container").height(offset);
-          offset = e.pageY-$("#pills-papers .row").offset().top;
-          $("#pills-papers .row").height(offset);
+          offset = e.pageY-$("#papers-container").offset().top;
+          $("#papers-container").height(offset);
           $dragging.offset({
               top: e.pageY
           });
@@ -1190,18 +1190,18 @@ $(document).ready(function () {
       $dragging = $(e.target);
       $("#sunburst-container").removeClass("transition")
       $("#window-divider").removeClass("transition");
-      $("#pills-papers .row").removeClass("transition");
+      $("#papers-container").removeClass("transition");
       $("#sunburst-container").css("overflow", "visible");
-      $("#pills-papers .row").css("overflow", "visible");
+      $("#papers-container").css("overflow", "hidden");
     });
 
     $(document).on("mouseup", function (e) {
       if($dragging) {
         $("#sunburst-container").addClass("transition")
         $("#window-divider").addClass("transition");
-        $("#pills-papers .row").addClass("transition");
+        $("#papers-container").addClass("transition");
         $("#sunburst-container").css("overflow", "scroll");
-        $("#pills-papers .row").css("overflow", "scroll");
+        $("#papers-container").css("overflow", "scroll");
         let offset = $(window).height()-$dragging.offset().top-$dragging.height()-1;
         $("#sunburst-container").height(offset);
         $dragging = null;
