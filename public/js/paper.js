@@ -292,27 +292,15 @@ function getPaperBoundary(articleid, neededBoundaries, container, display) {
 
 //Changes the sorting used by the paper view
 function changePaperSort(indexToSortOn) {
-    var sortItems = ["#sortByJournal", "#sortByRef", "#sortByYear"];
-
-    //Change the buttons active
-    switch (indexToSortOn) {
-        case (-1):
-            d3.select(sortItems[1]).classed('active', true);
-            d3.select(sortItems[0]).classed('active', false);
-            d3.select(sortItems[2]).classed('active', false);
-            break;
-        case ('journaltitle'):
-            d3.select(sortItems[0]).classed('active', true);
-            d3.select(sortItems[1]).classed('active', false);
-            d3.select(sortItems[2]).classed('active', false);
-            break;
-        case ('articleyear'):
-            d3.select(sortItems[2]).classed('active', true);
-            d3.select(sortItems[0]).classed('active', false);
-            d3.select(sortItems[1]).classed('active', false);
-            break;
+    $(".sort-by").removeClass('active');
+    switch(indexToSortOn) {
+      case 'articleyear':
+        $("#sortByYear").addClass("active");
+        break;
+      case 'journaltitle':
+        $("#sortByJournal").addClass("active");
+        break;
     }
-
     //Hide all popovers
     $('[data-toggle=popover]').popover('hide');
     //Clear the screen
@@ -371,6 +359,7 @@ function drawPapers() {
       }),
       success: function (data) {
         let results = JSON.parse(data);
+        console.log(results);
         let papers = results["papers"];
         let all_max = results["max"];
         Object.keys(papers).forEach(key => {
@@ -385,7 +374,7 @@ function drawPapers() {
             activeLines.push(lines[i] > 0);
             activeLinesPercents.push(lines[i]/all_max);
           });
-          drawPaper(110, 160, activeLines, activeLinesPercents, svgContainer, key, false);
+          // drawPaper(110, 160, activeLines, activeLinesPercents, svgContainer, key, false);
         });
       },
       async: true,
