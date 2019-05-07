@@ -40,16 +40,16 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" id="pills-home-tab" data-toggle="pill" href="#pills-home" role="tab"
-                        aria-controls="pills-home" aria-selected="true" onclick="$('.popover').popover('hide'); d3.select('#paperSortButton').style('display', 'none'); d3.select('#groupByButton').style('display', 'none'); d3.select('#exportButton').style('display', 'none');">Home</a>
+                        aria-controls="pills-home" aria-selected="true" onclick="$('#navOptions').show();">Home</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" id="pills-papers-tab" data-toggle="pill" href="#pills-papers" role="tab"
-                        aria-controls="pills-papers" aria-selected="false" onclick="if(!document.getElementById('pills-papers-tab').classList.contains('disabled')){ document.getElementById('paperSortButton').style.display = null; d3.select('#groupByButton').style('display', 'none'); d3.select('#exportButton').style('display', 'none');}">Papers</a>
+                        aria-controls="pills-papers" aria-selected="false" onclick="$('#navOptions').hide();">Papers</a>
                 </li>
-                <li class="nav-item">
+                <!-- <li class="nav-item">
                     <a class="nav-link" id="pills-rules-tab" data-toggle="pill" href="#pills-rules" role="tab"
                         aria-controls="pills-rules" aria-selected="false" onclick="">Rules</a>
-                </li>
+                </li> -->
                 <li class="nav-item">
                     <a class="nav-link" id="pills-admin-tab" data-toggle="pill" href="#pills-admin" role="tab"
                         aria-controls="pills-rules" aria-selected="false" onclick="">Admin</a>

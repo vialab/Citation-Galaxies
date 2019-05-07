@@ -5,13 +5,14 @@ var currentPaperSelected;
 var buttonsSelected = {}; //Used to count the current amount of buttons selected (used to determine if to show the paper indicator)
 
 var boundariesByPaper = {}; //Used to hold the sentence boundaries for each paper
-var indexToSortPapersOn = -1; //The value to sort the papers with
+var indexToSortPapersOn = "articleyear"; //The value to sort the papers with
 
 var referencesSelected = []; //The current boundary selections for the current paper
 
 var paperText = {}; //Holds the raw paper text
 var paperData = {}; //Holds the paper data - mainly where words, references and sentences are and their locations
-
+var paper_data = {};
+var nPaperLoad = 10;
 var currentURL = "http://localhost:5432/"; //The url to access the backend
 
 //Used to highlight the references selected
@@ -152,7 +153,6 @@ function changePaperTextBoundary(articleid, year) {
                 }
             }
 
-
             //Prep data for single paper to be drawn, similar to drawPapers()
             data = tmpResults;
             paperData[articleid] = [];
@@ -292,7 +292,7 @@ function getPaperBoundary(articleid, neededBoundaries, container, display) {
 
 //Changes the sorting used by the paper view
 function changePaperSort(indexToSortOn) {
-    $(".sort-by").removeClass('active');
+    $(".paper-sort").removeClass('active');
     switch(indexToSortOn) {
       case 'articleyear':
         $("#sortByYear").addClass("active");
@@ -304,13 +304,14 @@ function changePaperSort(indexToSortOn) {
     //Hide all popovers
     $('[data-toggle=popover]').popover('hide');
     //Clear the screen
-    paperRow.remove();
+    // paperRow.remove();
     //Clear all database requests
-    clearRequests();
+    // clearRequests();
     //Change sorting index
     indexToSortPapersOn = indexToSortOn;
     //Draw new papers
-    drawPapers();
+    // drawPapers();
+    drawPapersByIndex(paper_data);
 }
 
 //Sorts the papers using the global value to sort on for the papers
@@ -344,11 +345,6 @@ function sortPapers(indexToSortOn, sortedArray) {
 // instead of holding everything on the client
 // retrieve from the server only what we need, as we need it
 function drawPapers() {
-  d3.select("#paperRow").remove();
-  paperRow = d3.select("#pills-papers").append("div")
-    .attr("class", "row transition")
-    .attr("id", "papers-container");
-  minimizeDivider();
   paperRequests.push($.ajax({
       type: 'POST',
       url: processURL + "papers",
@@ -358,40 +354,140 @@ function drawPapers() {
         , "increment": currIncrement
         , "rangeLeft": sentenceRangeAbove
         , "rangeRight": sentenceRangeBelow
+        , "lastRank": 0
+        , "nrank": nPaperLoad
       }),
       success: function (data) {
-        let results = JSON.parse(data);
-        console.log(results);
-        let papers = results["papers"];
-        let all_max = results["max"];
-        for(let y of results.years) {
-          let yearRow = paperRow.append("div")
-            .attr("class", "row papers-row")
-            .attr("id", "papers-row-" + y);
-          yearRow.append("div").attr("class", "row col-sm-12")
-            .append("h2").text(y);
-          yearRow.append("div").attr("class", "row col-sm-12 papers");
-        }
-        Object.keys(papers).forEach(key => {
-          let container_id = "#papers-row-" + papers[key].year;
-          //Append a column for each paper
-          let divContainer = d3.select(container_id + " .papers")
-            .append("div")
-              .attr("class", "col-xs-* partialpadding");
-          //Container for paper to go into
-          let svgContainer = divContainer.append("svg")
-            .attr("class", "paper-thumbnail")
-            .attr("width", 115).attr("height", 168);
-          paperText[key] = [{'articleyear': 1}];
-          let activeLines = [];
-          let activeLinesPercents = [];
-          let lines = papers[key]["content"];
-          Object.keys(lines).forEach(i => {
-            activeLines.push(lines[i] > 0);
-            activeLinesPercents.push(lines[i]/all_max);
-          });
-          drawPaper(110, 160, activeLines, activeLinesPercents, svgContainer, key, false);
-        });
+        paper_data = JSON.parse(data);
+        drawPapersByIndex(paper_data);
+      },
+      async: true,
+      timeout: 600000
+  }));
+}
+
+// draw a specific set of papers passed in as input
+// this version categorizes the papers by whatever index currently selected
+function drawPapersByIndex(results) {
+  d3.select("#papers-container").remove();
+  d3.select("#paperRow").remove();
+  paperRow = d3.select("#pills-papers").append("div")
+    .attr("class", "row transition")
+    .attr("id", "papers-container");
+  minimizeDivider();
+  let papers = results["papers"];
+  let all_max = results["max"];
+  // categorize by journal then year
+  if(indexToSortPapersOn == "journaltitle") {
+    for(let jid in results.journals) {
+      let journalRow = paperRow.append("div") // add a row for journal
+        .attr("class", "row journal-row")
+        .attr("id", "journal-row-" + jid);
+      journalRow.append("div").attr("class", "row col-sm-12")
+        .append("h2").text(results.journals[jid]["title"]);
+      // iterate all the available years for this journal
+      for(let y of results.journals[jid]["years"]) {
+        let yearRow = journalRow.append("div")
+          .attr("class", "row papers-row")
+          .attr("id", "papers-row-" + y);
+        yearRow.append("div").attr("class", "row col-sm-12")
+          .append("h2").text(y);
+        let papers= yearRow.append("div")
+          .attr("class", "row col-sm-12 papers")
+          .attr("data-journal-id", jid)
+          .attr("data-year", y);
+        papers.append("div").attr("class", "col-xs-* partialpadding load-more");
+      }
+    }
+  } else { // only categorize by years
+    for(let y of results.years) {
+      let yearRow = paperRow.append("div")
+        .attr("class", "row papers-row")
+        .attr("id", "papers-row-" + y);
+      yearRow.append("div").attr("class", "row col-sm-12")
+        .append("h2").text(y);
+      let papers = yearRow.append("div")
+        .attr("class", "row col-sm-12 papers")
+        .attr("data-year", y);
+    }
+  }
+  drawPaperList(papers, all_max);
+
+}
+
+function drawPaperList(papers, all_max) {
+  // now draw the actual papers
+  Object.keys(papers).forEach(key => {
+    let container_id = "#papers-row-" + papers[key].year;
+    if(indexToSortPapersOn == "journaltitle") {
+      container_id = "#journal-row-" + papers[key].journalid
+        + " #papers-row-" + papers[key].year;
+    }
+    //Append a column for each paper
+    let divContainer = d3.select(container_id + " .papers")
+      .append("div")
+        .attr("class", "col-xs-* partialpadding");
+    //Container for paper to go into
+    let svgContainer = divContainer.append("svg")
+      .attr("class", "paper-thumbnail")
+      .attr("data-rank", papers[key]["rank"])
+      .attr("width", 115).attr("height", 168);
+    paperText[key] = [{'articleyear': 1}];
+    let activeLines = [];
+    let activeLinesPercents = [];
+    let lines = papers[key]["content"];
+    // set list of lines with different color strengths to draw
+    Object.keys(lines).forEach(i => {
+      activeLines.push(lines[i] > 0);
+      activeLinesPercents.push(lines[i]/all_max);
+    });
+    drawPaper(110, 160, activeLines, activeLinesPercents, svgContainer, key, false);
+  });
+  // delete the load buttons from before to redraw at end of list
+  $(".load-more").remove();
+  // add a load more button for each category that was drawn
+  d3.selectAll(".papers")
+    .append("div")
+    .attr("class", "col-xs-* partialpadding load-more")
+    .attr("onclick", "loadMorePapers(this);")
+      .append("div")
+      .attr("class", "btn")
+        .append("span").text("+");
+}
+
+// load a small set of papers to be specifically appended after element
+function loadMorePapers(elem) {
+  let $papers = $(elem).closest(".papers");
+  let $sibs = $(".paper-thumbnail",$papers);
+  let last_rank = Math.max.apply(Math, $.map($sibs.toArray(), function(node) {
+  	   return $(node).data("rank");
+    }));
+  let year = $papers.data("year");
+  let filtered = [];
+  let jid = $papers.data("journal-id");
+  for(let sel of selections) {
+    if(year == sel.split("-")[0]) filtered.push(sel);
+  }
+  paperRequests.push($.ajax({
+      type: 'POST',
+      url: processURL + "papers",
+      data: JSON.stringify({
+        'selections': filtered
+        , "query": currSearchQuery
+        , "increment": currIncrement
+        , "rangeLeft": sentenceRangeAbove
+        , "rangeRight": sentenceRangeBelow
+        , "year": year
+        , "journalid": jid
+        , "lastRank": last_rank
+        , "nrank": nPaperLoad
+      }),
+      success: function (data) {
+        let extra_papers = JSON.parse(data);
+        paper_data["papers"] = $.extend(paper_data["papers"], extra_papers["papers"]);
+        if(extra_papers["max"] > paper_data["max"]) paper_data["max"] = extra_papers["max"];
+        paper_data["journals"] = $.extend(paper_data["journals"], extra_papers["journals"]);
+        drawPaperList(extra_papers["papers"], paper_data["max"]);
       },
       async: true,
       timeout: 600000
@@ -730,25 +826,26 @@ function cycleVisibility(item) {
 }
 
 function switchToPapers() {
-    //Clear the previous paper requests
-    clearRequests(false, true);
-    //Allows the user access to the papers page once they've selected an item
-    // if (document.getElementById("pills-papers-tab").classList.contains('disabled')) {
-    //     document.getElementById("pills-papers-tab").classList.remove("disabled");
-    // }
-    d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
+  $("#navOptions").hide();
+  //Clear the previous paper requests
+  clearRequests(false, true);
+  //Allows the user access to the papers page once they've selected an item
+  // if (document.getElementById("pills-papers-tab").classList.contains('disabled')) {
+  //     document.getElementById("pills-papers-tab").classList.remove("disabled");
+  // }
+  d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
 
-    //Remove the paper row - append a message about the slow computation time, and run the search for the papers
-    d3.select("#paperRow").remove();
-    var paperRow = d3.select("#pills-papers").append("div").attr("class", "row justify-content-center").attr("id", "paperRow");
-    paperRow.append("div").attr("class", "alert alert-warning alert-dismissible fade show")
-        .attr("role", "alert").attr("id", "alert")
-        .html("<strong>Please Wait</strong> - the computation might take awhile. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>");
+  //Remove the paper row - append a message about the slow computation time, and run the search for the papers
+  d3.select("#paperRow").remove();
+  var paperRow = d3.select("#pills-papers").append("div").attr("class", "row justify-content-center").attr("id", "paperRow");
+  paperRow.append("div").attr("class", "alert alert-warning alert-dismissible fade show")
+      .attr("role", "alert").attr("id", "alert")
+      .html("<strong>Please Wait</strong> - the computation might take awhile. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>");
 
-    d3.select("#paperSortButton").style("display", null); //Unhide sort button for papers
+  d3.select("#paperSortButton").style("display", null); //Unhide sort button for papers
 
-    $('#pills-papers-tab').tab('show');
-    executeAsync(function () { drawPapers(); }, 500);
+  $('#pills-papers-tab').tab('show');
+  executeAsync(function () { drawPapers(); }, 500);
 }
 
 function getPopoverContent(articleid) {
