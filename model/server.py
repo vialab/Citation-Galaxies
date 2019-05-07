@@ -161,21 +161,7 @@ def do_query():
         # we have made this query before!
         payload = base64.b64decode(cache["querydata"].values[0])
     else:
-        sql = """select *, count(*) as count from (
-            		select wordSearch.articleid as articleID
-                        , wordSearch.articleyear
-            			, wordSearch.sentencenum as wordSentence
-            			, citationSearch.sentencenum as citationSentence
-            			, ((( CAST(wordSearch.startlocationpaper as float)
-            				+wordSearch.endlocationpaper)/2)
-            				/wordSearch.articleCharCount) * 100 as percent
-            		from wordsearch, citationsearch
-            		where wordsearch.articleid = citationsearch.articleid
-                    and wordSearch.lemma = ANY(%s)
-                ) as wordCitationJoin
-                group by wordSentence, citationSentence, articleyear, articleid, percent
-                order by wordCitationJoin.articleid, wordCitationJoin.percent
-    	"""
+        sql = main_query
         df = run_query(sql, data=(query,))
         df["id"] = np.arange(df.shape[0])
 
@@ -203,32 +189,6 @@ def do_count():
     return dumps({"agg":sorted, "nunique":citations["id"].unique().tolist()})
 
 
-@route("/papers/filter")
-@enable_cors
-def do_paperfilter():
-    # data = loads(request.body.read())
-    # loaded = data["loaded_articles"]
-    # signals = data["signals"]
-    # sort_by = data["sortby"]
-    sort_by = "articleyear"
-    if sort_by == "articleyear":
-        df = citations.groupby(["articleid","articleyear"]).size().reset_index(name="refcount")
-    else: # otherwise by journal
-        df = citations.groupby(["articleid", "journalid", "journaltitle", "articleyear"]).size().reset_index(name="refcount")
-    # df_filtered = pd.DataFrame()
-    # for id, signal in signals.items():
-    #     df_signal = agg.aggregate_signals(df, signal)
-    #     df_filtered = pd.concat([df_filtered,df_signal]).drop_duplicates().reset_index(drop=True)
-    df = df.to_dict(orient="records")
-    sorted = {}
-    for row in df:
-        year = str(row["articleyear"])
-        if sort_by == "articleyear":
-            if year not in sorted:
-                sorted[year] = [row]
-    return dumps(df.to_dict())
-
-
 @route("/papers", method=["POST"])
 @enable_cors
 def do_papers():
@@ -238,6 +198,8 @@ def do_papers():
     filter = ""
     years = []
     range_list = data["selections"]
+    last_rank = int(data["lastRank"])
+    n_ranks = int(data["nrank"])
     for i, range in enumerate(range_list):
         if i > 0:
             filter += " or "
@@ -249,28 +211,7 @@ def do_papers():
     if len(query) > 0:
         left_bound = int(data["rangeLeft"])
         right_bound = int(data["rangeRight"])
-        sql = """
-            select *
-			from (select *
-                , count(*) as count
-                , DENSE_RANK() OVER(PARTITION BY articleyear ORDER BY articleid) rnk
-                from (
-            		select wordSearch.articleid as articleID
-                        , wordSearch.articleyear
-            			, wordSearch.sentencenum as wordSentence
-            			, citationSearch.sentencenum as citationSentence
-            			, ((( CAST(wordSearch.startlocationpaper as float)
-            				+wordSearch.endlocationpaper)/2)
-            				/wordSearch.articleCharCount) * 100 as percent
-            		from wordsearch, citationsearch
-            		where wordsearch.articleid = citationsearch.articleid
-                    and wordSearch.lemma = ANY(%s) and wordSearch.articleYear = ANY(%s)
-                ) as wordCitationJoin
-                group by wordSentence, citationSentence, articleyear, articleid, percent
-			) as w
-			where rnk <= 5
-			order by articleyear, rnk
-    	"""
+        sql = main_query
         # first filter by the query again.. this probably could be improved
         df = run_query(sql, data=(query,years))
     else:
@@ -280,21 +221,41 @@ def do_papers():
     bins, labels = get_bins(increment)
     # now we can select our ranges and group by article
     df = df.query(filter)
+    ref_count = df.groupby("articleid").size().reset_index(name="refcount")
+    # get total amount of references per paper for ranking
+    df = df.merge(ref_count, on="articleid", how="left")
+    df["rank"] = df.groupby(["articleyear"])["refcount"].rank("dense", ascending=False)
+    # filter for only top 5 results in each year
+    df = df.query("rank>" + str(last_rank) + " and rank<=" + str(last_rank+5))
     df["bin"] = pd.cut(df["percent"], bins=bins, labels=labels)
-    df = df.merge(citations[["articleid", "journaltitle", "journalid"]], on="articleid", how="left")
-    df = df.groupby(["articleid", "articleyear", "journaltitle", "journalid", "bin"]).size().reset_index(name="refcount")
-    df = df.sort_values(["refcount"], ascending=False)
+    if len(query) > 0:
+        df = df.merge(citations[["articleid", "journaltitle", "journalid"]], on="articleid", how="left")
+    # get the size of each bin
+    bin_size = df.groupby(["articleid","bin"]).size().reset_index(name="binsize")
+    df = df.merge(bin_size, on=["articleid","bin"], how="left")
+    # save max and list of years and journals for display
     max = df["refcount"].max().item()
     years = sorted(df["articleyear"].unique().tolist())
+    journals = {}
+    # transform data for consumption
     records = df.to_dict(orient="records")
     sorted_articles = {}
-    journals = {}
     for row in records:
         articleid = str(row["articleid"])
         if articleid not in sorted_articles:
-            sorted_articles[articleid] = { "content": {}, "max": 0, "year": row["articleyear"], "journalid": row["journalid"] }
-        journals[str(row["journalid"])] = row["journaltitle"]
-        x = row["refcount"]
+            sorted_articles[articleid] = { "content": {}, "max": 0 }
+            sorted_articles[articleid]["year"] = row["articleyear"]
+            sorted_articles[articleid]["journalid"] = row["journalid"]
+            sorted_articles[articleid]["total"] = row["refcount"]
+            sorted_articles[articleid]["rank"] = row["rank"]
+            for i in np.arange(100/int(increment)):
+                sorted_articles[articleid]["content"][int(i)] = 0
+        jid = str(row["journalid"])
+        if jid not in journals:
+            journals[jid] = {"title":row["journaltitle"], "years":[]}
+        if row["articleyear"] not in journals[jid]["years"]:
+            journals[jid]["years"].append(row["articleyear"])
+        x = row["binsize"]
         sorted_articles[articleid]["content"][row["bin"]] = x
         if x > sorted_articles[articleid]["max"]:
             sorted_articles[articleid]["max"] = x
@@ -488,16 +449,16 @@ class Aggregator():
     def aggregate_years(self, distribution):
         bins, labels = get_bins(self.increment)
         distribution["bin"] = pd.cut(distribution["percent"], bins=bins, labels=labels)
-        distribution = distribution.groupby(["articleyear", "bin"]).count()
-        distribution.fillna(0, inplace=True)
-        distribution = distribution.to_dict()
+        distribution = distribution.groupby(["articleyear", "bin"]).size().reset_index(name="refcount")
+        # distribution.fillna(0, inplace=True)
+        distribution = distribution.to_dict(orient="records")
         sorted = {}
-        for key in distribution["percent"]:
-            year = str(key[0])
+        for row in distribution:
+            year = str(row["articleyear"])
             if year not in sorted:
                 sorted[year] = { "content": {}, "max": 0, "total": 0 }
-            x = distribution["percent"][key]
-            sorted[year]["content"][str(key[1])] = x
+            x = row["refcount"]
+            sorted[year]["content"][row["bin"]] = x
             sorted[year]["total"] += x
             if x > sorted[year]["max"]:
                 sorted[year]["max"] = x
@@ -518,6 +479,24 @@ citations = citations.merge(articles[["articleid", "journaltitle", "journalid"]]
 # citations.to_csv("./model/citation_context.csv", encoding="utf-8")
 # citations.to_pickle("./model/citation_context2.pkl")
 w2v = get_model()
+main_query = """
+    select *
+    , count(*) as count
+    from (
+        select wordSearch.articleid as articleID
+            , wordSearch.articleyear
+            , wordSearch.sentencenum as wordSentence
+            , citationSearch.sentencenum as citationSentence
+            , ((( CAST(wordSearch.startlocationpaper as float)
+                +wordSearch.endlocationpaper)/2)
+                /wordSearch.articleCharCount) * 100 as percent
+        from wordsearch, citationsearch
+        where wordsearch.articleid = citationsearch.articleid
+        and wordSearch.lemma = ANY(%s) and wordSearch.articleYear = ANY(%s)
+    ) as wordCitationJoin
+    group by wordSentence, citationSentence, articleyear, articleid, percent
+    order by articleyear
+    """
 # ix = open_dir(dirname="./model/index")
 # searcher = ix.searcher()
 # qp = QueryParser("content", schema=ix.schema)

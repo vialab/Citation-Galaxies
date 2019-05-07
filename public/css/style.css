@@ -50,7 +50,37 @@
 .partialpadding {
     padding: 5px 5px 5px 5px !important;
     float: none;
-    margin: 0 auto;
+    /* margin: 0 auto; */
+}
+
+.load-more {
+  width: 115px;
+  height: 168px;
+}
+
+.load-more .btn {
+  height:100%;
+  width:100%;
+  background-color: rgb(248, 249, 250);
+  border: 1px solid gray;
+  margin-top: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.load-more .btn:hover {
+  background-color: lightgray;
+  cursor: pointer;
+  color: white;
+}
+
+.load-more .btn span {
+  color: gray;
+  font-size: 60px;
+  padding: 0;
+  margin: 0;
+  margin-bottom: 10px;
 }
 
 .temp-load {
@@ -92,8 +122,18 @@
   width: 100%;
 }
 
+
+#papers-container .journal-row {
+  margin-bottom: 25px;
+  margin-top: 25px;
+}
+
 #papers-container .papers-row {
   margin-bottom: 25px;
+}
+
+#papers-container .papers {
+  justify-content: center;
 }
 
 #papers-container h2 {
