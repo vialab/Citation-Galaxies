@@ -31,7 +31,8 @@ $(document).bind("mouseup", function (event) {
   let sel = window.getSelection();
   if(sel.toString() != "") {
     // only show custom menu when we are highlighting in a popover
-    if($(sel.getRangeAt(0).commonAncestorContainer.parentNode).parents(".popover").length) {
+    if($(sel.getRangeAt(0).commonAncestorContainer.parentNode).parent().hasClass("citation-text")) {
+      console.log("yay");
       $("#text-selection").val(sel);
       $(".custom-menu").finish().toggle(100).css({
           top: event.pageY + "px",
