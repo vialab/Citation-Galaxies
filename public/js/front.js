@@ -628,7 +628,7 @@ function minimizeSelections() {
 //Used for when multiple selections are made
 function multipleSelection(currSelection, column, shiftPressed, object) {
     //Create an array full of the selections
-
+    last_query = {};
     //If the array doesnt have the selection already
     if (!selections.includes(currSelection)) {
         //If shift WASNT pressed and this is NOT a column that is being selected, then remove all selections
@@ -681,6 +681,7 @@ function disableAll() {
 function switchToHome() {
     $('#pills-home-tab').tab('show');
     d3.select('#paperSortButton').style('display', 'none');
+    d3.select('#paperNormButton').style('display', 'none');
     d3.select('#groupByButton').style('display', 'none');
     d3.select('#exportButton').style('display', 'none');
 }

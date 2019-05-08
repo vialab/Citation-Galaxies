@@ -367,7 +367,11 @@ function drawPapers() {
 
 // draw a specific set of papers passed in as input
 // this version categorizes the papers by whatever index currently selected
-function drawPapersByIndex(results) {
+function drawPapersByIndex(results, local_norm=false) {
+  $(".paper-norm").removeClass('active');
+  if(local_norm) $("#normLocal").addClass("active");
+  else $("#normGlobal").addClass("active");
+
   d3.select("#papers-container").remove();
   d3.select("#paperRow").remove();
   paperRow = d3.select("#pills-papers").append("div")
@@ -410,11 +414,11 @@ function drawPapersByIndex(results) {
         .attr("data-year", y);
     }
   }
-  drawPaperList(papers, all_max);
+  drawPaperList(papers, all_max, local_norm);
 
 }
 
-function drawPaperList(papers, all_max) {
+function drawPaperList(papers, all_max, local_norm=false) {
   // now draw the actual papers
   Object.keys(papers).forEach(key => {
     let container_id = "#papers-row-" + papers[key].year;
@@ -435,10 +439,12 @@ function drawPaperList(papers, all_max) {
     let activeLines = [];
     let activeLinesPercents = [];
     let lines = papers[key]["content"];
+    let max = all_max;
+    if(local_norm) max = papers[key].max;
     // set list of lines with different color strengths to draw
     Object.keys(lines).forEach(i => {
       activeLines.push(lines[i] > 0);
-      activeLinesPercents.push(lines[i]/all_max);
+      activeLinesPercents.push(lines[i]/max);
     });
     drawPaper(110, 160, activeLines, activeLinesPercents, svgContainer, key, false);
   });
@@ -451,7 +457,7 @@ function drawPaperList(papers, all_max) {
     .attr("onclick", "loadMorePapers(this);")
       .append("div")
       .attr("class", "btn")
-        .append("span").text("+");
+        .append("span").text("...");
 }
 
 // load a small set of papers to be specifically appended after element
@@ -853,6 +859,7 @@ function switchToPapers() {
       .attr("role", "alert").attr("id", "alert")
       .html("<strong>Please Wait</strong> - the computation might take awhile. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>");
 
+  d3.select("#paperNormButton").style("display", null); //Unhide sort button for papers
   d3.select("#paperSortButton").style("display", null); //Unhide sort button for papers
 
   $('#pills-papers-tab').tab('show');
