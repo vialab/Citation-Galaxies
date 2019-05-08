@@ -251,7 +251,7 @@ div.tooltip {
 
 .custom-menu {
     display: none;
-    z-index: 1063;
+    z-index: 100002;
     position: absolute;
     overflow: hidden;
     border: 1px solid #777;

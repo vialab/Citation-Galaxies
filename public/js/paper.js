@@ -898,9 +898,7 @@ function getPopoverContent(articleid) {
         }
         let citations = [];
         p.citations.forEach(c => {
-          let start = c.startlocationpaper - p.start;
-          let end = c.endlocationpaper - p.start;
-          let citation_text = p.text.substr(start, end);
+          let citation_text = c.citationtext;
           if(!citations.includes(citation_text)) {
             full_text = full_text.replace(citation_text
               , "<span class='citation'>"+citation_text+"</span>");
