@@ -293,18 +293,18 @@ a.disabled {
   pointer-events: none;
 }
 
-#filterQueryOptions  {
+.filter-query-options  {
     display:flex;
     justify-content: flex-end;
 }
 
-#filterQueryOptions .filterOption {
+.filter-query-options .filter-option {
   margin: 5px 5px;
   flex: 1;
   white-space: nowrap;
 }
 
-#filterQueryOptions .filterOption button {
+.filter-query-options .filter-option button {
   width: 100%;
 }
 

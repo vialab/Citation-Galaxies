@@ -53,6 +53,7 @@ var loaded_articles = [];
 var process_queue = {}; //process queue of intervals
 var overlay_sentiment = false; // flag to immediately show sentiment results
 var front_data = {};
+var last_query = {};
 
 //Used to change the increment on the main screen
 function seperationChange(increment) {
