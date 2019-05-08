@@ -832,6 +832,18 @@ function switchToPapers() {
   // if (document.getElementById("pills-papers-tab").classList.contains('disabled')) {
   //     document.getElementById("pills-papers-tab").classList.remove("disabled");
   // }
+  if(last_query.currIncrement == currIncrement
+    && last_query.currSearchQuery == currSearchQuery
+    && last_query.selections == selections) {
+      return;
+  } else {
+    last_query.currIncrement = currIncrement;
+    last_query.currSearchQuery = currSearchQuery;
+    last_query.selections = selections;
+  }
+  if(selections.length == 0) {
+    selectAllYears(); // default is to show all :)
+  }
   d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
 
   //Remove the paper row - append a message about the slow computation time, and run the search for the papers
