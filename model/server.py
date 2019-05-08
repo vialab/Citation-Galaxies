@@ -214,7 +214,7 @@ def do_papers():
         sql = main_query
         # first filter by the query again.. this probably could be improved
         df = run_query(sql, data=(query,years))
-    else:s
+    else:
         df = citations.copy(deep=True)
 
     increment = int(data["increment"])
@@ -234,7 +234,7 @@ def do_papers():
     bin_size = df.groupby(["articleid","bin"]).size().reset_index(name="binsize")
     df = df.merge(bin_size, on=["articleid","bin"], how="left")
     # save max and list of years and journals for display
-    max = df["refcount"].max().item()
+    max = df["binsize"].max().item()
     years = sorted(df["articleyear"].unique().tolist())
     journals = {}
     # transform data for consumption

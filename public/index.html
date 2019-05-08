@@ -176,16 +176,29 @@
                 </div>
             </div>
             <div class="tab-pane fade" id="pills-papers" role="tabpanel" aria-labelledby="pills-papers-tab">
-              <div class="dropdown" id="sortOptions">
-                  <button class="btn btn-outline-secondary dropdown-toggle" id="paperSortButton" style="margin-right: 20px; display: none;"
-                      type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                      Sort By
-                  </button>
-                  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <a class="dropdown-item paper-sort active" id="sortByYear" href="#" onclick="changePaperSort('articleyear')">Year</a>
-                    <a class="dropdown-item paper-sort" id="sortByJournal" href="#" onclick="changePaperSort('journaltitle')">Journal</a>
-                      <!-- <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a> -->
-                  </div>
+              <div id="sortOptions">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" id="paperSortButton" style="margin-right: 20px; display: none;"
+                        type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Sort By
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                      <a class="dropdown-item paper-sort active" id="sortByYear" href="#" onclick="changePaperSort('articleyear')">Year</a>
+                      <a class="dropdown-item paper-sort" id="sortByJournal" href="#" onclick="changePaperSort('journaltitle')">Journal</a>
+                        <!-- <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a> -->
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" id="paperNormButton" style="margin-right: 20px; display: none;"
+                        type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Normalize
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                      <a class="dropdown-item paper-norm active" id="normGlobal" href="#" onclick="drawPapersByIndex(paper_data, false);">Global</a>
+                      <a class="dropdown-item paper-norm" id="normLocal" href="#" onclick="drawPapersByIndex(paper_data, true);">Local</a>
+                        <!-- <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a> -->
+                    </div>
+                </div>
               </div>
               <div id="papers-container" class="row transition"></div>
               <div id="window-divider" class="transition">
