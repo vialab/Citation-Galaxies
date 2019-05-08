@@ -18,6 +18,7 @@ function findSimilar(elem) {
   $sel.val($("#signalcategoryid", $elem).html());
   getSimilarWords(signal, function(results) {
     let $modal = $("#generic-modal");
+    $modal.removeClass("full-screen");
     $(".modal-title", $modal).html("Similar words to \"" + signal + "\" by usage");
     $(".modal-body").html("");
 

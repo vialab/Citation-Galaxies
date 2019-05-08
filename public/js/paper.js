@@ -33,7 +33,6 @@ function selectPaperViewBoundary(object) {
 
 //Add the refernce to the current list of references selected
 function updateReferencesSelected(object) {
-  console.log(object);
     var found = false;
     //If the reference selected is already in the array do not add another copy
     for (var i = 0; i < referencesSelected.length; i++) {
@@ -743,13 +742,13 @@ function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer,
           , trigger: 'manual'
         });
         // clear the data whenever we hide a popover to keep our html clean
-        $(this).on("hidden.bs.popover", function(e) {
-          d3.select(this).attr("data-content", "");
-        });
+        // $(this).on("hidden.bs.popover", function(e) {
+        //   d3.select(this).attr("data-content", "");
+        // });
         //If the paper is clicked, hide all other papers open at the moment
-        $('[data-toggle=popover]').not(this).popover('hide');
-        d3.select(this).attr("data-content", $('#popover_content_wrapper').html());
-        $(this).popover('show');
+        // $('[data-toggle=popover]').not(this).popover('hide');
+        // d3.select(this).attr("data-content", $('#popover_content_wrapper').html());
+        // $(this).popover('show');
         //Reset selection data that was not added
         inTextSelection = [];
         referencesSelected = [];
@@ -854,17 +853,24 @@ function getPopoverContent(articleid) {
     , url: processURL+"paper?id="+articleid
     , success: function(results) {
       let data = JSON.parse(results);
-      console.log(data);
-      let popover = d3.select("#popover_text");
-      popover.html("");
-      popover.append("h2").text(data['articletitle']
+      let $modal = $("#generic-modal");
+      $modal.addClass("full-screen");
+      $(".modal-title", $modal).html("");
+      $(".modal-body").html("");
+      $(".modal-footer").html("");
+      let popover = d3.select("#generic-modal .modal-body");
+      let article_title = data['articletitle']
         + " (" + data['articleyear'] + ") (" + articleid + ") ("
-        + data['journaltitle'] + ")");
+        + data['journaltitle'] + ")";
+      $(".modal-title", $modal).html(article_title);
+      // let popover = d3.select("#popover_text");
+      // popover.html("");
+      // popover.append("h2").text(article_title);
 
-      var listEntry = popover.append("ul").attr("class", "list-group citation-text");
+      let list = popover.append("ul").attr("class", "list-group citation-text");
       data["paragraphs"].forEach(p => {
         let full_text = p.text;
-        listEntry = listEntry.append("li").attr("class", "list-group-item");
+        listEntry = list.append("li").attr("class", "list-group-item");
         // markup search query words in this paragraph
         if(currSearchQuery.length > 0) {
           for(let query of currSearchQuery) {
@@ -885,16 +891,20 @@ function getPopoverContent(articleid) {
         // use the markup text
         listEntry.html(full_text);
       });
+      $modal.modal("show");
     }
   });
 }
 
-
 function setPopoverContent(articleid) {
   //Append the relevant paper data in the popover
-  var popover = d3.select("#popover_text");
-  popover.html("");
-  popover.append("h2").text(paperText[articleid][0]['articletitle'] + " (" + paperText[articleid][0]['articleyear'] + ") (" + articleid + ") (" + paperText[articleid][0]['journaltitle'] + ")");
+  // var popover = d3.select("#popover_text");
+  // popover.html("");
+  let curr_paper = paperText[articleid][0];
+  let article_title = curr_paper['articletitle'] + " ("
+    + curr_paper['articleyear'] + ") (" + articleid + ") ("
+    + curr_paper['journaltitle'] + ")";
+  popover.append("h2").text(article_title);
 
   //Append each reference context
   for (var i = 0; i < paperData[articleid].length; i++) {
@@ -907,7 +917,7 @@ function setPopoverContent(articleid) {
       listEntry = listEntry.append("li").attr("class", "list-group-item").attr("onclick", "selectPaperViewBoundary(this);updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
       var lastSplitIndex = paperData[articleid][i][0][8][0]; //Index used to figure out where the paper text was last split on
       //If the context has a space at the beginning, skip it
-      if (paperText[articleid][0]['papertext'].charAt(lastSplitIndex) == ' ') {
+      if (curr_paper['papertext'].charAt(lastSplitIndex) == ' ') {
           lastSplitIndex += 1;
       }
       var endTextIndex = paperData[articleid][i][0][9][1]; //Index for the end of the context
@@ -915,9 +925,9 @@ function setPopoverContent(articleid) {
       tempText += '"';
 
       // Mark up current search query and citations within each paragraph..
-      let full_text = paperText[articleid][0]['papertext']
+      let full_text = curr_paper['papertext']
         .substring(lastSplitIndex, endTextIndex + 1).trim();
-      let citation_text = paperText[articleid][0]['papertext']
+      let citation_text = curr_paper['papertext']
               .substring(paperData[articleid][i][0][3] - 1
                 , paperData[articleid][i][0][4] + 1)
               .trim();
@@ -953,9 +963,9 @@ function setPopoverContent(articleid) {
       //Append "br" for padding
       popover.append("br");
   }
+  $modal.modal("show");
 
   $("#popover_text .list-group-item").on("click", function() {
-    console.log("blah!");
     selectPaperViewBoundary(this);
     updateReferencesSelected([this.id, this.innerHTML
       , paperText[this.id][0]['articletitle']
