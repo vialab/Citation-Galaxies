@@ -348,7 +348,7 @@ function drawPapers() {
       type: 'POST',
       url: processURL + "papers",
       data: JSON.stringify({
-        'selections': selections
+        'selections': minimizeSelections()
         , "query": currSearchQuery
         , "increment": currIncrement
         , "rangeLeft": sentenceRangeAbove

@@ -214,7 +214,7 @@ def do_papers():
         sql = main_query
         # first filter by the query again.. this probably could be improved
         df = run_query(sql, data=(query,years))
-    else:
+    else:s
         df = citations.copy(deep=True)
 
     increment = int(data["increment"])
