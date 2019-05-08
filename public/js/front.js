@@ -223,6 +223,7 @@ function changeLabel(choice) {
   } else {
     overlay_sentiment = false;
     $(".sentiment").hide();
+    return;
   }
   currentLabel = choice;
   //Clear the paper glyph and recalculate the lines
@@ -325,12 +326,12 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
 
             //If shift was pressed, then dont process the selection and keep the previous selections
             //Else clear previous selections, and process this one
-            var shiftPressed = false;
-            if (d3.event.shiftKey) {
-                shiftPressed = true;
-            } else {
-                removeAllSelections();
-            }
+            var shiftPressed = true; // this is now default.. use a button to get to next page
+            // if (d3.event.shiftKey) {
+            //     shiftPressed = true;
+            // } else {
+            //     removeAllSelections();
+            // }
 
             //Go through all minisquares, if they're on the same line get their year and run it through the selection function
             $(".minsqr.box-" + d3.event.target.id.split("_")[1]).each(function(i) {
@@ -400,6 +401,8 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
       .attr("xy", 3)
       .attr("width", containerSizeW)
       .attr("height", containerSizeW)
+      .attr("class", "year-hitbox")
+      .attr("id", "year-hitbox-"+label)
       .style("fill", "rgba(0,0,0,0)"); // <-- used to make transparent
 
   //Total on the year container
@@ -449,12 +452,12 @@ function drawColumn(label, containerSizeW, miniSquareSizeX, miniSquareSizeY, svg
       d3.event.stopPropagation();
 
       //If shift is pressed, dont process the selection - else do
-      var shiftPressed = false;
-      if (d3.event.shiftKey) {
-          shiftPressed = true;
-      } else {
-          removeAllSelections();
-      }
+      var shiftPressed = true;
+      // if (d3.event.shiftKey) {
+      //     shiftPressed = true;
+      // } else {
+      //     removeAllSelections();
+      // }
 
       $("."+label+".minsqr").each(function(i) {
         let id = $(this).attr("id").split("_");
@@ -570,6 +573,17 @@ function adaptSelection(year) {
     }
 }
 
+function selectAllYears() {
+  $(".minsqr").each(function(i) {
+    let id = $(this).attr("id").split("_");
+    let year = id[1];
+    let from = parseInt(id[2]) * currIncrement;
+    let to = (parseInt(id[2])+1) * currIncrement;
+    let selection = year+"-"+from+"-"+to;
+    multipleSelection(selection, true, true, d3.select("#"+$(this).attr("id")));
+  });
+}
+
 //Used to remove all user selections and remove their stroke / highlight
 function removeAllSelections() {
     selections = [];
@@ -577,6 +591,37 @@ function removeAllSelections() {
         drawBorder(selectionObjects[i], true);
     }
     selectionObjects = [];
+}
+
+function minimizeSelections() {
+  let sorted = selections.sort();
+  let minimized = [];
+  let year = "";
+  let start = 0;
+  let end = 0;
+  sorted.forEach(function(s, i) {
+    let range = s.split("-")
+      , new_start = parseInt(range[1])
+      , new_end = parseInt(range[2]);
+    if(i == 0) {
+      year = range[0];
+      start = new_start;
+      end = new_end;
+      return;
+    }
+    if(year != range[0] || end != new_start) {
+      minimized.push(year + "-" + start + "-" + end);
+      year = range[0];
+      start = new_start;
+      end = new_end;
+      return;
+    }
+    if(end == new_start) {
+      end = new_end;
+    }
+  });
+  minimized.push(year + "-" + start + "-" + end);
+  return minimized;
 }
 
 //Used for when multiple selections are made
@@ -1086,7 +1131,7 @@ function drawAllYears(data) {
   $(".hit-box").on("click", function (e) {
       //If shift is pressed, dont process the selection - else do
       var shiftPressed = e.shiftKey;
-
+      shiftPressed = true;
       //Prune the id string of the clicked item (minSqrHB_YEAR_NUM) to get NUM
       var id = $(this).attr("id").split("_");
       let from = parseInt(id[2]) * currIncrement;
@@ -1094,7 +1139,7 @@ function drawAllYears(data) {
       let label = id[1] +"-" + from + "-" + to;
       //MultipleSelection() deals with having a variety of selections, and when to process them
       //multipleSelection(tmp.substring(0, tmp.indexOf("_")) + ": " + seperationLabels[parseInt(tmp.substring(tmp.indexOf("_") + 1, d3.event.target.id.length))].text(), false, shiftPressed, d3.select("#" + d3.event.target.id));
-      multipleSelection(label, false, shiftPressed, d3.select(this));
+      multipleSelection(label, false, shiftPressed, d3.select("#"+$(this).attr("id")));
       //Switch to the papers if shift is not pressed
       if (shiftPressed == false) {
           switchToPapers();
