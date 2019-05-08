@@ -420,6 +420,19 @@ g text {
   max-width: 960px; // Optional, maximum width
 }
 
+.modal-dialog.full-screen {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.full-screen .modal-content {
+  height: auto;
+  min-height: 100%;
+  border-radius: 0;
+}
+
 @media(max-width: 900px) {
   #navOptions {
     width: 100%;
