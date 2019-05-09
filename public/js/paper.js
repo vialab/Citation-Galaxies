@@ -343,19 +343,36 @@ function sortPapers(indexToSortOn, sortedArray) {
 // Draws all the papers -- rewritten
 // instead of holding everything on the client
 // retrieve from the server only what we need, as we need it
-function drawPapers() {
+function drawPapers(signal_id, signal_cat_id) {
+  // if we have an associated signal, filter by it
+  let values = {
+    'selections': minimizeSelections()
+    , "query": currSearchQuery
+    , "increment": currIncrement
+    , "rangeLeft": sentenceRangeAbove
+    , "rangeRight": sentenceRangeBelow
+    , "lastRank": 0
+    , "nrank": nPaperLoad
+    , "signals": {}
+  };
+  // add a set of signals based on their category
+  if(typeof(signal_cat_id) != "undefined") {
+    for(let id in sentiment_signals) {
+      let signal = sentiment_signals[id];
+      if(signal.category == signal_cat_id) {
+        values["signals"][id] = signal;
+      }
+    }
+  } else {
+    // alternatively, filter by a single signal
+    if(typeof(signal_id) != "undefined") {
+      values["signals"][signal_id] = sentiment_signals[signal_id];
+    }
+  }
   paperRequests.push($.ajax({
       type: 'POST',
       url: processURL + "papers",
-      data: JSON.stringify({
-        'selections': minimizeSelections()
-        , "query": currSearchQuery
-        , "increment": currIncrement
-        , "rangeLeft": sentenceRangeAbove
-        , "rangeRight": sentenceRangeBelow
-        , "lastRank": 0
-        , "nrank": nPaperLoad
-      }),
+      data: JSON.stringify(values),
       success: function (data) {
         paper_data = JSON.parse(data);
         drawPapersByIndex(paper_data);
@@ -875,8 +892,8 @@ function getPopoverContent(articleid) {
       let $modal = $("#generic-modal");
       $modal.addClass("full-screen");
       $(".modal-title", $modal).html("");
-      $(".modal-body").html("");
-      $(".modal-footer").html("");
+      $(".modal-body", $modal).html("");
+      $(".modal-footer", $modal).html("");
       let popover = d3.select("#generic-modal .modal-body");
       let article_title = data['articletitle']
         + " (" + data['articleyear'] + ") (" + articleid + ") ("

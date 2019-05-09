@@ -20,7 +20,7 @@ function findSimilar(elem) {
     let $modal = $("#generic-modal");
     $modal.removeClass("full-screen");
     $(".modal-title", $modal).html("Similar words to \"" + signal + "\" by usage");
-    $(".modal-body").html("");
+    $(".modal-body", $modal).html("");
 
     let $body = $(".modal-body", $modal);
     $body.html("");
