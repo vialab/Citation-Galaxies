@@ -205,7 +205,16 @@ function click(d) {
      .on("end", updateDonutLabels())
      .duration(200)
      .attrTween('d', arcTweenPath);
- }
+
+  minimizeDivider();
+  if(d.data.name == "root") {
+    drawPapers()
+  } else if(d.data.name.includes("cat")) {
+    drawPapers(undefined, d.data.catid);
+  } else {
+    drawPapers(parseInt(d.data.name))
+  }
+}
 
 // Fade all but the current sequence, and show it in the breadcrumb trail.
 function mouseover(d) {

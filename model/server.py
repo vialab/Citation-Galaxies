@@ -194,6 +194,7 @@ def do_count():
 def do_papers():
     data = loads(request.body.read())
     query = data["query"]
+    signals = data["signals"]
     # now create a pandas query based off of the ranges
     filter = ""
     years = []
@@ -222,14 +223,23 @@ def do_papers():
     # now we can select our ranges and group by article
     df = df.query(filter)
     ref_count = df.groupby("articleid").size().reset_index(name="refcount")
+    # merge in any additional columns we need for display/filtering
+    if len(query) > 0:
+        df = df.merge(citations[["articleid", "journaltitle", "journalid", "context"]], on="articleid", how="left")
+    # if we have signals associated to this query, filter
+    if len(signals.items()) > 0:
+        agg = Aggregator(increment)
+        df_filtered = pd.DataFrame()
+        for id, signal in signals.items():
+            df_new = agg.aggregate_signals(df, signal)
+            df_filtered = pd.concat([df_filtered,df_new]).drop_duplicates().reset_index(drop=True)
+        df = df_filtered
     # get total amount of references per paper for ranking
     df = df.merge(ref_count, on="articleid", how="left")
     df["rank"] = df.groupby(["articleyear"])["refcount"].rank("dense", ascending=False)
     # filter for only top 5 results in each year
     df = df.query("rank>" + str(last_rank) + " and rank<=" + str(last_rank+5))
     df["bin"] = pd.cut(df["percent"], bins=bins, labels=labels)
-    if len(query) > 0:
-        df = df.merge(citations[["articleid", "journaltitle", "journalid"]], on="articleid", how="left")
     # get the size of each bin
     bin_size = df.groupby(["articleid","bin"]).size().reset_index(name="binsize")
     df = df.merge(bin_size, on=["articleid","bin"], how="left")

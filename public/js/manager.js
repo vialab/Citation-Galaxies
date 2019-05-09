@@ -334,6 +334,8 @@ function postInsert(table_name, values, callback) {
       "table_name": table_name
       , "values": JSON.stringify(values)
     },
-    success: callback
+    success: function(results) {
+      if(typeof(callback) != "undefined") callback(results);
+    }
   });
 }

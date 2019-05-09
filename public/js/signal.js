@@ -365,6 +365,7 @@ function filterSignals(category, pid) {
   return filtered_data;
 }
 
+
 function getAllChildrenKeys(signal) {
   let children = signal.filters.concat(signal.restrictions);
   let keys = [];
@@ -375,4 +376,15 @@ function getAllChildrenKeys(signal) {
   return keys.filter( (value, index, self) => {
     return self.indexOf(value) === index;
   });
+}
+
+
+function addSignal(cat_id) {
+  let values = {
+    "score": 1
+    , "signalcategoryid": cat_id
+    , "signaltypeid": 1
+    , "signal": $("#text-selection").val()
+  };
+  postInsert("signal", values);
 }
