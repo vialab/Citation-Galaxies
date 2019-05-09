@@ -207,6 +207,13 @@ function click(d) {
      .attrTween('d', arcTweenPath);
 
   minimizeDivider();
+  d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
+  //Remove the paper row - append a message about the slow computation time, and run the search for the papers
+  d3.select("#paperRow").remove();
+  var paperRow = d3.select("#pills-papers").append("div").attr("class", "row justify-content-center").attr("id", "paperRow");
+  paperRow.append("div").attr("class", "alert alert-warning alert-dismissible fade show")
+      .attr("role", "alert").attr("id", "alert")
+      .html("<strong>Please Wait</strong> - the computation might take awhile. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>");
   if(d.data.name == "root") {
     drawPapers()
   } else if(d.data.name.includes("cat")) {
