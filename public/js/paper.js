@@ -914,6 +914,7 @@ function getPopoverContent(articleid) {
           }
         }
         let citations = [];
+        full_text = tagCitationSentiment(articleid, full_text);
         p.citations.forEach(c => {
           let citation_text = c.citationtext;
           if(!citations.includes(citation_text)) {

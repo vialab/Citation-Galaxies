@@ -322,7 +322,8 @@ a.disabled {
 }
 
 span.sentiment-text {
-  text-decoration: underline;
+  font-weight: bold;
+  font-size: 2em;
 }
 
 span.citation {

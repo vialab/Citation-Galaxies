@@ -47,18 +47,21 @@ function tagCitationSentiment(articleid, text) {
   let new_text = text, score = 0, n = 0;
   // a tag is a json object that contains signal_idx, location ([start, end]),
   // and value (1, 0, -1)
-  for(let key of Object.keys(sentiment_signals)) {
+  for(let key in sentiment_signals) {
     let s = sentiment_signals[key];
     let cat = s.category;
     let color = sentiment_categories[cat].color;
-    let rule = new RegExp(`(${s.signal})`, 'ig')
-      , value = s.value;
-    if(rule.exec(new_text)) {
+    let rule = new RegExp(s.signal, "g");
+    let value = s.value;
+    let matches = new_text.match(rule);
+    if(matches != null) {
       // markup the existence of this rule in the text
-      new_text = new_text.replace(rule, "<span class='sentiment-text'>"
+      let col = hexToRGBA(sentiment_categories[cat].color);
+      new_text = new_text.replace(s.signal
+        , "<span class='sentiment-text' style='background-color: " + col + "'>"
         + s.signal + "</span>");
-      score += value; // sum score
-      n++;
+      score += value * matches.length; // sum score
+      n += matches.length;
     }
   }
   // save the score (average between -1 and +1)
