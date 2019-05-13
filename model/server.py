@@ -198,6 +198,7 @@ def do_papers():
     # now create a pandas query based off of the ranges
     filter = ""
     years = []
+    journal_id = data["journalid"]
     range_list = data["selections"]
     last_rank = int(data["lastRank"])
     n_ranks = int(data["nrank"])
@@ -226,6 +227,8 @@ def do_papers():
     # merge in any additional columns we need for display/filtering
     if len(query) > 0:
         df = df.merge(citations[["articleid", "journaltitle", "journalid", "context"]], on="articleid", how="left")
+    if journal_id != "":
+        df = df[df["journalid"] == journal_id]
     # if we have signals associated to this query, filter
     if len(signals.items()) > 0:
         agg = Aggregator(increment)

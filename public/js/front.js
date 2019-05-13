@@ -1185,28 +1185,30 @@ function searchForQuery(query) {
 }
 
 function maximizeDivider() {
-  setDivider($("#mainNav").height() + 16);
+  setDivider($(window).width()-15);
 }
 
 function minimizeDivider() {
-  setDivider($(window).height()-25);
+  setDivider(0);
 }
 
-function setDivider(pageY) {
+function setDivider(pageX) {
   let $div = $("#window-divider");
   $div.offset({
-      top: pageY
+      left: pageX
   });
-  let offset = $(window).height()-pageY-$div.height()-1;
-  $("#sunburst-container").height(offset);
-  offset = pageY-$("#papers-container").offset().top;
-  $("#papers-container").height(offset);
+  let offset = pageX;
+  $("#sunburst-container").width(offset);
+  offset = $(window).width()-pageX-15;
+  $("#papers-container").width(offset);
+  $("#sortOptions").width(offset);
 }
 
 $(document).ready(function () {
     $(".toast").toast({ "delay": 2000 });
     currentURL = window.location.origin + "/";
-
+    $("#papers-container").height($(window).height()-82-$("#sortOptions").height);
+    $("#sunburst-container").height($(window).height()-82-$("#sortOptions").height);
     // hide the rules testing harness for local use only
     // though we hide it, it should not contain system breaking functionality
     if(currentURL.indexOf("localhost") >= 0) {
@@ -1220,14 +1222,15 @@ $(document).ready(function () {
 
     $(document).on("mousemove", function(e) {
         if ($dragging) {
-          if(e.pageY <= $("#mainNav").height() + 16) return;
-          if(e.pageY >= $(window).height()-25) return;
-          let offset = $(window).height()-$dragging.offset().top-$dragging.height()-1;
-          $("#sunburst-container").height(offset);
-          offset = e.pageY-$("#papers-container").offset().top;
-          $("#papers-container").height(offset);
+          if(e.pageX <= 0) return;
+          if(e.pageX >= $(window).width()-15) return;
+          let offset = e.pageX;
+          $("#sunburst-container").width(offset);
+          offset = $(window).width()-e.pageX-15;
+          $("#papers-container").width(offset);
+          $("#sortOptions").width(offset);
           $dragging.offset({
-              top: e.pageY
+              left: e.pageX
           });
         }
     });
@@ -1238,7 +1241,6 @@ $(document).ready(function () {
       $("#sunburst-container").removeClass("transition")
       $("#window-divider").removeClass("transition");
       $("#papers-container").removeClass("transition");
-      $("#sunburst-container").css("overflow", "visible");
       $("#papers-container").css("overflow", "hidden");
     });
 
@@ -1247,10 +1249,9 @@ $(document).ready(function () {
         $("#sunburst-container").addClass("transition")
         $("#window-divider").addClass("transition");
         $("#papers-container").addClass("transition");
-        $("#sunburst-container").css("overflow", "scroll");
         $("#papers-container").css("overflow", "scroll");
-        let offset = $(window).height()-$dragging.offset().top-$dragging.height()-1;
-        $("#sunburst-container").height(offset);
+        let offset = e.pageX;
+        $("#sunburst-container").width(offset);
         $dragging = null;
       }
     });

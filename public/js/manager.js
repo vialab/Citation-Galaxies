@@ -69,9 +69,6 @@ function populateTable(signals, name, table, links, actions, schema, parent) {
     let tableBody = $("<tbody></tbody>").appendTo(table);
     let headerRow = $("<tr></tr>").appendTo(tableHeader);
 
-    // Get the form
-    let form_container = $("#ruleForm");
-
     // Create a array to hold the keys from the json
     // To be used as the header to the table
     let headers = [];
@@ -87,39 +84,30 @@ function populateTable(signals, name, table, links, actions, schema, parent) {
         }
         headers.push(key);
     }
-
-    // Create the form
-    let form = $("<div class='row'></div>").appendTo(form_container);
+    $("<th>actions</th>").appendTo(headerRow);
+    // create a row for adding a completely new row
+    let $addrow = $("<tr id='add-new-row' class='edit-row'></tr>");
+    // For each entry in the json
     for (let i = 1; i < headers.length; i++) {
-      let html = "<div class='col-sm-3'><input type='";
-      switch(schema[headers[i]]) {
-        case "integer":
-          html += "number' step='1"
-          break;
-        default:
-          html += "text";
-          break;
-      }
-      html += "' data-type='" + schema[headers[i]];
-      html += "' class='form-control mr-2'\
-         id='" + headers[i] + "_field'\
-         placeholder='" + headers[i] + "'></div>";
-      $(html).appendTo(form);
+      let html = "<td id='" + headers[i] + "' class='edit-cell"
+        + " empty'> &lt;empty&gt;" + "</td>";
+      $(html).appendTo($addrow);
     }
-
     // set the parentid in the form if we have one
     if(parent.id !== undefined) {
       $("#" + parent.col + "_field").val(parent.id);
     }
-
-    // create a confirm button
-    let html = "<div class='row'><div class='col-sm-12'><button type='submit' class='btn btn-primary' \
+    let $actioncell = $("<td></td>").appendTo($addrow);
+    let $actions = $("<div class='action-cell'></div>").appendTo($actioncell);
+    let html = "<button type='submit' class='btn btn-success' \
       onclick='insertRow(\"" + name + "\"";
     if(parent.id !== undefined) {
       html += ", \"" + parent.col + "\"," + parent.id;
     }
-    html += ")'>Submit</button></div></div>";
-    $(html).appendTo(form_container);
+    html += ")'>Submit</button>";
+    $(html).appendTo($actions);
+    html = "<button class='btn btn-danger ml-2' onclick=''> X </button>";
+    $(html).appendTo($actions);
 
     // Populate the cells
     for (let signal of signals) {
@@ -137,6 +125,10 @@ function populateTable(signals, name, table, links, actions, schema, parent) {
           $(html).appendTo(row);
         }
         // create link buttons
+        let $actioncell = $("<td></td>");
+        let $actions = $("<div class='action-cell'></div>");
+        // Add the remove button first
+
         if(typeof(links) != "undefined") {
           Object.keys(links).forEach(key => {
             let link = links[key];
@@ -144,10 +136,10 @@ function populateTable(signals, name, table, links, actions, schema, parent) {
             Object.keys(link.params).forEach(id => {
               params[link.params[id]] = signal[id];
             })
-            let html = "<button class='btn btn-primary ml-2' onclick='loadTable(\""
+            let html = "<button class='btn btn-primary ml-2 more-actions' onclick='loadTable(\""
               + link.query + "\","  + JSON.stringify(params).replace(/\\"/g, '\'')
               + ")'>" + key + "</button>";
-            $(html).appendTo(row);
+            $(html).appendTo($actions);
           });
         }
         // create action buttons that perform some sort of "action"
@@ -155,23 +147,26 @@ function populateTable(signals, name, table, links, actions, schema, parent) {
           Object.keys(actions).forEach(key => {
             let action = actions[key];
             let params = {};
-            let html = "<button class='btn btn-primary ml-2' onclick='"
+            let html = "<button class='btn btn-primary ml-2 more-actions' onclick='"
               + action + "(this)'>" + key + "</button>";
-            $(html).appendTo(row);
+            $(html).appendTo($actions);
           });
         }
-        // Add the remove button
-        let html = "<button class='btn btn-primary ml-2' onclick='deleteRow(\""
+        let html = "<button class='btn btn-danger ml-2' onclick='deleteRow(\""
           + name + "\"," + signal[headers[0]] + ")'> X </button>";
-        $(html).appendTo(row);
+        $(html).appendTo($actions);
+        // append actions to table
+        $actions.appendTo($actioncell);
+        $actioncell.appendTo(row);
 
         // On a cell click allow the row to be edited
-        row.find("td.edit-cell").click(function (event) {
-          editCrudRow(event);
-        });
         row.appendTo(tableBody);
     }
+    $addrow.appendTo(tableBody)
 
+    $(".edit-cell").click(function (event) {
+      editCrudRow(event);
+    });
 
     $("#signalTable button").click(function (event) {
         let target = $(event.target);
@@ -190,7 +185,7 @@ function deselectCrudRows(update) {
         let row = $(rows[i]);
         row.removeClass("editing");
         // If the row is being edited
-        if (row.attr("id").includes("_edited")) {
+        if (row.attr("id").includes("_edited") || row.attr("id") == "add-new-row") {
             let row_elements = row.children();
 
             for (let i = 0; i < row_elements.length; i++) {
@@ -228,7 +223,6 @@ function deselectCrudRows(update) {
 function editCrudRow(event) {
   let selected_row = $(event.target).parent();
   let row_elements = selected_row.children();
-  $("td.empty", selected_row).html("")
   // If the row hasn't been selected for editing already
   if (!selected_row.attr("id").includes("_edited")) {
     // Deselect all other rows
@@ -246,20 +240,20 @@ function editCrudRow(event) {
         // Allow the cell to be edited
         row_element.attr('contenteditable', 'true');
     }
-
+    $("td.empty", selected_row).html("")
     // Flag the row as edited
-    selected_row.attr("id", selected_row.attr("id") + "_edited");
     selected_row.addClass("editing");
 
     // Add a button to submit the changes
-    let html = "<button id='submit_crud_row' class='btn btn-primary ml-2' onclick='updateRow'> ✓ </button>";
-    let submit_edit_button = $().appendTo(selected_row);
-
-    // When clicked, submit the data and deselect the row
-    submit_edit_button.click(function (event) {
-        deselectCrudRows(true);
-    });
-
+    if(selected_row.attr("id") != "add-new-row") {
+      selected_row.attr("id", selected_row.attr("id") + "_edited");
+      let html = "<button id='submit_crud_row' class='btn btn-warning ml-2' onclick='updateRow'> ✓ </button>";
+      let submit_edit_button = $(html).appendTo($(".action-cell",selected_row));
+      // When clicked, submit the data and deselect the row
+      submit_edit_button.click(function (event) {
+          deselectCrudRows(true);
+      });
+    }
     // Focus on the clicked element
     $(event.target).focus();
   }
