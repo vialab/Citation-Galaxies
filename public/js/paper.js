@@ -354,6 +354,7 @@ function drawPapers(signal_id, signal_cat_id) {
     , "lastRank": 0
     , "nrank": nPaperLoad
     , "signals": {}
+    , "journalid": ""
   };
   // add a set of signals based on their category
   if(typeof(signal_cat_id) != "undefined") {
@@ -487,6 +488,7 @@ function loadMorePapers(elem) {
   let year = $papers.data("year");
   let filtered = [];
   let jid = $papers.data("journal-id");
+  if(typeof(jid) == "undefined") jid = "";
   for(let sel of selections) {
     if(year == sel.split("-")[0]) filtered.push(sel);
   }
@@ -503,6 +505,7 @@ function loadMorePapers(elem) {
         , "journalid": jid
         , "lastRank": last_rank
         , "nrank": nPaperLoad
+        , "signals": {}
       }),
       success: function (data) {
         let extra_papers = JSON.parse(data);

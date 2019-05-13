@@ -110,10 +110,13 @@
 }
 
 #pills-papers #papers-container {
+  position: fixed;
+  right: 0px;
   margin: 0 0;
   width: 100%;
   padding: 0 0;
-  height: 340px;
+  padding-top: 40px;
+  height: 100%;
   overflow: scroll;
 }
 
@@ -314,7 +317,10 @@ a.disabled {
 }
 
 #sortOptions {
+  position: fixed;
+  right: 0px;
   margin-bottom: 10px;
+  z-index: 5;
 }
 
 .paper-thumbnail {
@@ -406,6 +412,35 @@ span.query-text {
   margin: 15px;
   border-radius: .25rem;
   padding: 15px;
+}
+
+#ruleForm {
+  display: grid;
+  grid-auto-flow: column;
+}
+
+.edit-row .action-cell {
+  display: grid;
+  grid-auto-flow: column;
+}
+
+.edit-row .action-cell .btn-danger
+,.edit-row .action-cell .btn-warning {
+  width: 20px;
+  place-self: end;
+}
+
+.edit-row .action-cell button {
+  font-size: 0.7em;
+  padding: 2px;
+}
+
+.edit-row .more-actions {
+  opacity: 0;
+}
+
+.edit-row:hover .more-actions {
+  opacity: 1;
 }
 
 .edit-row:not(.editing) .edit-cell.empty {
