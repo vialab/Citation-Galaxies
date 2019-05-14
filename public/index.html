@@ -52,7 +52,7 @@
                 </li> -->
                 <li class="nav-item">
                     <a class="nav-link" id="pills-admin-tab" data-toggle="pill" href="#pills-admin" role="tab"
-                        aria-controls="pills-rules" aria-selected="false" onclick="">Admin</a>
+                        aria-controls="pills-rules" aria-selected="false" onclick="">Rules</a>
                 </li>
             </ul>
           <div id="navOptions">
@@ -223,36 +223,19 @@
               <div id="vis-container">
                 <button class="btn btn-primary" onclick="processAllSignals();">Reprocess</button>
                 <button class="btn btn-primary" onclick="createVisualization(transformScores());">Redraw</button>
-                <!-- <ul id="crumb-list">
-                  <li class="crumb active" onclick="drawCategoryList();"><span>Categories</span>&nbsp;</li>
-                </ul>
-                <div id="category-list" class="vis-list"></div>
-                <div id="signal-list" class="vis-list"></div>
-                <div id="signal-vis"></div> -->
               </div>
             </div>
             <div class="tab-pane fade" id="pills-admin" role="tabpanel" aria-labelledby="pills-admin-tab">
-
-              <div class="container">
-                <div class="row">
-                    <div class="col">
-                      <button type="button" class="btn btn-secondary" onclick="loadTable('signalcategory', undefined, true, transformCategoryData)">Categories</button>
-                      <button type="button" class="btn btn-secondary" onclick="loadTable('signal', undefined, true, transformSignalData)">Signals</button>
-                      <br/><br/><br/>
-                      <form class="form-inline" id="ruleForm"></form>
-                    </div>
+                <div class="">
+                  <button type="button" class="btn btn-secondary" onclick="loadTable('signalcategory', undefined, true, transformCategoryData)">Categories</button>
+                  <button type="button" class="btn btn-secondary" onclick="loadTable('signal', undefined, true, transformSignalData)">Signals</button>
                 </div>
+                <br/>
                 <!-- Table for the results -->
-                <div class="row mt-4">
-                  <!-- <i>The results table should then be updated to show all rows (even new ones)</i>
-                  <i>Clicking on a row should fill the form above, and pressing submit should let us update that row</i> -->
-                    <div class="col">
-                       <table class="table" id="ruleTable">
-                       </table>
-                    </div>
+                <div class="">
+                   <table class="table" id="ruleTable">
+                   </table>
                 </div>
-              </div>
-
             </div>
         </div>
     </div>

@@ -36,10 +36,7 @@ function loadData(url, callback, params={}, _async=true) {
 // clear the form and clear the table of any results
 function clearCrudTable() {
     let table = $("#ruleTable");
-    let form = $("#ruleForm");
-    form.children().remove();
     table.children().remove();
-    $("#ruleForm")[0].reset();
 }
 
 // dynamically load data from a query and show results in a table
@@ -85,96 +82,133 @@ function populateTable(signals, name, table, links, actions, schema, parent) {
         headers.push(key);
     }
     $("<th>actions</th>").appendTo(headerRow);
-    // create a row for adding a completely new row
-    let $addrow = $("<tr id='add-new-row' class='edit-row'></tr>");
-    // For each entry in the json
-    for (let i = 1; i < headers.length; i++) {
-      let html = "<td id='" + headers[i] + "' class='edit-cell"
-        + " empty'> &lt;empty&gt;" + "</td>";
-      $(html).appendTo($addrow);
-    }
     // set the parentid in the form if we have one
     if(parent.id !== undefined) {
       $("#" + parent.col + "_field").val(parent.id);
     }
+
+    // Populate the cells
+    for (let signal of signals) {
+        let signalID = headers[0] + "_" + signal[headers[0]];
+        let row = drawTableRow(headers, signal, signalID);
+        // draw any links/action buttons at the end
+        drawActionOptions(row, headers, signal, links, actions);
+        // append the final row to our table
+        row.appendTo(tableBody);
+    }
+    // create a row for adding a completely new row
+    let $addrow = drawTableRow(headers, {}, 'add-new-row');
+    // it will have different actions for submission/cancellation
     let $actioncell = $("<td></td>").appendTo($addrow);
     let $actions = $("<div class='action-cell'></div>").appendTo($actioncell);
-    let html = "<button type='submit' class='btn btn-success' \
+    let html = "<button type='submit' class='btn btn-primary' \
       onclick='insertRow(\"" + name + "\"";
     if(parent.id !== undefined) {
       html += ", \"" + parent.col + "\"," + parent.id;
     }
     html += ")'>Submit</button>";
     $(html).appendTo($actions);
-    html = "<button class='btn btn-danger ml-2' onclick=''> X </button>";
+    html = "<button class='btn btn-danger ml-2' onclick='cancelAddRow(this);'> X </button>";
     $(html).appendTo($actions);
+    // append it to the end of the main table
+    $addrow.appendTo(tableBody);
 
-    // Populate the cells
-    for (let signal of signals) {
-        let signalID = headers[0] + "_" + signal[headers[0]];
-        let row = $("<tr id='" + signalID + "' class='edit-row'></tr>");
-        // For each entry in the json
-        for (let i = 1; i < headers.length; i++) {
-          let html = "<td id='" + headers[i] + "' class='edit-cell";
-          if(signal[headers[i]]) {
-            html += "'>" + signal[headers[i]];
-          } else {
-            html += " empty'> &lt;empty&gt;";
-          }
-          html += "</td>";
-          $(html).appendTo(row);
-        }
-        // create link buttons
-        let $actioncell = $("<td></td>");
-        let $actions = $("<div class='action-cell'></div>");
-        // Add the remove button first
+    let $startadd = $("<tr id='start-add-row' class='edit-row noselect' onclick='showAddRow();'></tr>");
+    $("<td colspan='" + headers.length + "'> + </td>").appendTo($startadd);
+    $startadd.appendTo(tableBody);
+    bindRowFunctions();
+}
 
-        if(typeof(links) != "undefined") {
-          Object.keys(links).forEach(key => {
-            let link = links[key];
-            let params = {};
-            Object.keys(link.params).forEach(id => {
-              params[link.params[id]] = signal[id];
-            })
-            let html = "<button class='btn btn-primary ml-2 more-actions' onclick='loadTable(\""
-              + link.query + "\","  + JSON.stringify(params).replace(/\\"/g, '\'')
-              + ")'>" + key + "</button>";
-            $(html).appendTo($actions);
-          });
-        }
-        // create action buttons that perform some sort of "action"
-        if(typeof(actions) != "undefined") {
-          Object.keys(actions).forEach(key => {
-            let action = actions[key];
-            let params = {};
-            let html = "<button class='btn btn-primary ml-2 more-actions' onclick='"
-              + action + "(this)'>" + key + "</button>";
-            $(html).appendTo($actions);
-          });
-        }
-        let html = "<button class='btn btn-danger ml-2' onclick='deleteRow(\""
-          + name + "\"," + signal[headers[0]] + ")'> X </button>";
-        $(html).appendTo($actions);
-        // append actions to table
-        $actions.appendTo($actioncell);
-        $actioncell.appendTo(row);
+function bindRowFunctions() {
+  $(".edit-cell").click(function (event) {
+    editCrudRow(event);
+  });
 
-        // On a cell click allow the row to be edited
-        row.appendTo(tableBody);
+  $("#signalTable button").click(function (event) {
+      let target = $(event.target);
+      let signal_id = target.parent().attr("id");
+
+      // TODO Remove the signal from the db
+      console.log(signal_id);
+  });
+}
+
+function cancelAddRow(elem) {
+  let $row = $(elem).parents("#add-new-row");
+  if($("#add-new-row").length != 1) {
+    $row.remove();
+  } else {
+    $row.hide();
+  }
+}
+
+function showAddRow() {
+  let $row = $("#add-new-row");
+  if($row.length >= 1 && $row.is(":visible")) {
+    $row = $row.clone();
+    $row.insertBefore($("#start-add-row"));
+    bindRowFunctions();
+  }
+  $row.show();
+  $row.addClass("showing");
+  setTimeout(function() {
+    $row.removeClass("showing");
+}, 500);
+}
+
+// create a single row marked up for our edit table
+function drawTableRow(headers, signal, signalID) {
+  let row = $("<tr id='" + signalID + "' class='edit-row'></tr>");
+  // For each entry in the json
+  for (let i = 1; i < headers.length; i++) {
+    let html = "<td id='" + headers[i] + "' class='edit-cell";
+    if(signal[headers[i]]) {
+      html += "'>" + signal[headers[i]];
+    } else {
+      html += " empty'> &lt;empty&gt;";
     }
-    $addrow.appendTo(tableBody)
+    html += "</td>";
+    $(html).appendTo(row);
+  }
+  return row;
+}
 
-    $(".edit-cell").click(function (event) {
-      editCrudRow(event);
+// append defined links or actions at the end of each row as a cell
+function drawActionOptions(row, headers, signal, links, actions) {
+  // create link buttons
+  let $actioncell = $("<td></td>");
+  let $actions = $("<div class='action-cell'></div>");
+  // Add the remove button first
+
+  if(typeof(links) != "undefined") {
+    Object.keys(links).forEach(key => {
+      let link = links[key];
+      let params = {};
+      Object.keys(link.params).forEach(id => {
+        params[link.params[id]] = signal[id];
+      })
+      let html = "<button class='btn btn-primary ml-2 more-actions' onclick='loadTable(\""
+        + link.query + "\","  + JSON.stringify(params).replace(/\\"/g, '\'')
+        + ")'>" + key + "</button>";
+      $(html).appendTo($actions);
     });
-
-    $("#signalTable button").click(function (event) {
-        let target = $(event.target);
-        let signal_id = target.parent().attr("id");
-
-        // TODO Remove the signal from the db
-        console.log(signal_id);
+  }
+  // create action buttons that perform some sort of "action"
+  if(typeof(actions) != "undefined") {
+    Object.keys(actions).forEach(key => {
+      let action = actions[key];
+      let params = {};
+      let html = "<button class='btn btn-primary ml-2 more-actions' onclick='"
+        + action + "(this)'>" + key + "</button>";
+      $(html).appendTo($actions);
     });
+  }
+  let html = "<button class='btn btn-danger ml-2' onclick='deleteRow(\""
+    + name + "\"," + signal[headers[0]] + ")'> X </button>";
+  $(html).appendTo($actions);
+  // append actions to table
+  $actions.appendTo($actioncell);
+  $actioncell.appendTo(row);
 }
 
 // Deselect a row (and possibly edit the content)
