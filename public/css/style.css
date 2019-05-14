@@ -1,3 +1,13 @@
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+}
+
 .dropdown-item.active {
     background-color: #6E757D !important;
 }
@@ -103,6 +113,12 @@
     padding: 15px 0px;
     margin: 0 auto;
     justify-content: space-evenly;
+}
+
+#pills-admin {
+  padding: 15px;
+  max-width: 100%;
+  overflow: scroll;
 }
 
 #pills-home {
@@ -426,8 +442,52 @@ span.query-text {
 
 .edit-row .action-cell .btn-danger
 ,.edit-row .action-cell .btn-warning {
-  width: 20px;
+  width: 22px;
+  height: 22px;
   place-self: end;
+}
+
+#start-add-row td {
+  text-align: center;
+  font-size: 40px;
+  padding: 0;
+  padding-bottom: 7px;
+  background-color: rgba(240,240,240,0.5);
+  cursor: pointer;
+  color: lightgray;
+}
+
+#start-add-row td:hover {
+  background-color: rgba(230,240,255,0.8);
+  border: 1px solid rgba(200, 220, 255, 1);
+  color: gray;
+}
+
+#add-new-row, .edit-row:not(:hover) .edit-cell {
+  -webkit-transition: all ease 0.5s;
+  transition: all ease 0.5s;
+}
+
+#add-new-row.edit-row {
+  display:none;
+}
+
+#add-new-row.edit-row.showing {
+  height: auto;
+  border: 1px solid rgba(255,193,7,0.5) !important;
+  background-color: rgba(255,193,7,0.2) !important;
+}
+
+#add-new-row.edit-row .action-cell .btn-danger {
+  place-self: start;
+}
+
+#add-new-row .action-cell {
+  padding-left: 7px;
+}
+
+tr.edit-row td:last-child {
+  background-color: rgba(240, 240, 240, 0.5);
 }
 
 .edit-row .action-cell button {
@@ -436,11 +496,18 @@ span.query-text {
 }
 
 .edit-row .more-actions {
-  opacity: 0;
+  opacity: 0.2;
+  background-color: gray;
+  border: 1px solid gray;
 }
 
 .edit-row:hover .more-actions {
   opacity: 1;
+}
+
+.edit-row:hover .edit-cell, #add-new-row .edit-cell {
+  border: 1px solid rgba(200, 220, 255, 1);
+  background-color: rgba(230, 240, 255, 0.5);
 }
 
 .edit-row:not(.editing) .edit-cell.empty {
