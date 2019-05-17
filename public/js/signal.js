@@ -1,6 +1,6 @@
-function Signal(id, cat_id, signal, type_id, parent_id, value=0) {
+function Signal(id, cat_id, signal, type_id, parent_id, value = 0) {
   // ensure that there are no duplicates (this.id must be unique)
-  if(sentiment_signals[id]) throw "Signal " + id + " already exists!";
+  if (sentiment_signals[id]) throw "Signal " + id + " already exists!";
   this.signal = signal.trim();
   this.distance = 0;
   this.filters = [];
@@ -20,53 +20,67 @@ let signal_scores = {};
 let default_color = "#bbb";
 
 // Trigger action when the contexmenu is about to be shown
-$(document).bind("mouseup", function (event) {
+$(document).bind("mouseup", function(event) {
   // if where is clicked is not the menu, hide the menu
-  if($(".custom-menu").is(":visible")) {
-    if(!$(event.target).parents(".custom-menu").length > 0) {
+  if ($(".custom-menu").is(":visible")) {
+    if (!$(event.target).parents(".custom-menu").length > 0) {
       $(".custom-menu").hide(100);
     }
   }
   // Avoid the real one
   let sel = window.getSelection();
-  if(sel.toString() != "") {
+  if (sel.toString() != "") {
     // only show custom menu when we are highlighting in a popover
-    if($(sel.getRangeAt(0).commonAncestorContainer.parentNode).parent().hasClass("citation-text")) {
+    if (
+      $(sel.getRangeAt(0).commonAncestorContainer.parentNode)
+        .parent()
+        .hasClass("citation-text")
+    ) {
       console.log("yay");
       $("#text-selection").val(sel);
-      $(".custom-menu").finish().toggle(100).css({
+      $(".custom-menu")
+        .finish()
+        .toggle(100)
+        .css({
           top: event.pageY + "px",
           left: event.pageX + "px"
-      });
+        });
     }
   }
 });
 
 // given paper citation text, get matching rule counts
 function tagCitationSentiment(articleid, text) {
-  let new_text = text, score = 0, n = 0;
+  let new_text = text,
+    score = 0,
+    n = 0;
   // a tag is a json object that contains signal_idx, location ([start, end]),
   // and value (1, 0, -1)
-  for(let key in sentiment_signals) {
+  for (let key in sentiment_signals) {
     let s = sentiment_signals[key];
     let cat = s.category;
     let color = sentiment_categories[cat].color;
     let rule = new RegExp(s.signal, "g");
     let value = s.value;
     let matches = new_text.match(rule);
-    if(matches != null) {
+    if (matches != null) {
       // markup the existence of this rule in the text
       let col = hexToRGBA(sentiment_categories[cat].color);
-      new_text = new_text.replace(s.signal
-        , "<span class='sentiment-text' style='background-color: " + col + "'>"
-        + s.signal + "</span>");
+      new_text = new_text.replace(
+        s.signal,
+        "<span class='sentiment-text' style='background-color: " +
+          col +
+          "'>" +
+          s.signal +
+          "</span>"
+      );
       score += value * matches.length; // sum score
       n += matches.length;
     }
   }
   // save the score (average between -1 and +1)
-  if(articleid in scores) {
-    scores[articleid] = (scores[articleid] + (score / n)) / 2;
+  if (articleid in scores) {
+    scores[articleid] = (scores[articleid] + score / n) / 2;
   } else {
     scores[articleid] = 0;
   }
@@ -74,26 +88,26 @@ function tagCitationSentiment(articleid, text) {
 }
 
 // Pre-process the front screen counts for a single year
-function processSignals(query, year, recache=1) {
+function processSignals(query, year, recache = 1) {
   // if a request already exists, abort it and request new one
-  if(process_queue[year] != undefined) process_queue[year].abort();
+  if (process_queue[year] != undefined) process_queue[year].abort();
   // request
   process_queue[year] = $.ajax({
-    type: 'POST',
+    type: "POST",
     url: currentURL + "process/signals",
     data: {
-      'query': JSON.stringify(query)
-      , 'year': year
-      , 'ruleSet': JSON.stringify(sentiment_signals) // for backprocessing
-      , 'rangeLeft': sentenceRangeAbove
-      , 'rangeRight': sentenceRangeBelow
-      , 'recache': recache
+      query: JSON.stringify(query),
+      year: year,
+      ruleSet: JSON.stringify(sentiment_signals), // for backprocessing
+      rangeLeft: sentenceRangeAbove,
+      rangeRight: sentenceRangeBelow,
+      recache: recache
     },
-    success: function (data) {
+    success: function(data) {
       // done so let's remove this from the queue
       process_queue[year] = undefined;
-      score_data[year] = processSentimentBins(data);;
-      if(overlay_sentiment) drawSentimentColumn(year);
+      score_data[year] = processSentimentBins(data);
+      if (overlay_sentiment) drawSentimentColumn(year);
     },
     error: function() {
       process_queue[year] = undefined;
@@ -104,30 +118,31 @@ function processSignals(query, year, recache=1) {
 
 // Aggregate sentiment data into bins for use in d3
 function processSentimentBins(data) {
-  let bin_count = 100/currIncrement
-    , sorted_data = { "max_value": 0
-        , "max_count": 0
-        , "total_value": new Array(bin_count).fill(0).map(() => 0)
-      };
+  let bin_count = 100 / currIncrement,
+    sorted_data = {
+      max_value: 0,
+      max_count: 0,
+      total_value: new Array(bin_count).fill(0).map(() => 0)
+    };
 
   // for each category (positive/neutral/negative)
   Object.keys(sentiment_categories).forEach(k => {
     let cat_id = k.toString();
     // create an empty array of n bins for values and counts
     sorted_data[cat_id] = {
-      "value": new Array(bin_count).fill(0).map(() => 0)
-    }
+      value: new Array(bin_count).fill(0).map(() => 0)
+    };
   });
 
-  for(let row of data) {
-    let bin_num = Math.floor((row.percent*100)/currIncrement);
+  for (let row of data) {
+    let bin_num = Math.floor((row.percent * 100) / currIncrement);
     // score should have all the same sentiment categories
     Object.keys(row.score).forEach(k => {
       let cat_id = k.toString();
       let val = Math.abs(row.score[cat_id]);
       sorted_data[cat_id]["value"][bin_num] += val;
       sorted_data["total_value"][bin_num] += val;
-      if(sorted_data[cat_id]["value"][bin_num] > sorted_data["max_value"]) {
+      if (sorted_data[cat_id]["value"][bin_num] > sorted_data["max_value"]) {
         sorted_data["max_value"] = sorted_data[cat_id]["value"][bin_num];
       }
     });
@@ -139,74 +154,85 @@ function processSentimentBins(data) {
 function drawSentimentColumn(year) {
   // this is okay because at this point, the column has been drawn
   let cat_list = Object.keys(sentiment_categories);
-  if($(".sentiment.overlay-"+year).length > 0) return; // already drawn
+  if ($(".sentiment.overlay-" + year).length > 0) return; // already drawn
   // iterate for each incremental block in this column
-  for(let i=0; i<100/currIncrement; i++) {
-    let $box = $("." + ([year,"minsqr","box-"+i].join(".")))
-      , minsqr = d3.select("#box-group-"+year+"-"+i)
-      , box_width = $box.width()
-      , box_height = $box.height()
-      , svgContainer = d3.select("#svg-"+year)
-      , x_offset = 0
-      , total_val = score_data[year]["total_value"][i];
-      // no sentiment? Make it a completely neutral square
-      if(total_val == 0) {
-        // obviously this is temporary.. should be a default set by user (if any)
-        svgContainer.append("rect")
-          .attr("width", box_width)
-          .attr("height", box_height)
-          .attr("x", minsqr.attr("dx"))
-          .attr("y", minsqr.attr("dy"))
-          .attr("class", "sentiment overlay-"+year)
-          .style("fill", default_color)
-          .style("opacity", 0.5);
-        continue;
-      }
-      // for each of the categories listed by user
-      for(let cat of cat_list) {
-        // draw a proportional square for this category/square
-        if(!score_data[year][cat]) continue;
-        let cat_width = (score_data[year][cat]["value"][i]/total_val) * box_width;
-        x_offset += cat_width;
-        let ratio = score_data[year][cat]["value"][i] / score_data[year]["max_value"];
-        svgContainer.append("rect")
-          .attr("width", cat_width)
-          .attr("height", box_height)
-          .attr("x", parseFloat(minsqr.attr("dx"))+box_width-x_offset)
-          .attr("y", minsqr.attr("dy"))
-          .attr("class", "sentiment overlay-"+year)
-          .style("fill", sentiment_categories[cat].color)
-          .style("opacity", (ratio * 0.6)+0.3);
-      }
+  for (let i = 0; i < 100 / currIncrement; i++) {
+    let $box = $("." + [year, "minsqr", "box-" + i].join(".")),
+      minsqr = d3.select("#box-group-" + year + "-" + i),
+      box_width = $box.width(),
+      box_height = $box.height(),
+      svgContainer = d3.select("#svg-" + year),
+      x_offset = 0,
+      total_val = score_data[year]["total_value"][i];
+    // no sentiment? Make it a completely neutral square
+    if (total_val == 0) {
+      // obviously this is temporary.. should be a default set by user (if any)
+      svgContainer
+        .append("rect")
+        .attr("width", box_width)
+        .attr("height", box_height)
+        .attr("x", minsqr.attr("dx"))
+        .attr("y", minsqr.attr("dy"))
+        .attr("class", "sentiment overlay-" + year)
+        .style("fill", default_color)
+        .style("opacity", 0.5);
+      continue;
+    }
+    // for each of the categories listed by user
+    for (let cat of cat_list) {
+      // draw a proportional square for this category/square
+      if (!score_data[year][cat]) continue;
+      let cat_width =
+        (score_data[year][cat]["value"][i] / total_val) * box_width;
+      x_offset += cat_width;
+      let ratio =
+        score_data[year][cat]["value"][i] / score_data[year]["max_value"];
+      svgContainer
+        .append("rect")
+        .attr("width", cat_width)
+        .attr("height", box_height)
+        .attr("x", parseFloat(minsqr.attr("dx")) + box_width - x_offset)
+        .attr("y", minsqr.attr("dy"))
+        .attr("class", "sentiment overlay-" + year)
+        .style("fill", sentiment_categories[cat].color)
+        .style("opacity", ratio * 0.6 + 0.3);
+    }
   }
-  if(overlay_sentiment) {
+  if (overlay_sentiment) {
     $(".sentiment").show();
   }
 }
 
 // load category data into json object
-function transformCategoryData(results, replace_all=false) {
-  if(replace_all) {
+function transformCategoryData(results, replace_all = false) {
+  if (replace_all) {
     sentiment_categories = {};
   }
-  for(let cat of results) {
-    sentiment_categories[cat.id] = { "name": cat.catname
-      , "value": cat.score
-      , "color": cat.color
-    }
+  for (let cat of results) {
+    sentiment_categories[cat.id] = {
+      name: cat.catname,
+      value: cat.score,
+      color: cat.color
+    };
   }
 }
 
 // load signal data into json object
 function transformSignalData(results, replace_all) {
-  if(replace_all) sentiment_signals = {};
-  for(let signal of results) {
+  if (replace_all) sentiment_signals = {};
+  for (let signal of results) {
     try {
       // use results to instantiate a signal object
-      let s = new Signal(signal.id, signal.signalcategoryid, signal.signal
-                          , signal.signaltypeid, signal.parentid, signal.score);
+      let s = new Signal(
+        signal.id,
+        signal.signalcategoryid,
+        signal.signal,
+        signal.signaltypeid,
+        signal.parentid,
+        signal.score
+      );
       sentiment_signals[signal.id] = s;
-    } catch(e) {
+    } catch (e) {
       console.log("Error loading signal: " + e);
       continue;
     }
@@ -215,65 +241,91 @@ function transformSignalData(results, replace_all) {
 
 function loadCategories(callback) {
   loadData("signalcategory", function(results) {
-      sentiment_signals = {};
-      transformCategoryData(results);
-      if(typeof(callback) != "undefined") callback();
+    sentiment_signals = {};
+    transformCategoryData(results);
+    if (typeof callback != "undefined") callback();
   });
 }
 
 // load all filters at nonce
 function loadSignals(callback) {
-  loadData("signalbytype", function(signals) {
-    transformSignalData(signals);
-    loadFilters(() => {
-      loadRestrictions(() => {
-        updateInterface();
-        if(typeof(callback) != "undefined") callback();
+  loadData(
+    "signalbytype",
+    function(signals) {
+      transformSignalData(signals);
+      loadFilters(() => {
+        loadRestrictions(() => {
+          updateInterface();
+          if (typeof callback != "undefined") callback();
+        });
       });
-    });
-  }, {"signaltypeid": 1});
+    },
+    {signaltypeid: 1}
+  );
 }
 
 // load all filters at nonce
 function loadFilters(callback) {
-  loadData("signalbytype", function(filters) {
-    for(let signal of filters) {
-      try {
-        // use results to instantiate a signal object
-        let s = new Signal(signal.id, signal.signalcategoryid, signal.signal
-                            , signal.signaltypeid, signal.parentid, signal.score);
-        sentiment_signals[signal.id] = s;
-        if(!sentiment_signals[signal.parentid].filters.includes(signal.id)) {
-          sentiment_signals[signal.parentid].filters.push(signal.id);
+  loadData(
+    "signalbytype",
+    function(filters) {
+      for (let signal of filters) {
+        try {
+          // use results to instantiate a signal object
+          let s = new Signal(
+            signal.id,
+            signal.signalcategoryid,
+            signal.signal,
+            signal.signaltypeid,
+            signal.parentid,
+            signal.score
+          );
+          sentiment_signals[signal.id] = s;
+          if (!sentiment_signals[signal.parentid].filters.includes(signal.id)) {
+            sentiment_signals[signal.parentid].filters.push(signal.id);
+          }
+        } catch (e) {
+          console.log("Error loading signal: " + e);
+          continue;
         }
-      } catch(e) {
-        console.log("Error loading signal: " + e);
-        continue;
       }
-    }
-    if(typeof(callback) != "undefined") callback();
-  }, {"signaltypeid":2});
+      if (typeof callback != "undefined") callback();
+    },
+    {signaltypeid: 2}
+  );
 }
 
 // load all restrictions at once
 function loadRestrictions(callback) {
-  loadData("signalbytype", function(restrictions) {
-    for(let signal of restrictions) {
-      try {
-        // use results to instantiate a signal object
-        let s = new Signal(signal.id, signal.signalcategoryid, signal.signal
-                            , signal.signaltypeid, signal.parentid, signal.score);
-        sentiment_signals[signal.id] = s;
-        if(!sentiment_signals[signal.parentid].restrictions.includes(signal.id)) {
-          sentiment_signals[signal.parentid].restrictions.push(signal.id);
+  loadData(
+    "signalbytype",
+    function(restrictions) {
+      for (let signal of restrictions) {
+        try {
+          // use results to instantiate a signal object
+          let s = new Signal(
+            signal.id,
+            signal.signalcategoryid,
+            signal.signal,
+            signal.signaltypeid,
+            signal.parentid,
+            signal.score
+          );
+          sentiment_signals[signal.id] = s;
+          if (
+            !sentiment_signals[signal.parentid].restrictions.includes(signal.id)
+          ) {
+            sentiment_signals[signal.parentid].restrictions.push(signal.id);
+          }
+        } catch (e) {
+          console.log("Error loading signal: " + e);
+          continue;
         }
-      } catch(e) {
-        console.log("Error loading signal: " + e);
-        continue;
       }
-    }
-    if(typeof(callback) != "undefined") callback();
-  }, {"signaltypeid":3});
+      if (typeof callback != "undefined") callback();
+    },
+    {signaltypeid: 3}
+  );
 }
 
 // redraw all html elements
@@ -287,27 +339,39 @@ function updateCategoryInterface() {
   // update global html elements to reflect any changes to categories
   $("#categories").html("");
   $(".custom-menu").html("");
-  Object.keys(sentiment_categories).forEach( id => {
+  Object.keys(sentiment_categories).forEach(id => {
     let cat = sentiment_categories[id];
-    $("#rule-type").append(" \
-      <option value='" + id + "'>" + cat.name + "</option>");
+    $("#rule-type").append(
+      " \
+      <option value='" + id + "'>" + cat.name + "</option>"
+    );
 
-      let html = "<div class='col-sm-4'> \
-        <h4>" + cat.name + "</h4> \
-        <div id='" + id + "-rules' class='rule-list'> \
+    let html =
+      "<div class='col-sm-4'> \
+        <h4>" +
+      cat.name +
+      "</h4> \
+        <div id='" +
+      id +
+      "-rules' class='rule-list'> \
         </div>\
       </div>";
     $("#categories").append($(html));
 
-    html = "<li class='menu-btn' onclick='addSignal(" + id + ");'>" + cat.name + "</li>";
+    html =
+      "<li class='menu-btn' onclick='addSignal(" +
+      id +
+      ");'>" +
+      cat.name +
+      "</li>";
     $(".custom-menu").append($(html));
   });
 }
 
 // create a generic select input of categories
 function getCategorySelect() {
-  let $sel = $("<select class='sel-cat'></select>")
-  Object.keys(sentiment_categories).forEach( id => {
+  let $sel = $("<select class='sel-cat'></select>");
+  Object.keys(sentiment_categories).forEach(id => {
     let cat = sentiment_categories[id];
     $sel.append(" \
       <option value='" + id + "'>" + cat.name + "</option>");
@@ -327,54 +391,57 @@ function getSignalTypeSelect() {
 
 // process our signals wrt our current search query
 function processAllSignals() {
-    $.ajax({
-      type: 'POST',
-      url: processURL + "process/signals",
-      data: JSON.stringify({
-        "increment": currIncrement
-        , "loaded_articles": loaded_articles
-        , "signals": sentiment_signals
-        , "query": currSearchQuery
-      }),
-      success: function (results) {
-        let data = JSON.parse(results);
-        score_data = data["front_data"];
-        signal_scores = data["signal_scores"];
-        Object.keys(score_data).forEach(year => {
-          drawSentimentColumn(year);
-        });
-        toast("Processing Complete!", "Distribution can now be viewed by sentiment.");
-        $("#changeLabelItem2").removeClass("disabled");
-        createVisualization(transformScores());
-      }
-      , error: function(err) {
-        console.log(err);
-      }
-    });
+  $.ajax({
+    type: "POST",
+    url: processURL + "process/signals",
+    data: JSON.stringify({
+      increment: currIncrement,
+      loaded_articles: loaded_articles,
+      signals: sentiment_signals,
+      query: currSearchQuery
+    }),
+    success: function(results) {
+      let data = JSON.parse(results);
+      score_data = data["front_data"];
+      signal_scores = data["signal_scores"];
+      Object.keys(score_data).forEach(year => {
+        drawSentimentColumn(year);
+      });
+      toast(
+        "Processing Complete!",
+        "Distribution can now be viewed by sentiment."
+      );
+      $("#changeLabelItem2").removeClass("disabled");
+      createVisualization(transformScores());
+    },
+    error: function(err) {
+      console.log(err);
+    }
+  });
 }
 
 // filter our signal list by either a category, parentid, or both
 function filterSignals(category, pid) {
   let filtered_data = sentiment_signals;
   // filter by a category
-  if(typeof(category) != "undefined") {
+  if (typeof category != "undefined") {
     let acc = {};
     Object.keys(filtered_data).forEach(key => {
-      if(filtered_data[key].category == category) {
+      if (filtered_data[key].category == category) {
         acc[key] = filtered_data[key];
       }
     });
     filtered_data = acc;
   }
   // filter by a specific parent signal
-  if(typeof(pid) != "undefined") {
+  if (typeof pid != "undefined") {
     // get a recursive list of children keys
     let signal = filtered_data[pid];
     let keys = getAllChildrenKeys(signal);
     let acc = {};
     keys.push(pid);
     Object.keys(filtered_data).forEach(key => {
-      if(keys.includes(key)) {
+      if (keys.includes(key)) {
         acc[key] = filtered_data[key];
       }
     });
@@ -383,26 +450,24 @@ function filterSignals(category, pid) {
   return filtered_data;
 }
 
-
 function getAllChildrenKeys(signal) {
   let children = signal.filters.concat(signal.restrictions);
   let keys = [];
-  for(let child of children) {
+  for (let child of children) {
     keys.push(child.id);
     keys = keys.concat(getAllChildrenKeys(child));
   }
-  return keys.filter( (value, index, self) => {
+  return keys.filter((value, index, self) => {
     return self.indexOf(value) === index;
   });
 }
 
-
 function addSignal(cat_id) {
   let values = {
-    "score": 1
-    , "signalcategoryid": cat_id
-    , "signaltypeid": 1
-    , "signal": $("#text-selection").val()
+    score: 1,
+    signalcategoryid: cat_id,
+    signaltypeid: 1,
+    signal: $("#text-selection").val()
   };
   postInsert("signal", values);
 }
