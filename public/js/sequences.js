@@ -2,8 +2,8 @@
 let total_size = 0, total_tagged = 0, clicked_cat = null, clicked_depth = null;
 let node;
 let svg;
-const width = 750;
-const height = 600;
+const width = 1000;
+const height = 1000;
 const radius = (Math.min(width, height) / 2);
 const x = d3.scaleLinear().range([0, 2 * Math.PI]);
 const y = d3.scaleLinear().range([0, radius]);
@@ -121,32 +121,6 @@ function fillDonutSlice(d) {
   $path.addClass("bite-clone");
   $path.css("fill", getSBColor(d));
   $parent.prepend($path);
-  // fill the root node with its distribution
-  // let $defs = $("#bite-grads");
-  // if($defs.length == 0) {
-  //   d3.select("#chart svg")
-  //     .append("defs")
-  //     .attr("id", "bite-grads")
-  // }
-  // let grad = d3.select("#bite-grads").append("linearGradient")
-  //   .attr("id", "bite-grad-"+d.data.name)
-  //   .attr("class", "bite-grad")
-  //   .attr("x1", "0%")
-  //   .attr("x2", "0%")
-  //   .attr("y1", "100%").attr("y2", "0%");
-  // let percentage = (100 * d.value / total_size).toPrecision(3);
-  // // let percentage = 50;
-  // grad.append("stop")
-  //   .attr("offset", percentage+"%")
-  //   .style("stop-color", getSBColor(d, 1));
-  // grad.append("stop")
-  //   .attr("offset", percentage+"%")
-  //   .style("stop-color", getSBColor(d, 0.5));
-  //
-  // let ang = ((x((d.x0 + d.x1) / 2) - Math.PI / 2) / Math.PI * 180) + 90;
-  // let textAngle = (ang > 90) ? 270 + ang : ang;
-  // grad.attr("gradientTransform", "rotate(" + textAngle + ")");
-  // d3.select(this).style("fill", "url(#bite-grad-" + d.data.name + ")");
 }
 
 function arcTweenText(a, i) {
@@ -206,7 +180,6 @@ function click(d) {
      .duration(200)
      .attrTween('d', arcTweenPath);
 
-  minimizeDivider();
   d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
   //Remove the paper row - append a message about the slow computation time, and run the search for the papers
   d3.select("#paperRow").remove();
@@ -235,7 +208,14 @@ function mouseover(d) {
     let path = d3.selectAll("path:not(.bite-clone)").filter(function(d) {
       return d.data.catid == catid && d.depth > 1;
     });
-    path.each(function(d, i) {
+    let last_parent;
+    let i = 0;
+    path.each(function(d) {
+      if(last_parent === undefined) last_parent = d.parent.data.name;
+      if(d.parent.data.name !== last_parent) {
+        last_parent = d.parent.data.name;
+        i = 0;
+      }
       let n = d.parent.children.length;
       let px0 = d.parent.x0;
       let px1 = d.parent.x1;
@@ -245,6 +225,7 @@ function mouseover(d) {
       d.x0 = px0 + (dx * (i));
       d.x1 = px0 + (dx * (i+1));
       d.open = true;
+      i++;
     });
 
     path.transition()
@@ -257,6 +238,7 @@ function mouseover(d) {
         fillDonutSlice(d);
       })
       .attrTween("d", arcTweenPath);
+
   }
   let percentage = (100 * d.value / total_size).toPrecision(3);
   let percentageString = percentage + "%";
@@ -517,7 +499,7 @@ function buildHierarchy(csv) {
       } else {
        	// Reached the end of the sequence; create a leaf node.
        	childNode = {"name": nodeID, "size": size
-          , "catid": catid, "signal":nodeName};
+          , "catid": catid, "signal":nodeName, "children": []};
        	children.push(childNode);
       }
     }
@@ -535,8 +517,10 @@ function transformScores(filtered_data=sentiment_signals) {
   Object.keys(filtered_data).forEach(key => {
     let signal = filtered_data[key];
     let id = signal.id.toString();
-    while(!isNaN(signal.parentid)) {
-      id = signal.parentid.toString() + "-" + id;
+    let curr_signal = signal;
+    while(!isNaN(curr_signal.parentid)) {
+      id = curr_signal.parentid.toString() + "-" + id;
+      curr_signal = filtered_data[curr_signal.parentid];
     }
     id = "cat" + signal.category + "-" + id;
     csv.push([id, signal_scores[signal.id], signal.category, signal.signal]);

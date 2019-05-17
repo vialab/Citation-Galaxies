@@ -395,7 +395,7 @@ function drawPapersByIndex(results, local_norm=false) {
   paperRow = d3.select("#pills-papers").append("div")
     .attr("class", "row transition")
     .attr("id", "papers-container");
-  minimizeDivider();
+  // minimizeDivider();
   let papers = results["papers"];
   let all_max = results["max"];
   // categorize by journal then year

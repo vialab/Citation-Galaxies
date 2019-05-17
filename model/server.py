@@ -117,7 +117,9 @@ def do_process_rules():
         processed = {}
         agg = Aggregator(increment)
         for id, signal in signals.items():
-            df_signal = agg.aggregate_signals(df, signal)
+            if signal["typeid"] > 1:
+                continue
+            df_signal = agg.aggregate_signals(df, signal, signals)
             processed[id] = agg.aggregate_years(df_signal)
         # aggregate year data for front ui display
         # each year is json which has categories as keys, as well as a supplemental
@@ -234,7 +236,7 @@ def do_papers():
         agg = Aggregator(increment)
         df_filtered = pd.DataFrame()
         for id, signal in signals.items():
-            df_new = agg.aggregate_signals(df, signal)
+            df_new = agg.aggregate_signals(df, signal, signals)
             df_filtered = pd.concat([df_filtered,df_new]).drop_duplicates().reset_index(drop=True)
         df = df_filtered
     # get total amount of references per paper for ranking
@@ -434,7 +436,7 @@ class Aggregator():
         self.increment = _increment
         self.p = {}
 
-    def aggregate_signals(self, df, signal):
+    def aggregate_signals(self, df, signal, signals):
         id = str(signal["id"])
         w = signal["signal"]
         base = df[df["context"].str.contains(w)]
@@ -445,8 +447,9 @@ class Aggregator():
                 self.p[id] += agg[key]["total"]
 
         filtered = None
-        for fid, filter in signal["filters"]:
-            new_base = self.aggregate_signals(base, filter)
+        for fid in signal["filters"]:
+            filter = signals[str(fid)]
+            new_base = self.aggregate_signals(base, filter, signals)
             if filtered is None:
                 filtered = new_base
             else:
@@ -454,8 +457,9 @@ class Aggregator():
 
         if filtered is None:
             filtered = base
-        for rid, restriction in signal["restrictions"]:
-            new_base = self.aggregate_signals(base, restriction)
+        for rid in signal["restrictions"]:
+            restriction = signals[str(rid)]
+            new_base = self.aggregate_signals(base, restriction, signals)
             filtered = filtered[~filtered.index.isin(new_base.index)]
         return filtered
 

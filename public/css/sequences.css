@@ -8,6 +8,8 @@
   margin-top: 10px;
 } */
 
+text { pointer-events: none; }
+
 #sunburst-container {
   position: fixed;
   top: 72px;
@@ -21,18 +23,21 @@
 
 #window-divider {
   position: fixed;
-  top: 72px;
+  top: 0px;
   width: 15px;
   height: 100%;
-  border-left: 1px solid black;
-  border-right: 1px solid black;
+  border-left: 1px solid gray;
+  border-right: 1px solid gray;
   cursor: pointer;
   z-index: 7;
   background-color: lightgray;
+  box-shadow: 5px 5px 10px lightgray;
 }
 
 #window-divider ul {
   padding: 0;
+  margin-top: 100px;
+  color gray;
 }
 
 #window-divider ul li {
@@ -55,6 +60,10 @@
 #sequence {
   width: 600px;
   height: 70px;
+  margin-top: 15px;
+  position: fixed;
+  z-index: 11;
+  pointer-events: none;
 }
 
 #legend {
@@ -69,7 +78,7 @@
 #chart {
   position: relative;
   margin: 0 auto;
-  width: 750px;
+  width: auto;
 }
 
 #chart path {
@@ -78,12 +87,13 @@
 
 #explanation {
   position: absolute;
-  top: 230px;
-  left: 305px;
+  top: 430px;
+  left: 425px;
   width: 140px;
   text-align: center;
   color: #666;
   z-index: -1;
+  pointer-events: none;
 }
 
 #percentage {

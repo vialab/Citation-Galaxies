@@ -339,6 +339,15 @@ a.disabled {
   z-index: 5;
 }
 
+#sortOptions {
+
+}
+
+#alert {
+  z-index: 10;
+
+}
+
 .paper-thumbnail {
   background-color: rgba(248, 249, 250, 1);
 }

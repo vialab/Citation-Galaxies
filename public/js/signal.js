@@ -225,17 +225,19 @@ function loadCategories(callback) {
 function loadSignals(callback) {
   loadData("signalbytype", function(signals) {
     transformSignalData(signals);
-    loadFilters();
-    loadRestrictions();
-    updateInterface();
-    if(typeof(callback) != "undefined") callback();
+    loadFilters(() => {
+      loadRestrictions(() => {
+        updateInterface();
+        if(typeof(callback) != "undefined") callback();
+      });
+    });
   }, {"signaltypeid": 1});
 }
 
 // load all filters at nonce
-function loadFilters() {
+function loadFilters(callback) {
   loadData("signalbytype", function(filters) {
-    for(let s of filters) {
+    for(let signal of filters) {
       try {
         // use results to instantiate a signal object
         let s = new Signal(signal.id, signal.signalcategoryid, signal.signal
@@ -249,13 +251,14 @@ function loadFilters() {
         continue;
       }
     }
+    if(typeof(callback) != "undefined") callback();
   }, {"signaltypeid":2});
 }
 
 // load all restrictions at once
-function loadRestrictions() {
+function loadRestrictions(callback) {
   loadData("signalbytype", function(restrictions) {
-    for(let s of restrictions) {
+    for(let signal of restrictions) {
       try {
         // use results to instantiate a signal object
         let s = new Signal(signal.id, signal.signalcategoryid, signal.signal
@@ -269,6 +272,7 @@ function loadRestrictions() {
         continue;
       }
     }
+    if(typeof(callback) != "undefined") callback();
   }, {"signaltypeid":3});
 }
 
@@ -311,6 +315,16 @@ function getCategorySelect() {
   return $sel;
 }
 
+// create a generic select input of filter filter types
+// TODO: make this dynamic in the future.. not needed now since only 3 exist
+function getSignalTypeSelect() {
+  let $sel = $("<select class='sel-type'></select>");
+  $sel.append("<option value='1'>Signal</option>");
+  $sel.append("<option value='2'>Filter</option>");
+  $sel.append("<option value='3'>Restriction</option>");
+  return $sel;
+}
+
 // process our signals wrt our current search query
 function processAllSignals() {
     $.ajax({
@@ -329,6 +343,7 @@ function processAllSignals() {
         Object.keys(score_data).forEach(year => {
           drawSentimentColumn(year);
         });
+        toast("Processing Complete!", "Distribution can now be viewed by sentiment.");
         $("#changeLabelItem2").removeClass("disabled");
         createVisualization(transformScores());
       }

@@ -300,15 +300,13 @@ app.post("/api/update", function(req, res, next) {
 
   // get the parameters from the request
   let table_name = req.body.table_name;
-  let row_id = req.body.id;
-  let values = {};
+  let values = JSON.parse(req.body.values);
 
   // validate this request
   if(!Object.keys(dbschema.api).includes(table_name)) return res.sendStatus(400);
   if(dbschema.api[table_name].require_cookie) values["cookieid"] = cookie_id;
 
   let query = dbschema.api["update_"+table_name].query;
-  values["id"] = row_id; // variable should always be called id
 
   pool.connect((err, client, done) => {
     pool.query(named(query)(values), function(err, result) {
@@ -351,6 +349,7 @@ app.post("/api/*", function(req, res, next) {
         return res.sendStatus(500);
       }
       return res.json({"data":result.rows
+        , "aliases": dbschema.api[table_name].aliases
         , "links": dbschema.api[table_name].links
         , "actions": dbschema.api[table_name].actions
         , "name": table_name

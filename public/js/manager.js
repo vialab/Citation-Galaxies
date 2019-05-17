@@ -1,4 +1,6 @@
 var last_load = {};
+var loaded_table = "";
+var loaded_parent = {"id": undefined, "col": undefined};
 
 $(document).ready(function () {
 
@@ -8,8 +10,9 @@ $(document).ready(function () {
      */
 
     $(document).mouseup(function(e) {
-      let container = $("#ruleTable");
-      if(!container.is(e.target) && container.has(e.target).length === 0) {
+      // not editing, so we don't need to do anything
+      if($(".edit-row.editing").length == 0) return;
+      if(!$(e.target).parents(".edit-row").hasClass("editing")) {
         deselectCrudRows(false);
       }
     })
@@ -27,7 +30,7 @@ function loadData(url, callback, params={}, _async=true) {
     },
     success: function(results) {
       // console.log(results);
-      callback(results["data"], results["links"], results["actions"], results["name"], results["schema"], results["parent"]);
+      callback(results["data"], results["aliases"], results["links"], results["actions"], results["name"], results["schema"], results["parent"]);
     },
     async: _async
   });
@@ -43,24 +46,52 @@ function clearCrudTable() {
 function loadTable(table_name, params, draw_table=true, callback=undefined) {
 
   if(typeof(params) == "string") params = JSON.parse(params);
-  loadData(table_name, function (results, links, actions, name, schema, parent) {
+  loadData(table_name, function (results, aliases, links, actions, name, schema, parent) {
     if(typeof(callback) != "undefined") callback(results);
     if(draw_table) {
-      $("#ruleTable").data("query", table_name);
       clearCrudTable();
-      populateTable(results, name, $("#ruleTable"), links, actions, schema, parent);
+      loaded_table = table_name;
+      loaded_parent = parent;
+      let external_data = {};
+      // load any external data requirements for aliases
+      if(aliases !== undefined) {
+        let wait_queue = [];
+        // create a list of data loading calls to queue up
+        Object.keys(aliases).forEach((key) => {
+          if(aliases[key].query !== undefined) {
+            let table_name = aliases[key].query;
+            let f = () => $.ajax({
+                type: 'POST'
+                , url: currentURL + "api/" + table_name
+                , data: { "values": JSON.stringify({}) }
+                , success: (results) => { external_data[table_name] = results; }
+              });
+            // push ajax function into our queue
+            wait_queue.push(f());
+          }
+        });
+        // if we have things to load, load them synchronously
+        if(wait_queue.length > 0) {
+          let waiting = true, wait = 0;
+          $.when(...wait_queue).done(function() {
+            populateTable(results, name, $("#ruleTable"), links, actions, schema, external_data);
+          });
+        }
+      } else {
+        populateTable(results, name, $("#ruleTable"), links, actions, schema, external_data);
+      }
     }
+
     last_load = { table_name: table_name
       , params: params
       , draw_table: draw_table
       , callback: callback
-    }
+      , timestamp: (new Date()).getTime()
+    };
   }, params);
 }
 
-function populateTable(signals, name, table, links, actions, schema, parent) {
-    table.html("");
-
+function populateTable(signals, name, table, links, actions, schema, external_data) {
     // Create the header row
     let tableHeader = $("<thead></thead>").appendTo(table);
     let tableBody = $("<tbody></tbody>").appendTo(table);
@@ -76,16 +107,13 @@ function populateTable(signals, name, table, links, actions, schema, parent) {
     for (let key in header_example) {
         // Used to prevent showing the id row
         if (headers.length != 0) {
-            let element = $("<th data-type='" + schema[key] + "'>" + key + "</th>");
+            let element = $("<th id='" + key + "' data-type='" + schema[key]
+              + "'>" + key + "</th>");
             element.appendTo(headerRow);
         }
         headers.push(key);
     }
     $("<th>actions</th>").appendTo(headerRow);
-    // set the parentid in the form if we have one
-    if(parent.id !== undefined) {
-      $("#" + parent.col + "_field").val(parent.id);
-    }
 
     // Populate the cells
     for (let signal of signals) {
@@ -96,17 +124,14 @@ function populateTable(signals, name, table, links, actions, schema, parent) {
         // append the final row to our table
         row.appendTo(tableBody);
     }
+    signals = signals.sort(function(a, b) { return a[headers[0]]-b[headers[0]] });
     // create a row for adding a completely new row
     let $addrow = drawTableRow(headers, {}, 'add-new-row');
     // it will have different actions for submission/cancellation
     let $actioncell = $("<td></td>").appendTo($addrow);
     let $actions = $("<div class='action-cell'></div>").appendTo($actioncell);
     let html = "<button type='submit' class='btn btn-primary' \
-      onclick='insertRow(\"" + name + "\"";
-    if(parent.id !== undefined) {
-      html += ", \"" + parent.col + "\"," + parent.id;
-    }
-    html += ")'>Submit</button>";
+      onclick='insertRow(this)'>Submit</button>";
     $(html).appendTo($actions);
     html = "<button class='btn btn-danger ml-2' onclick='cancelAddRow(this);'> X </button>";
     $(html).appendTo($actions);
@@ -116,6 +141,7 @@ function populateTable(signals, name, table, links, actions, schema, parent) {
     let $startadd = $("<tr id='start-add-row' class='edit-row noselect' onclick='showAddRow();'></tr>");
     $("<td colspan='" + headers.length + "'> + </td>").appendTo($startadd);
     $startadd.appendTo(tableBody);
+
     bindRowFunctions();
 }
 
@@ -162,7 +188,9 @@ function drawTableRow(headers, signal, signalID) {
   // For each entry in the json
   for (let i = 1; i < headers.length; i++) {
     let html = "<td id='" + headers[i] + "' class='edit-cell";
-    if(signal[headers[i]]) {
+    if(loaded_parent.id !== undefined && headers[i] == loaded_parent.col) {
+      html += "'>" + loaded_parent.id;
+    } else if(signal[headers[i]]) {
       html += "'>" + signal[headers[i]];
     } else {
       html += " empty'> &lt;empty&gt;";
@@ -203,8 +231,8 @@ function drawActionOptions(row, headers, signal, links, actions) {
       $(html).appendTo($actions);
     });
   }
-  let html = "<button class='btn btn-danger ml-2' onclick='deleteRow(\""
-    + name + "\"," + signal[headers[0]] + ")'> X </button>";
+  let html = "<button class='btn btn-danger ml-2' onclick='deleteRow("
+    + signal[headers[0]] + ")'> X </button>";
   $(html).appendTo($actions);
   // append actions to table
   $actions.appendTo($actioncell);
@@ -255,10 +283,10 @@ function deselectCrudRows(update) {
 
 // Allow a row to be edited
 function editCrudRow(event) {
-  let selected_row = $(event.target).parent();
+  let selected_row = $(event.target).parents(".edit-row");
   let row_elements = selected_row.children();
   // If the row hasn't been selected for editing already
-  if (!selected_row.attr("id").includes("_edited")) {
+  if (!$(selected_row).hasClass("editing")) {
     // Deselect all other rows
     deselectCrudRows(false);
 
@@ -281,12 +309,8 @@ function editCrudRow(event) {
     // Add a button to submit the changes
     if(selected_row.attr("id") != "add-new-row") {
       selected_row.attr("id", selected_row.attr("id") + "_edited");
-      let html = "<button id='submit_crud_row' class='btn btn-warning ml-2' onclick='updateRow'> ✓ </button>";
+      let html = "<button id='submit_crud_row' class='btn btn-warning ml-2' onclick='updateRow(this);'> ✓ </button>";
       let submit_edit_button = $(html).appendTo($(".action-cell",selected_row));
-      // When clicked, submit the data and deselect the row
-      submit_edit_button.click(function (event) {
-          deselectCrudRows(true);
-      });
     }
     // Focus on the clicked element
     $(event.target).focus();
@@ -298,13 +322,13 @@ function reloadTable() {
 }
 
 // delete a row
-function deleteRow(table_name, id) {
-  let self = this;
+function deleteRow(id) {
+  console.log(id);
   $.ajax({
     type: "POST",
     url: currentURL + "api/delete",
     data: {
-      "table_name": table_name
+      "table_name": loaded_table
       , "id": id
     },
     success: function(results) {
@@ -318,19 +342,36 @@ function deleteRow(table_name, id) {
 }
 
 // insert a new row
-function insertRow(table_name, parent_col, parent_id) {
-  let self = this
-    , values = {};
-
-  $("#ruleForm input").each(function(index) {
-    let field_name = $(this).attr("id").split("_")[0];
-    values[field_name] = $(this).val();
+function insertRow(elem) {
+  let $row = $(elem).parents(".edit-row")
+    , values = {}
+    , valid_update = true;
+  let table = loaded_table;
+  if(loaded_table == "filter" || loaded_table == "restriction") table = "signal";
+  // iterate through each cell
+  $(".edit-cell", $row).each(function(index) {
+    let field_name = $(this).attr("id");
+    let val = $(this).html();
+    // validate that the data type is correct for this cell
+    let type = $("th#"+field_name).data("type");
+    valid_update = validateDataType(val, type);
+    // if it's not valid, throw an error and stop trying to update
+    if(!valid_update) {
+      toast("ERROR", "Invalid value \"" + val + "\" for " + field_name
+        +  " of type " + type);
+      return false;
+    }
+    // add to our values to update
+    if(val == "") values[field_name] = null;
+    else values[field_name] = val;
   });
 
-  if(parentid !== undefined) values[parent_col] = parentid;
+  if(!valid_update) return;
 
-  postInsert(table_name, values, function(results) {
-    console.log("inserted!");
+  values["id"] = $row.attr("id").split("_")[1];
+  if(loaded_parent.id !== undefined) values[loaded_parent.col] = loaded_parent.id;
+
+  postInsert(table, values, function(results) {
     reloadTable();
     toast("Success!", "Row was inserted to the database.");
   });
@@ -338,22 +379,54 @@ function insertRow(table_name, parent_col, parent_id) {
 
 // update a table using a datastructure that should remain consistent
 // JSON object that must include an id
-function updateRow(table_name, id) {
-  let elem = $("#id_"+id)
-    , values = {};
+function updateRow(elem) {
+  let $row = $(elem).parents(".edit-row")
+    , values = {}
+    , valid_update = true;
 
-  $(".edit-cell", elem).each(function(index) {
+  // iterate through each cell
+  $(".edit-cell", $row).each(function(index) {
     let field_name = $(this).attr("id");
-    values[field_name] = $(this).val();
+    let val = $(this).html();
+    // validate that the data type is correct for this cell
+    let type = $("th#"+field_name).data("type");
+    valid_update = validateDataType(val, type);
+    // if it's not valid, throw an error and stop trying to update
+    if(!valid_update) {
+      toast("ERROR", "Invalid value \"" + val + "\" for " + field_name
+        +  " of type " + type);
+      return false;
+    }
+    // add to our values to update
+    if(val == "") values[field_name] = null;
+    else values[field_name] = val;
   });
 
-  postInsert(table_name, values, function(results) {
-    console.log("inserted!");
+  if(!valid_update) return;
+  values["id"] = $row.attr("id").split("_")[1];
+  // ship the update to the server then reload the table
+  postUpdate(loaded_table, values, function(results) {
     reloadTable();
     toast("Success!", "Row was updated in the database.");
   })
 }
 
+// hook for sending row updates
+function postUpdate(table_name, values, callback) {
+  $.ajax({
+    type: "POST",
+    url: currentURL + "api/update",
+    data: {
+      "table_name": table_name
+      , "values": JSON.stringify(values)
+    },
+    success: function(results) {
+      if(typeof(callback) != "undefined") callback(results);
+    }
+  });
+}
+
+// hook for sending row inserts
 function postInsert(table_name, values, callback) {
   $.ajax({
     type: "POST",
@@ -366,4 +439,16 @@ function postInsert(table_name, values, callback) {
       if(typeof(callback) != "undefined") callback(results);
     }
   });
+}
+
+function validateDataType(data, type) {
+  if(data == "") return true;
+  switch(type) {
+    case "integer":
+      return !isNaN(parseInt(data));
+      break;
+    case "character varying":
+    default:
+      return data === data.toString();
+  }
 }
