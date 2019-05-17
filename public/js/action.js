@@ -1,12 +1,12 @@
 // get a list of similar words
 function getSimilarWords(word, callback) {
   $.ajax({
-    type: "GET"
-    , url: processURL + "similar?word=" + word
-    , success: function(results) {
+    type: "GET",
+    url: processURL + "similar?word=" + word,
+    success: function(results) {
       callback(results);
-    }
-    , async: true
+    },
+    async: true
   });
 }
 
@@ -22,25 +22,36 @@ function findSimilar(elem) {
   getSimilarWords(signal, function(results) {
     let $modal = $("#generic-modal");
     $modal.removeClass("full-screen");
-    $(".modal-title", $modal).html("Similar words to \"" + signal + "\" by usage");
+    $(".modal-title", $modal).html(
+      'Similar words to "' + signal + '" by usage'
+    );
     $(".modal-body", $modal).html("");
 
     let $body = $(".modal-body", $modal);
     $body.html("");
 
     let $tbody = $("<tbody></tbody>");
-    for(let i=0; i<results.length; i++) {
+    for (let i = 0; i < results.length; i++) {
       let o = results[i];
-      let html = "<tr><td><div class='input-group-text'>\
-        <input type='checkbox' class='similar-word' data-word='" + o.word
-        + "'></div></td><td>" + o.word + "</td><td>" + (o.score*100).toFixed(2)
-        + "</td><td>" + $seltype[0].outerHTML + "</td><td>" + $sel[0].outerHTML
-        + "</td></tr>";
+      let html =
+        "<tr><td><div class='input-group-text'>\
+        <input type='checkbox' class='similar-word' data-word='" +
+        o.word +
+        "'></div></td><td>" +
+        o.word +
+        "</td><td>" +
+        (o.score * 100).toFixed(2) +
+        "</td><td>" +
+        $seltype[0].outerHTML +
+        "</td><td>" +
+        $sel[0].outerHTML +
+        "</td></tr>";
       $tbody.append(html);
     }
     $sel.attr("id", "select-all-category");
     $seltype.attr("id", "select-all-type");
-    let $table = $(`<table class='table'>
+    let $table = $(
+      `<table class='table'>
       <thead>
         <tr>
           <th>
@@ -50,11 +61,16 @@ function findSimilar(elem) {
           </th>
           <th>Word</th>
           <th>Similarity (%)</th>
-          <th>` + $seltype[0].outerHTML + `</th>
-          <th>` + $sel[0].outerHTML + `</th>
+          <th>` +
+        $seltype[0].outerHTML +
+        `</th>
+          <th>` +
+        $sel[0].outerHTML +
+        `</th>
         </tr>
       </thead>
-    </table>`);
+    </table>`
+    );
     $table.append($tbody);
     $body.append($table);
 
@@ -67,20 +83,24 @@ function findSimilar(elem) {
     });
 
     $("#select-all-type").change(function() {
-      if($(this).val() > 1) $(".sel-cat").hide();
+      if ($(this).val() > 1) $(".sel-cat").hide();
       else $(".sel-cat").show();
       $(".sel-type").val($(this).val());
     });
 
     $(".sel-type:not(#select-all-type)").change(function() {
       let $row = $(this).parents("tr");
-      if($(this).val() > 1) $(".sel-cat", $row).hide();
+      if ($(this).val() > 1) $(".sel-cat", $row).hide();
       else $(".sel-cat", $row).show();
     });
 
     $(".modal-footer", $modal).html("");
-    $(".modal-footer", $modal).append("<button class='btn btn-primary' \
-      onclick='addSimilarSignals(" + parent_id + ");'>Add Rules</button>");
+    $(".modal-footer", $modal).append(
+      "<button class='btn btn-primary' \
+      onclick='addSimilarSignals(" +
+        parent_id +
+        ");'>Add Rules</button>"
+    );
 
     $modal.modal("show");
   });
@@ -89,12 +109,12 @@ function findSimilar(elem) {
 // get a list of similar words
 function getPrediction(word, callback) {
   $.ajax({
-    type: "GET"
-    , url: processURL + "predict?context=" + word
-    , success: function(results) {
+    type: "GET",
+    url: processURL + "predict?context=" + word,
+    success: function(results) {
       callback(results);
-    }
-    , async: true
+    },
+    async: true
   });
 }
 
@@ -112,12 +132,12 @@ function addSimilarSignals(parent_id) {
     let $row = $(this).parents("tr");
     let type = parseInt($(".sel-type", $row).val());
     let values = {
-      "score": null
-      , "signalcategoryid": parseInt($(".sel-cat", $row).val())
-      , "signaltypeid": type
-      , "parentid": null
+      score: null,
+      signalcategoryid: parseInt($(".sel-cat", $row).val()),
+      signaltypeid: type,
+      parentid: null
     };
-    if(type > 1) {
+    if (type > 1) {
       values["parentid"] = parent_id;
       values["signalcategoryid"] = sentiment_signals[parent_id].category;
     }

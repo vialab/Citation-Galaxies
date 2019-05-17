@@ -5,12 +5,14 @@ from whoosh.index import open_dir
 from whoosh.fields import Schema, TEXT, ID
 from whoosh.qparser import QueryParser
 
+
 def decodeInput():
     decoded = b64decode(argv[1])
     try:
         return loads(decoded)
     except:
         return decoded
+
 
 ix = open_dir(dirname="./model/index")
 qp = QueryParser("content", schema=ix.schema)

@@ -15,6 +15,8 @@ from gensim.models import Word2Vec
 from configparser import ConfigParser
 
 # the decorator
+
+
 def enable_cors(fn):
     def _enable_cors(*args, **kwargs):
         # set CORS headers
@@ -26,6 +28,7 @@ def enable_cors(fn):
             # actual request; reply with the actual response
             return fn(*args, **kwargs)
     return _enable_cors
+
 
 def get_model():
     model = Word2Vec.load("./model/vectors/word2vec.model")
@@ -57,7 +60,8 @@ def do_related():
     n = 10
     if "n" in request.query:
         n = request.query["n"]
-    word_list = w2v.predict_output_word(request.query["context"].split(","), topn=n)
+    word_list = w2v.predict_output_word(
+        request.query["context"].split(","), topn=n)
     if word_list is None:
         return dumps({})
     results = []
@@ -68,7 +72,6 @@ def do_related():
         results.append(temp)
     response.content_type = "application/json"
     return dumps(results)
-
 
 
 @route("/search", method="GET")
@@ -87,10 +90,9 @@ def do_search():
         hits = searcher.search(q, limit=n)
         for hit in hits:
             h = dict(hit)
-            results.append({"0id":h["id"]})
+            results.append({"0id": h["id"]})
         response.content_type = "application/json"
     return dumps(results)
-
 
 
 @route("/process/signals", method="POST")
@@ -105,8 +107,9 @@ def do_process_rules():
     signal_key = base64.b64encode(dumps(signals).encode())
     query_key = base64.b64encode(dumps(query).encode())
     ruleKey = str(increment).encode() + b"_" + signal_key + b"_" + query_key
-    ruleHash = base64.b64encode(ruleKey).decode("utf-8");
-    cache = run_query("select querydata from querycache where queryid=%s", data=(ruleHash,))
+    ruleHash = base64.b64encode(ruleKey).decode("utf-8")
+    cache = run_query(
+        "select querydata from querycache where queryid=%s", data=(ruleHash,))
     if cache.shape[0] > 0:
         payload = base64.b64decode(cache["querydata"].values[0])
     else:
@@ -130,10 +133,10 @@ def do_process_rules():
                 y_data = processed[key][year]
                 cat_id = signals[key]["category"]
                 if year not in ui:
-                    ui[year] = { "total_value": [0]*int(100/increment)
-                        , "max_value": 0 }
+                    ui[year] = {"total_value": [0] *
+                                int(100 / increment), "max_value": 0}
                 if cat_id not in ui[year]:
-                    ui[year][cat_id] = { "value": [0]*int(100/increment) }
+                    ui[year][cat_id] = {"value": [0] * int(100 / increment)}
                 if y_data["max"] > ui[year]["max_value"]:
                     ui[year]["max_value"] = y_data["max"]
                 for i in y_data["content"]:
@@ -141,7 +144,8 @@ def do_process_rules():
                     ui[year]["total_value"][int(i)] += y_data["content"][i]
         payload = dumps({"front_data": ui, "signal_scores": agg.p})
         encoded = base64.b64encode(payload.encode()).decode("utf-8")
-        run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(ruleHash, encoded))
+        run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(
+            ruleHash, encoded))
     return payload
 
 
@@ -157,8 +161,9 @@ def do_query():
     query = data["query"]
     query_key = base64.b64encode(dumps(query).encode())
     ruleKey = str(increment).encode() + b"_" + query_key
-    ruleHash = base64.b64encode(ruleKey).decode("utf-8");
-    cache = run_query("select querydata from querycache where queryid=%s", data=(ruleHash,))
+    ruleHash = base64.b64encode(ruleKey).decode("utf-8")
+    cache = run_query(
+        "select querydata from querycache where queryid=%s", data=(ruleHash,))
     if cache.shape[0] > 0:
         # we have made this query before!
         payload = base64.b64decode(cache["querydata"].values[0])
@@ -170,11 +175,12 @@ def do_query():
         df["leftdist"] = df["wordsentence"] - df["citationsentence"]
         df["rightdist"] = df["citationsentence"] - df["wordsentence"]
         df = df.query("(leftdist >= 0 and leftdist <= " + str(left_bound)
-            + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
+                      + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
         sorted = agg.aggregate_years(df[["articleyear", "percent"]])
-        payload = dumps({"agg":sorted, "nunique":df["id"].unique().tolist()})
+        payload = dumps({"agg": sorted, "nunique": df["id"].unique().tolist()})
         encoded = base64.b64encode(payload.encode()).decode("utf-8")
-        run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(ruleHash, encoded))
+        run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(
+            ruleHash, encoded))
     return payload
 
 
@@ -188,7 +194,7 @@ def do_count():
     distribution = citations[["articleyear", "percent"]].copy(deep=True)
     agg = Aggregator(increment)
     sorted = agg.aggregate_years(distribution)
-    return dumps({"agg":sorted, "nunique":citations["id"].unique().tolist()})
+    return dumps({"agg": sorted, "nunique": citations["id"].unique().tolist()})
 
 
 @route("/papers", method=["POST"])
@@ -210,14 +216,15 @@ def do_papers():
         r = range.split("-")
         if r[0] not in years:
             years.append(int(r[0]))
-        filter += "(articleyear == " + r[0] + " and percent >= " + r[1] + " and percent <= " + r[2] + ")"
+        filter += "(articleyear == " + \
+            r[0] + " and percent >= " + r[1] + " and percent <= " + r[2] + ")"
 
     if len(query) > 0:
         left_bound = int(data["rangeLeft"])
         right_bound = int(data["rangeRight"])
         sql = main_query
         # first filter by the query again.. this probably could be improved
-        df = run_query(sql, data=(query,years))
+        df = run_query(sql, data=(query, years))
     else:
         df = citations.copy(deep=True)
 
@@ -228,7 +235,8 @@ def do_papers():
     ref_count = df.groupby("articleid").size().reset_index(name="refcount")
     # merge in any additional columns we need for display/filtering
     if len(query) > 0:
-        df = df.merge(citations[["articleid", "journaltitle", "journalid", "context"]], on="articleid", how="left")
+        df = df.merge(citations[["articleid", "journaltitle",
+                                 "journalid", "context"]], on="articleid", how="left")
     if journal_id != "":
         df = df[df["journalid"] == journal_id]
     # if we have signals associated to this query, filter
@@ -237,17 +245,21 @@ def do_papers():
         df_filtered = pd.DataFrame()
         for id, signal in signals.items():
             df_new = agg.aggregate_signals(df, signal, signals)
-            df_filtered = pd.concat([df_filtered,df_new]).drop_duplicates().reset_index(drop=True)
+            df_filtered = pd.concat(
+                [df_filtered, df_new]).drop_duplicates().reset_index(drop=True)
         df = df_filtered
     # get total amount of references per paper for ranking
     df = df.merge(ref_count, on="articleid", how="left")
-    df["rank"] = df.groupby(["articleyear"])["refcount"].rank("dense", ascending=False)
+    df["rank"] = df.groupby(["articleyear"])[
+        "refcount"].rank("dense", ascending=False)
     # filter for only top 5 results in each year
-    df = df.query("rank>" + str(last_rank) + " and rank<=" + str(last_rank+5))
+    df = df.query("rank>" + str(last_rank) +
+                  " and rank<=" + str(last_rank + 5))
     df["bin"] = pd.cut(df["percent"], bins=bins, labels=labels)
     # get the size of each bin
-    bin_size = df.groupby(["articleid","bin"]).size().reset_index(name="binsize")
-    df = df.merge(bin_size, on=["articleid","bin"], how="left")
+    bin_size = df.groupby(["articleid", "bin"]
+                          ).size().reset_index(name="binsize")
+    df = df.merge(bin_size, on=["articleid", "bin"], how="left")
     # save max and list of years and journals for display
     max = df["binsize"].max().item()
     years = sorted(df["articleyear"].unique().tolist())
@@ -258,23 +270,23 @@ def do_papers():
     for row in records:
         articleid = str(row["articleid"])
         if articleid not in sorted_articles:
-            sorted_articles[articleid] = { "content": {}, "max": 0 }
+            sorted_articles[articleid] = {"content": {}, "max": 0}
             sorted_articles[articleid]["year"] = row["articleyear"]
             sorted_articles[articleid]["journalid"] = row["journalid"]
             sorted_articles[articleid]["total"] = row["refcount"]
             sorted_articles[articleid]["rank"] = row["rank"]
-            for i in np.arange(100/int(increment)):
+            for i in np.arange(100 / int(increment)):
                 sorted_articles[articleid]["content"][int(i)] = 0
         jid = str(row["journalid"])
         if jid not in journals:
-            journals[jid] = {"title":row["journaltitle"], "years":[]}
+            journals[jid] = {"title": row["journaltitle"], "years": []}
         if row["articleyear"] not in journals[jid]["years"]:
             journals[jid]["years"].append(row["articleyear"])
         x = row["binsize"]
         sorted_articles[articleid]["content"][row["bin"]] = x
         if x > sorted_articles[articleid]["max"]:
             sorted_articles[articleid]["max"] = x
-    return dumps({"max":max, "papers":sorted_articles, "years": years, "journals": journals})
+    return dumps({"max": max, "papers": sorted_articles, "years": years, "journals": journals})
 
 
 @route("/paper", method="GET")
@@ -321,20 +333,18 @@ def do_paper():
         start = row["startlocationpaper"].item()
         end = row["endlocationpaper"].item()
         text = df_text["papertext"][start:end]
-        cit = df.query("startlocationpaper >= " + str(start) + " and endlocationpaper <= " + str(end))
+        cit = df.query("startlocationpaper >= " + str(start) +
+                       " and endlocationpaper <= " + str(end))
         temp = {
-            "start": start
-            , "end": end
-            , "text": text
-            , "citations": cit.to_dict(orient="records")
+            "start": start, "end": end, "text": text, "citations": cit.to_dict(orient="records")
         }
         paragraphs.append(temp)
-    del df_text["papertext"] # don't send the whole text over
+    del df_text["papertext"]  # don't send the whole text over
     df_text["paragraphs"] = paragraphs
     return dumps(df_text)
 
 
-## support postgres database stuff
+# support postgres database stuff
 def config(filename='./model/database.ini', section='postgresql'):
     # create a parser
     parser = ConfigParser()
@@ -348,7 +358,8 @@ def config(filename='./model/database.ini', section='postgresql'):
         for param in params:
             db[param[0]] = param[1]
     else:
-        raise Exception('Section {0} not found in the {1} file'.format(section, filename))
+        raise Exception(
+            'Section {0} not found in the {1} file'.format(section, filename))
 
     return db
 
@@ -366,6 +377,7 @@ def connect():
         print(error)
     finally:
         return conn
+
 
 def run_update(sql, data=()):
     try:
@@ -389,6 +401,7 @@ def run_update(sql, data=()):
         if conn is not None:
             conn.close()
     return updated_rows
+
 
 def run_query(sql, data=(), is_update=False):
     results = pd.DataFrame()
@@ -453,7 +466,8 @@ class Aggregator():
             if filtered is None:
                 filtered = new_base
             else:
-                filtered = pd.concat([filted, new_base]).drop_duplicates().reset_index(drop=True)
+                filtered = pd.concat(
+                    [filted, new_base]).drop_duplicates().reset_index(drop=True)
 
         if filtered is None:
             filtered = base
@@ -465,15 +479,17 @@ class Aggregator():
 
     def aggregate_years(self, distribution):
         bins, labels = get_bins(self.increment)
-        distribution["bin"] = pd.cut(distribution["percent"], bins=bins, labels=labels)
-        distribution = distribution.groupby(["articleyear", "bin"]).size().reset_index(name="refcount")
+        distribution["bin"] = pd.cut(
+            distribution["percent"], bins=bins, labels=labels)
+        distribution = distribution.groupby(
+            ["articleyear", "bin"]).size().reset_index(name="refcount")
         # distribution.fillna(0, inplace=True)
         distribution = distribution.to_dict(orient="records")
         sorted = {}
         for row in distribution:
             year = str(row["articleyear"])
             if year not in sorted:
-                sorted[year] = { "content": {}, "max": 0, "total": 0 }
+                sorted[year] = {"content": {}, "max": 0, "total": 0}
             x = row["refcount"]
             sorted[year]["content"][row["bin"]] = x
             sorted[year]["total"] += x
@@ -490,8 +506,10 @@ citations["id"] = np.arange(citations.shape[0])
 # citations = pd.read_csv("./model/citations.csv", encoding="utf-8")
 # articles = pd.read_csv("./model/articles.csv", encoding="utf-8")
 # articles.rename(columns={ "id": "articleid" }, inplace=True)
-articles = run_query("select id as articleid, journaltitle, journalid from article")
-citations = citations.merge(articles[["articleid", "journaltitle", "journalid"]], on="articleid", how="left")
+articles = run_query(
+    "select id as articleid, journaltitle, journalid from article")
+citations = citations.merge(
+    articles[["articleid", "journaltitle", "journalid"]], on="articleid", how="left")
 # citations["percent"] = (((citations["startlocationpaper"]+citations["endlocationpaper"])/2)/citations["charcount"])*100
 # citations.to_csv("./model/citation_context.csv", encoding="utf-8")
 # citations.to_pickle("./model/citation_context2.pkl")
