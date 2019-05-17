@@ -5,6 +5,18 @@ const dbquery = {
     query: "select id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal \
       where enabled and cookieid=:cookieid;"
     , require_cookie: true
+    , aliases: {
+      "signalcategoryid": {
+        query: "signalcategory"
+        , col: "catname"
+        , name: "category"
+      }
+      , "signaltypeid": {
+        query: "signaltype"
+        , col: "name"
+        , name: "type"
+      }
+    }
     , links: { // to be used to connect to other queries
         "filters": {
           "params":{"id":"parentid"} // potential parameters to pass into next query
@@ -24,7 +36,19 @@ const dbquery = {
     query: "select id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal \
       where enabled and signaltypeid=1 and signalcategoryid=:signalcategoryid and cookieid=:cookieid;"
     , require_cookie: true
-    , links: { // to be used for more interactive/heirarchical tables
+    , aliases: {
+      "signalcategoryid": {
+        query: "signalcategory"
+        , col: "catname"
+        , name: "category"
+      }
+      , "signaltypeid": {
+        query: "signaltype"
+        , col: "name"
+        , name: "type"
+      }
+    }
+    , links: { // to be used to connect to other queries
         "filters": {
           "params":{"id":"parentid"} // potential parameters to pass into next query
           , "query": "filter" // name of another query
@@ -34,14 +58,29 @@ const dbquery = {
           , "query": "restriction"
         }
       }
+    , actions: { // to be used to perform specific javascript functions
+      "similar": "findSimilar" // let's let javascript handle getting the params
+    }
     , origin: "signal"
   }
   , signalbytype: {
     query: "select id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal \
       where enabled and signaltypeid=:signaltypeid and cookieid=:cookieid;"
     , require_cookie: true
-    , links: { // to be used for more interactive/heirarchical tables
-        "filters": { // name of the link
+    , aliases: {
+      "signalcategoryid": {
+        query: "signalcategory"
+        , col: "catname"
+        , name: "category"
+      }
+      , "signaltypeid": {
+        query: "signaltype"
+        , col: "name"
+        , name: "type"
+      }
+    }
+    , links: { // to be used to connect to other queries
+        "filters": {
           "params":{"id":"parentid"} // potential parameters to pass into next query
           , "query": "filter" // name of another query
         }
@@ -50,12 +89,40 @@ const dbquery = {
           , "query": "restriction"
         }
       }
+    , actions: { // to be used to perform specific javascript functions
+      "similar": "findSimilar" // let's let javascript handle getting the params
+    }
     , origin: "signal"
   }
   , filter: {
     query: "select id, signalcategoryid, signal, distance, parentid, signaltypeid from signal \
       where enabled and signaltypeid=2 and parentid=:parentid and cookieid=:cookieid"
     , require_cookie: true
+    , aliases: {
+      "signalcategoryid": {
+        query: "signalcategory"
+        , col: "catname"
+        , name: "category"
+      }
+      , "signaltypeid": {
+        query: "signaltype"
+        , col: "name"
+        , name: "type"
+      }
+    }
+    , links: { // to be used to connect to other queries
+        "filters": {
+          "params":{"id":"parentid"} // potential parameters to pass into next query
+          , "query": "filter" // name of another query
+        }
+        , "restrictions": {
+          "params":{"id":"parentid"}
+          , "query": "restriction"
+        }
+      }
+    , actions: { // to be used to perform specific javascript functions
+      "similar": "findSimilar" // let's let javascript handle getting the params
+    }
     , origin: "signal"
     , parent: "parentid"
   }
@@ -63,6 +130,31 @@ const dbquery = {
     query: "select id, signalcategoryid, signal, distance, parentid, signaltypeid from signal \
       where enabled and signaltypeid=3 and parentid=:parentid and cookieid=:cookieid"
     , require_cookie: true
+    , aliases: {
+      "signalcategoryid": {
+        query: "signalcategory"
+        , col: "catname"
+        , name: "category"
+      }
+      , "signaltypeid": {
+        query: "signaltype"
+        , col: "name"
+        , name: "type"
+      }
+    }
+    , links: { // to be used to connect to other queries
+        "filters": {
+          "params":{"id":"parentid"} // potential parameters to pass into next query
+          , "query": "filter" // name of another query
+        }
+        , "restrictions": {
+          "params":{"id":"parentid"}
+          , "query": "restriction"
+        }
+      }
+    , actions: { // to be used to perform specific javascript functions
+      "similar": "findSimilar" // let's let javascript handle getting the params
+    }
     , origin: "signal"
     , parent: "parentid"
   }
@@ -70,6 +162,7 @@ const dbquery = {
     query: "select id, catname, score, color from signalcategory where enabled\
       and cookieid=:cookieid;"
     , require_cookie: true
+    , aliases: {}
     , links: {
       "signals": {
         "params": {"id":"signalcategoryid"}
@@ -79,13 +172,14 @@ const dbquery = {
     , origin: "signalcategory"
   }
   , signaltype: {
-    query: "select * from signaltype"
+    query: "select id, name, type from signaltype"
+    , aliases: {}
     , require_cookie: false
     , origin: "signaltype"
   }
   , insert_signal: {
-    query: "insert into signal(signal, score, signalcategoryid, enabled, cookieid, signaltypeid) \
-      values(:signal, :score, :signalcategoryid, true, :cookieid, :signaltypeid)"
+    query: "insert into signal(signal, score, signalcategoryid, enabled, cookieid, signaltypeid, parentid) \
+      values(:signal, :score, :signalcategoryid, true, :cookieid, :signaltypeid, :parentid)"
     , require_cookie: true
   }
   , update_signal: {
@@ -93,24 +187,29 @@ const dbquery = {
       signalcategoryid=:signalcategoryid, enabled=:enabled, cookieid=:cookieid, \
       signaltypeid=:signaltypeid where id=:id and cookieid=:cookieid"
     , require_cookie: true
+    , aliases: {}
   }
   , delete_signal: {
     query: "delete from signal where id=:id and cookieid=:cookieid"
     , require_cookie: true
+    , aliases: {}
   }
   , insert_signalcategory: {
     query: "insert into signalcategory(catname, score, color, enabled, cookieid) \
       values(:catname, :score, :color, true, :cookieid)"
     , require_cookie: true
+    , aliases: {}
   }
   , update_signalcategory: {
     query: "update signalcategory set catname=:catname, score=:score, \
       color=:color where id=:id and cookieid=:cookieid"
     , require_cookie: true
+    , aliases: {}
   }
   , delete_signalcategory: {
     query: "delete from signalcategory where id=:id and cookieid=:cookieid"
     , require_cookie: true
+    , aliases: {}
   }
 
 };

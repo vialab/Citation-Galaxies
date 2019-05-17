@@ -12,9 +12,12 @@ function getSimilarWords(word, callback) {
 
 // find similar words using getSimilarWords
 function findSimilar(elem) {
-  let $elem = $(elem).parent();
+  let $elem = $(elem).parents(".edit-row");
   let signal = $("#signal", $elem).html();
+  let parent_id = $elem.attr("id").split("_")[1];
   let $sel = getCategorySelect();
+  let $seltype = getSignalTypeSelect();
+
   $sel.val($("#signalcategoryid", $elem).html());
   getSimilarWords(signal, function(results) {
     let $modal = $("#generic-modal");
@@ -31,10 +34,12 @@ function findSimilar(elem) {
       let html = "<tr><td><div class='input-group-text'>\
         <input type='checkbox' class='similar-word' data-word='" + o.word
         + "'></div></td><td>" + o.word + "</td><td>" + (o.score*100).toFixed(2)
-        + "</td><td>" + $sel[0].outerHTML + "</td></tr>";
+        + "</td><td>" + $seltype[0].outerHTML + "</td><td>" + $sel[0].outerHTML
+        + "</td></tr>";
       $tbody.append(html);
     }
     $sel.attr("id", "select-all-category");
+    $seltype.attr("id", "select-all-type");
     let $table = $(`<table class='table'>
       <thead>
         <tr>
@@ -45,6 +50,7 @@ function findSimilar(elem) {
           </th>
           <th>Word</th>
           <th>Similarity (%)</th>
+          <th>` + $seltype[0].outerHTML + `</th>
           <th>` + $sel[0].outerHTML + `</th>
         </tr>
       </thead>
@@ -58,15 +64,23 @@ function findSimilar(elem) {
 
     $("#select-all-category").change(function() {
       $(".sel-cat").val($(this).val());
-    })
+    });
 
-    $(".modal-footer").html("");
-    $(".modal-footer").append("<button class='btn btn-primary' \
-      onclick='addSimilarSignals(1);'>Add as Signal</button>");
-    $(".modal-footer").append("<button class='btn btn-primary' \
-      onclick='addSimilarSignals(2);'>Add as Filter</button>");
-    $(".modal-footer").append("<button class='btn btn-primary' \
-      onclick='addSimilarSignals(3);'>Add as Restriction</button>");
+    $("#select-all-type").change(function() {
+      if($(this).val() > 1) $(".sel-cat").hide();
+      else $(".sel-cat").show();
+      $(".sel-type").val($(this).val());
+    });
+
+    $(".sel-type:not(#select-all-type)").change(function() {
+      let $row = $(this).parents("tr");
+      if($(this).val() > 1) $(".sel-cat", $row).hide();
+      else $(".sel-cat", $row).show();
+    });
+
+    $(".modal-footer", $modal).html("");
+    $(".modal-footer", $modal).append("<button class='btn btn-primary' \
+      onclick='addSimilarSignals(" + parent_id + ");'>Add Rules</button>");
 
     $modal.modal("show");
   });
@@ -93,14 +107,20 @@ function findPrediction(elem) {
   });
 }
 
-function addSimilarSignals(type) {
+function addSimilarSignals(parent_id) {
   $(".similar-word:checked").each(function() {
-    let $row = $(this).closest("tr");
+    let $row = $(this).parents("tr");
+    let type = parseInt($(".sel-type", $row).val());
     let values = {
-      "score": 1
-      , "signalcategoryid": $(".sel-cat", $row).val()
+      "score": null
+      , "signalcategoryid": parseInt($(".sel-cat", $row).val())
       , "signaltypeid": type
+      , "parentid": null
     };
+    if(type > 1) {
+      values["parentid"] = parent_id;
+      values["signalcategoryid"] = sentiment_signals[parent_id].category;
+    }
     values["signal"] = $(this).data("word");
     postInsert("signal", values, function() {
       reloadTable();
