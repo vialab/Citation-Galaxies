@@ -100,7 +100,8 @@ function loadTable(
                 links,
                 actions,
                 schema,
-                external_data
+                external_data,
+                aliases
               );
             });
           }
@@ -112,7 +113,8 @@ function loadTable(
             links,
             actions,
             schema,
-            external_data
+            external_data,
+            aliases
           );
         }
       }
@@ -136,8 +138,11 @@ function populateTable(
   links,
   actions,
   schema,
-  external_data
+  external_data,
+  aliases
 ) {
+  console.log(aliases);
+  console.log(external_data);
   // Create the header row
   let tableHeader = $("<thead></thead>").appendTo(table);
   let tableBody = $("<tbody></tbody>").appendTo(table);
@@ -153,8 +158,18 @@ function populateTable(
   for (let key in header_example) {
     // Used to prevent showing the id row
     if (headers.length != 0) {
+      let title = key;
+      if (Object.keys(aliases).includes(key)) {
+        title = aliases[key].name;
+      }
       let element = $(
-        "<th id='" + key + "' data-type='" + schema[key] + "'>" + key + "</th>"
+        "<th id='" +
+          key +
+          "' data-type='" +
+          schema[key] +
+          "'>" +
+          title +
+          "</th>"
       );
       element.appendTo(headerRow);
     }
@@ -162,10 +177,19 @@ function populateTable(
   }
   $("<th>actions</th>").appendTo(headerRow);
 
+  Object.keys(aliases).forEach(key => {
+    let $sel = getAliasSelect(
+      key,
+      aliases[key],
+      external_data[aliases[key].query].data
+    );
+    aliases[key].sel = $sel;
+  });
+
   // Populate the cells
   for (let signal of signals) {
     let signalID = headers[0] + "_" + signal[headers[0]];
-    let row = drawTableRow(headers, signal, signalID);
+    let row = drawTableRow(headers, signal, signalID, aliases);
     // draw any links/action buttons at the end
     drawActionOptions(row, headers, signal, links, actions);
     // append the final row to our table
@@ -175,7 +199,7 @@ function populateTable(
     return a[headers[0]] - b[headers[0]];
   });
   // create a row for adding a completely new row
-  let $addrow = drawTableRow(headers, {}, "add-new-row");
+  let $addrow = drawTableRow(headers, {}, "add-new-row", aliases);
   // it will have different actions for submission/cancellation
   let $actioncell = $("<td></td>").appendTo($addrow);
   let $actions = $("<div class='action-cell'></div>").appendTo($actioncell);
@@ -196,6 +220,21 @@ function populateTable(
   $startadd.appendTo(tableBody);
 
   bindRowFunctions();
+}
+
+function getAliasSelect(target, alias, data) {
+  let $sel = $("<select class='" + target + "'></select>");
+  for (let o of data) {
+    $sel.append(
+      " \
+      <option value='" +
+        o[alias.value] +
+        "'>" +
+        o[alias.col] +
+        "</option>"
+    );
+  }
+  return $sel;
 }
 
 function bindRowFunctions() {
@@ -236,12 +275,19 @@ function showAddRow() {
 }
 
 // create a single row marked up for our edit table
-function drawTableRow(headers, signal, signalID) {
+function drawTableRow(headers, signal, signalID, aliases) {
   let row = $("<tr id='" + signalID + "' class='edit-row'></tr>");
   // For each entry in the json
   for (let i = 1; i < headers.length; i++) {
     let html = "<td id='" + headers[i] + "' class='edit-cell";
-    if (loaded_parent.id !== undefined && headers[i] == loaded_parent.col) {
+    if (headers[i] in aliases) {
+      let $sel = aliases[headers[i]].sel.clone();
+      html +=
+        "'>" + $("option[value='" + signal[headers[i]] + "']", $sel).html();
+    } else if (
+      loaded_parent.id !== undefined &&
+      headers[i] == loaded_parent.col
+    ) {
       html += "'>" + loaded_parent.id;
     } else if (signal[headers[i]]) {
       html += "'>" + signal[headers[i]];
@@ -528,4 +574,24 @@ function validateDataType(data, type) {
     default:
       return data === data.toString();
   }
+}
+
+function sortTableByColumn(table, column, order) {
+  var asc = order === "asc",
+    tbody = table.find("tbody");
+
+  tbody
+    .find("tr")
+    .sort(function(a, b) {
+      if (asc) {
+        return $("td#" + column, a)
+          .text()
+          .localeCompare($("td#" + column, b).text());
+      } else {
+        return $("td#" + column, b)
+          .text()
+          .localeCompare($("td#" + column, a).text());
+      }
+    })
+    .appendTo(tbody);
 }

@@ -9,11 +9,13 @@ const dbquery = {
     aliases: {
       signalcategoryid: {
         query: "signalcategory",
+        value: "id",
         col: "catname",
         name: "category"
       },
       signaltypeid: {
         query: "signaltype",
+        value: "id",
         col: "name",
         name: "type"
       }
@@ -43,11 +45,13 @@ const dbquery = {
     aliases: {
       signalcategoryid: {
         query: "signalcategory",
+        value: "id",
         col: "catname",
         name: "category"
       },
       signaltypeid: {
         query: "signaltype",
+        value: "id",
         col: "name",
         name: "type"
       }
@@ -77,11 +81,13 @@ const dbquery = {
     aliases: {
       signalcategoryid: {
         query: "signalcategory",
+        value: "id",
         col: "catname",
         name: "category"
       },
       signaltypeid: {
         query: "signaltype",
+        value: "id",
         col: "name",
         name: "type"
       }
@@ -111,11 +117,13 @@ const dbquery = {
     aliases: {
       signalcategoryid: {
         query: "signalcategory",
+        value: "id",
         col: "catname",
         name: "category"
       },
       signaltypeid: {
         query: "signaltype",
+        value: "id",
         col: "name",
         name: "type"
       }
@@ -146,11 +154,13 @@ const dbquery = {
     aliases: {
       signalcategoryid: {
         query: "signalcategory",
+        value: "id",
         col: "catname",
         name: "category"
       },
       signaltypeid: {
         query: "signaltype",
+        value: "id",
         col: "name",
         name: "type"
       }
