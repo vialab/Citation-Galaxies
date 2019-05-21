@@ -1,6 +1,7 @@
 var last_load = {};
 var loaded_table = "";
 var loaded_parent = {id: undefined, col: undefined};
+var global_aliases;
 
 $(document).ready(function() {
   /* CRUD processes are not based on search, although a nice touch would be
@@ -69,7 +70,12 @@ function loadTable(
         loaded_parent = parent;
         let external_data = {};
         // load any external data requirements for aliases
-        if (aliases !== undefined) {
+        if (
+          !(
+            Object.entries(aliases).length === 0 &&
+            aliases.constructor === Object
+          )
+        ) {
           let wait_queue = [];
           // create a list of data loading calls to queue up
           Object.keys(aliases).forEach(key => {
@@ -141,8 +147,6 @@ function populateTable(
   external_data,
   aliases
 ) {
-  console.log(aliases);
-  console.log(external_data);
   // Create the header row
   let tableHeader = $("<thead></thead>").appendTo(table);
   let tableBody = $("<tbody></tbody>").appendTo(table);
@@ -167,10 +171,13 @@ function populateTable(
           key +
           "' data-type='" +
           schema[key] +
-          "'>" +
+          "' onclick='sortRows(this);'>" +
           title +
           "</th>"
       );
+      if (Object.keys(aliases).includes(key)) {
+        element.addClass("aliased");
+      }
       element.appendTo(headerRow);
     }
     headers.push(key);
@@ -185,7 +192,7 @@ function populateTable(
     );
     aliases[key].sel = $sel;
   });
-
+  global_aliases = aliases;
   // Populate the cells
   for (let signal of signals) {
     let signalID = headers[0] + "_" + signal[headers[0]];
@@ -218,8 +225,9 @@ function populateTable(
   );
   $("<td colspan='" + headers.length + "'> + </td>").appendTo($startadd);
   $startadd.appendTo(tableBody);
-
   bindRowFunctions();
+  let sortby = $($(".edit-cell")[0]).attr("id");
+  sortTableByColumn($("#ruleTable"), sortby, "asc");
 }
 
 function getAliasSelect(target, alias, data) {
@@ -280,10 +288,13 @@ function drawTableRow(headers, signal, signalID, aliases) {
   // For each entry in the json
   for (let i = 1; i < headers.length; i++) {
     let html = "<td id='" + headers[i] + "' class='edit-cell";
-    if (headers[i] in aliases) {
+    if (headers[i] in aliases && signal[headers[i]]) {
       let $sel = aliases[headers[i]].sel.clone();
       html +=
-        "'>" + $("option[value='" + signal[headers[i]] + "']", $sel).html();
+        "' data-value='" +
+        signal[headers[i]] +
+        "'>" +
+        $("option[value='" + signal[headers[i]] + "']", $sel).html();
     } else if (
       loaded_parent.id !== undefined &&
       headers[i] == loaded_parent.col
@@ -407,11 +418,19 @@ function editCrudRow(event) {
       let row_element_id = row_element.attr("id");
       row_element.data("original", row_element_value);
       row_element.attr("id", row_element_id);
-
-      // Allow the cell to be edited
-      row_element.attr("contenteditable", "true");
+      if ($("th#" + row_element_id).hasClass("aliased")) {
+        let $sel = global_aliases[row_element_id].sel;
+        row_element.html($sel);
+        $("select." + row_element_id, row_element).val(
+          row_element.data("value")
+        );
+        row_element.addClass("aliased");
+      } else {
+        // Allow the cell to be edited
+        row_element.attr("contenteditable", "true");
+      }
     }
-    $("td.empty", selected_row).html("");
+    $("td.empty:not(.aliased)", selected_row).html("");
     // Flag the row as edited
     selected_row.addClass("editing");
 
@@ -509,17 +528,23 @@ function updateRow(elem) {
   $(".edit-cell", $row).each(function(index) {
     let field_name = $(this).attr("id");
     let val = $(this).html();
-    // validate that the data type is correct for this cell
-    let type = $("th#" + field_name).data("type");
-    valid_update = validateDataType(val, type);
-    // if it's not valid, throw an error and stop trying to update
-    if (!valid_update) {
-      toast(
-        "ERROR",
-        'Invalid value "' + val + '" for ' + field_name + " of type " + type
-      );
-      return false;
+    // if we are aliased, we got to get the value from a select option
+    if ($("th#" + field_name).hasClass("aliased")) {
+      val = $("select." + field_name, this).val();
+    } else {
+      // validate that the data type is correct for this cell
+      let type = $("th#" + field_name).data("type");
+      valid_update = validateDataType(val, type);
+      // if it's not valid, throw an error and stop trying to update
+      if (!valid_update) {
+        toast(
+          "ERROR",
+          'Invalid value "' + val + '" for ' + field_name + " of type " + type
+        );
+        return false;
+      }
     }
+
     // add to our values to update
     if (val == "") values[field_name] = null;
     else values[field_name] = val;
@@ -576,22 +601,64 @@ function validateDataType(data, type) {
   }
 }
 
-function sortTableByColumn(table, column, order) {
-  var asc = order === "asc",
-    tbody = table.find("tbody");
+function sortRows(elem) {
+  let $header = $(elem);
+  let alias = $header.html();
+  if ($header.hasClass("asc")) {
+    // switch to descending sort
+    $header.addClass("desc");
+    $header.removeClass("asc");
+    $header.html(alias.substring(0, alias.length - 1) + " &#8638;");
+    sortTableByColumn($("#ruleTable"), $header.attr("id"), "desc");
+  } else if ($header.hasClass("desc")) {
+    // remove sort
+    $header.removeClass("sort");
+    $header.removeClass("desc");
+    $header.html(alias.substring(0, alias.length - 2));
+    let sortby = $($(".edit-cell")[0]).attr("id");
+    sortTableByColumn($("#ruleTable"), sortby, "asc");
+  } else {
+    // switch to ascending sort
+    $header.addClass("sort");
+    $header.addClass("asc");
+    $header.html(alias + " &#8642;");
+    sortTableByColumn($("#ruleTable"), $header.attr("id"), "asc");
+  }
+  for (let h of $header.siblings("th.sort")) {
+    let $h = $(h);
+    let orig = $h.html();
+    let clean = orig.substring(0, orig.length - 2);
+    $h.html(clean);
+    $h.removeClass("sort");
+    $h.removeClass("asc");
+    $h.removeClass("desc");
+  }
+}
 
+function sortTableByColumn(table, column, order) {
+  let asc = order === "asc",
+    tbody = table.find("tbody"),
+    $addrow = $("#start-add-row").remove();
+  type = $("th#" + column).data("type");
   tbody
     .find("tr")
     .sort(function(a, b) {
-      if (asc) {
-        return $("td#" + column, a)
-          .text()
-          .localeCompare($("td#" + column, b).text());
+      let valA = $.trim($("td#" + column, a).text()),
+        valB = $.trim($("td#" + column, b).text());
+      if (type == "integer" && !$("th#" + column).hasClass("aliased")) {
+        if (valA == "<empty>") valA = 0;
+        if (valB == "<empty>") valB = 0;
+        valA = parseInt(valA);
+        valB = parseInt(valB);
+        if (asc) return valA > valB;
+        else valB > valA;
       } else {
-        return $("td#" + column, b)
-          .text()
-          .localeCompare($("td#" + column, a).text());
+        if (valA == "<empty>") valA = "";
+        if (valB == "<empty>") valB = "";
+        if (asc) return valA.localeCompare(valB);
+        else return valB.localeCompare(valA);
       }
     })
     .appendTo(tbody);
+  $addrow.appendTo(tbody);
 }

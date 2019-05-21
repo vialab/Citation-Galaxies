@@ -1,6 +1,4 @@
 function Signal(id, cat_id, signal, type_id, parent_id, value = 0) {
-  // ensure that there are no duplicates (this.id must be unique)
-  if (sentiment_signals[id]) throw "Signal " + id + " already exists!";
   this.signal = signal.trim();
   this.distance = 0;
   this.filters = [];
