@@ -18,6 +18,12 @@ const dbquery = {
         value: "id",
         col: "name",
         name: "type"
+      },
+      parentid: {
+        query: "signal",
+        value: "id",
+        col: "signal",
+        name: "parent"
       }
     },
     links: {
@@ -54,6 +60,12 @@ const dbquery = {
         value: "id",
         col: "name",
         name: "type"
+      },
+      parentid: {
+        query: "signal",
+        value: "id",
+        col: "signal",
+        name: "parent"
       }
     },
     links: {
@@ -90,6 +102,12 @@ const dbquery = {
         value: "id",
         col: "name",
         name: "type"
+      },
+      parentid: {
+        query: "signal",
+        value: "id",
+        col: "signal",
+        name: "parent"
       }
     },
     links: {
@@ -126,6 +144,12 @@ const dbquery = {
         value: "id",
         col: "name",
         name: "type"
+      },
+      parentid: {
+        query: "signal",
+        value: "id",
+        col: "signal",
+        name: "parent"
       }
     },
     links: {
@@ -163,6 +187,12 @@ const dbquery = {
         value: "id",
         col: "name",
         name: "type"
+      },
+      parentid: {
+        query: "signal",
+        value: "id",
+        col: "signal",
+        name: "parent"
       }
     },
     links: {

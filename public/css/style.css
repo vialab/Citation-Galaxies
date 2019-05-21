@@ -439,6 +439,10 @@ span.query-text {
   grid-auto-flow: column;
 }
 
+#ruleTable th {
+  cursor: pointer;
+}
+
 .edit-row .action-cell {
   display: grid;
   grid-auto-flow: column;
