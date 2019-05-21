@@ -443,6 +443,21 @@ span.query-text {
   cursor: pointer;
 }
 
+#last-table-title {
+  position: absolute;
+  color: lightgray;
+  text-transform: uppercase;
+  font-size: 1.5em;
+  cursor: pointer;
+}
+
+#rule-table-title {
+  margin: 25px;
+  text-align: center;
+  color: gray;
+  text-transform: uppercase;
+}
+
 .edit-row .action-cell {
   display: grid;
   grid-auto-flow: column;

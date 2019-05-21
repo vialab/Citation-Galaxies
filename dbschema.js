@@ -83,7 +83,8 @@ const dbquery = {
       // to be used to perform specific javascript functions
       similar: "findSimilar" // let's let javascript handle getting the params
     },
-    origin: "signal"
+    origin: "signal",
+    parent: "signalcategoryid"
   },
   signalbytype: {
     query:
@@ -125,7 +126,8 @@ const dbquery = {
       // to be used to perform specific javascript functions
       similar: "findSimilar" // let's let javascript handle getting the params
     },
-    origin: "signal"
+    origin: "signal",
+    parent: "signaltypeid"
   },
   filter: {
     query:
@@ -242,7 +244,7 @@ const dbquery = {
   update_signal: {
     query:
       "update signal set signal=:signal, score=:score, \
-      signalcategoryid=:signalcategoryid, enabled=:enabled, cookieid=:cookieid, \
+      signalcategoryid=:signalcategoryid, cookieid=:cookieid, \
       signaltypeid=:signaltypeid where id=:id and cookieid=:cookieid",
     require_cookie: true,
     aliases: {}
