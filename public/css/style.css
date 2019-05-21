@@ -468,6 +468,21 @@ span.query-text {
   width: 22px;
   height: 22px;
   place-self: end;
+  color: gray;
+  background-color: rgba(0, 0, 0, 0);
+  border: none;
+}
+
+.edit-row .action-cell .btn-danger:hover {
+  background-color: #dc3545;
+  border: 1px solid #dc3545;
+  color: white;
+}
+
+.edit-row .action-cell .btn-warning:hover {
+  background-color: #ffc107;
+  border: 1px solid #ffc107;
+  color: white;
 }
 
 #start-add-row td {

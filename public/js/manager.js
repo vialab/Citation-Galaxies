@@ -126,7 +126,7 @@ function loadTable(
           );
         }
       }
-      console.log(new_load);
+
       if (new_load) {
         last_load = {
           table_name: table_name,
@@ -488,7 +488,10 @@ function reloadTable() {
 
 // delete a row
 function deleteRow(id) {
-  console.log(id);
+  if ($("#id_" + id + "_edited").hasClass("editing")) {
+    deselectCrudRows();
+    return;
+  }
   $.ajax({
     type: "POST",
     url: currentURL + "api/delete",
