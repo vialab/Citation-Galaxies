@@ -211,11 +211,14 @@
         </div>
       </div>
       <div class="tab-pane fade" id="pills-admin" role="tabpanel" aria-labelledby="pills-admin-tab">
-        <div class="">
-          <button type="button" class="btn btn-secondary" onclick="loadTable('signalcategory', undefined, true, transformCategoryData)">Categories</button>
-          <button type="button" class="btn btn-secondary" onclick="loadTable('signal', undefined, true, transformSignalData)">Signals</button>
+        <div class="btn-group" role="group" style="float: right;">
+          <button type="button" class="btn btn-outline-secondary" onclick="loadTable('signalcategory', undefined, true, transformCategoryData)">Categories</button>
+          <button type="button" class="btn btn-outline-secondary" onclick="loadTable('signal', undefined, true, transformSignalData)">Signals</button>
         </div>
-        <br />
+        <div style="clear:both;">
+          <h4 id="last-table-title" onclick="loadPreviousTable();"></h4>
+          <h2 id="rule-table-title"></h2>
+        </div>
         <!-- Table for the results -->
         <div class="">
           <table class="table" id="ruleTable">

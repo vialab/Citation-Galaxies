@@ -57,7 +57,8 @@ function loadTable(
   table_name,
   params,
   draw_table = true,
-  callback = undefined
+  callback = undefined,
+  new_load = true
 ) {
   if (typeof params == "string") params = JSON.parse(params);
   loadData(
@@ -68,6 +69,7 @@ function loadTable(
         clearCrudTable();
         loaded_table = table_name;
         loaded_parent = parent;
+        $("#rule-table-title").html(getTableTitle(table_name));
         let external_data = {};
         // load any external data requirements for aliases
         if (
@@ -124,14 +126,25 @@ function loadTable(
           );
         }
       }
-
-      last_load = {
-        table_name: table_name,
-        params: params,
-        draw_table: draw_table,
-        callback: callback,
-        timestamp: new Date().getTime()
-      };
+      console.log(new_load);
+      if (new_load) {
+        last_load = {
+          table_name: table_name,
+          params: params,
+          draw_table: draw_table,
+          callback: callback,
+          timestamp: new Date().getTime(),
+          title: getTableTitle(table_name),
+          root: last_load
+        };
+      } else {
+        last_load = last_load.root;
+      }
+      if (Object.entries(last_load.root).length > 0) {
+        $("#last-table-title").html("< " + last_load.root.title);
+      } else {
+        $("#last-table-title").html("");
+      }
     },
     params
   );
@@ -285,6 +298,7 @@ function showAddRow() {
 // create a single row marked up for our edit table
 function drawTableRow(headers, signal, signalID, aliases) {
   let row = $("<tr id='" + signalID + "' class='edit-row'></tr>");
+  if (signalID == "add-new-row") row.addClass("add-row");
   // For each entry in the json
   for (let i = 1; i < headers.length; i++) {
     let html = "<td id='" + headers[i] + "' class='edit-cell";
@@ -445,6 +459,21 @@ function editCrudRow(event) {
     }
     // Focus on the clicked element
     $(event.target).focus();
+  }
+}
+
+function loadPreviousTable() {
+  if (
+    last_load.root !== undefined &&
+    Object.entries(last_load.root).length > 0
+  ) {
+    loadTable(
+      last_load.root.table_name,
+      last_load.root.params,
+      last_load.root.draw_table,
+      last_load.root.callback,
+      false
+    );
   }
 }
 
@@ -638,7 +667,8 @@ function sortRows(elem) {
 function sortTableByColumn(table, column, order) {
   let asc = order === "asc",
     tbody = table.find("tbody"),
-    $addrow = $("#start-add-row").remove();
+    $startrow = $("#start-add-row").remove(),
+    $addrow = $(".add-row").remove();
   type = $("th#" + column).data("type");
   tbody
     .find("tr")
@@ -661,4 +691,29 @@ function sortTableByColumn(table, column, order) {
     })
     .appendTo(tbody);
   $addrow.appendTo(tbody);
+  $startrow.appendTo(tbody);
+}
+
+function getTableTitle(tableName) {
+  switch (tableName) {
+    case "signalcategory":
+      return "Categories";
+      break;
+    case "signalbycategory":
+      return sentiment_categories[loaded_parent.id].name + " Signals";
+      break;
+    case "filter":
+      return 'Filters for "' + sentiment_signals[loaded_parent.id].signal + '"';
+      break;
+    case "restriction":
+      return (
+        'Restrictions for "' + sentiment_signals[loaded_parent.id].signal + '"'
+      );
+      break;
+    case "signal":
+      return "All Rules";
+      break;
+    default:
+      break;
+  }
 }
