@@ -133,15 +133,20 @@ def do_process_rules():
                 y_data = processed[key][year]
                 cat_id = signals[key]["category"]
                 if year not in ui:
-                    ui[year] = {"total_value": [0] *
-                                int(100 / increment), "max_value": 0}
+                    ui[year] = {
+                        "total_value": [0] * int(100 / increment), "max_value": 0
+                    }
+
                 if cat_id not in ui[year]:
                     ui[year][cat_id] = {"value": [0] * int(100 / increment)}
+
                 if y_data["max"] > ui[year]["max_value"]:
                     ui[year]["max_value"] = y_data["max"]
+
                 for i in y_data["content"]:
                     ui[year][cat_id]["value"][int(i)] += y_data["content"][i]
                     ui[year]["total_value"][int(i)] += y_data["content"][i]
+
         payload = dumps({"front_data": ui, "signal_scores": agg.p})
         encoded = base64.b64encode(payload.encode()).decode("utf-8")
         run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(
@@ -168,33 +173,30 @@ def do_query():
         # we have made this query before!
         payload = base64.b64decode(cache["querydata"].values[0])
     else:
-        sql = main_query
-        df = run_query(sql, data=(query,))
-        df["id"] = np.arange(df.shape[0])
-
-        df["leftdist"] = df["wordsentence"] - df["citationsentence"]
-        df["rightdist"] = df["citationsentence"] - df["wordsentence"]
-        df = df.query("(leftdist >= 0 and leftdist <= " + str(left_bound)
-                      + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
-        sorted = agg.aggregate_years(df[["articleyear", "percent"]])
-        payload = dumps({"agg": sorted, "nunique": df["id"].unique().tolist()})
-        encoded = base64.b64encode(payload.encode()).decode("utf-8")
+        if query == "":
+            distribution = citations[[
+                "articleyear", "percent", "articleid"]].copy(deep=True)
+            agg = Aggregator(increment)
+            sorted = agg.aggregate_years(distribution)
+            payload = dumps(
+                {"agg": sorted, "nunique": citations["id"].unique().tolist()})
+            encoded = base64.b64encode(payload.encode()).decode("utf-8")
+        else:
+            sql = main_query
+            df = run_query(sql, data=(query, all_years))
+            df["id"] = np.arange(df.shape[0])
+            df["leftdist"] = df["wordsentence"] - df["citationsentence"]
+            df["rightdist"] = df["citationsentence"] - df["wordsentence"]
+            df = df.query("(leftdist >= 0 and leftdist <= " + str(left_bound)
+                          + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
+            sorted = agg.aggregate_years(
+                df[["articleyear", "percent", "articleid"]])
+            payload = dumps(
+                {"agg": sorted, "nunique": df["id"].unique().tolist()})
+            encoded = base64.b64encode(payload.encode()).decode("utf-8")
         run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(
             ruleHash, encoded))
     return payload
-
-
-@route("/count", method=["POST"])
-@enable_cors
-def do_count():
-    data = loads(request.body.read())
-    increment = int(data["increment"])
-    bins, labels = get_bins(increment)
-
-    distribution = citations[["articleyear", "percent"]].copy(deep=True)
-    agg = Aggregator(increment)
-    sorted = agg.aggregate_years(distribution)
-    return dumps({"agg": sorted, "nunique": citations["id"].unique().tolist()})
 
 
 @route("/papers", method=["POST"])
@@ -445,7 +447,7 @@ def get_bins(increment):
 
 
 class Aggregator():
-    def __init__(self, _increment):
+    def __init__(self, _increment, ):
         self.increment = _increment
         self.p = {}
 
@@ -482,19 +484,37 @@ class Aggregator():
         distribution["bin"] = pd.cut(
             distribution["percent"], bins=bins, labels=labels)
         distribution = distribution.groupby(
-            ["articleyear", "bin"]).size().reset_index(name="refcount")
+            ["articleyear", "bin"], as_index=False).agg({
+                "articleid": ["size", "nunique"]
+            })
+        distribution.columns = list(map("_".join, distribution.columns.values))
         # distribution.fillna(0, inplace=True)
         distribution = distribution.to_dict(orient="records")
         sorted = {}
         for row in distribution:
-            year = str(row["articleyear"])
+            year = str(row["articleyear_"])
             if year not in sorted:
-                sorted[year] = {"content": {}, "max": 0, "total": 0}
-            x = row["refcount"]
-            sorted[year]["content"][row["bin"]] = x
+                sorted[year] = {
+                    "content": {},
+                    "max": 0,
+                    "total": 0,
+                    "papers": {
+                        "content": {},
+                        "max": 0,
+                        "total": 0
+                    }}
+
+            x = row["articleid_size"]
+            sorted[year]["content"][row["bin_"]] = x
             sorted[year]["total"] += x
             if x > sorted[year]["max"]:
                 sorted[year]["max"] = x
+
+            y = row["articleid_nunique"]
+            sorted[year]["papers"]["content"][row["bin_"]] = y
+            sorted[year]["papers"]["total"] += y
+            if y > sorted[year]["papers"]["max"]:
+                sorted[year]["papers"]["max"] = y
         return sorted
 
 
@@ -506,10 +526,10 @@ citations["id"] = np.arange(citations.shape[0])
 # citations = pd.read_csv("./model/citations.csv", encoding="utf-8")
 # articles = pd.read_csv("./model/articles.csv", encoding="utf-8")
 # articles.rename(columns={ "id": "articleid" }, inplace=True)
-articles = run_query(
-    "select id as articleid, journaltitle, journalid from article")
-citations = citations.merge(
-    articles[["articleid", "journaltitle", "journalid"]], on="articleid", how="left")
+# articles = run_query(
+#     "select id as articleid, journaltitle, journalid from article")
+# citations = citations.merge(
+#     articles[["articleid", "journaltitle", "journalid"]], on="articleid", how="left")
 # citations["percent"] = (((citations["startlocationpaper"]+citations["endlocationpaper"])/2)/citations["charcount"])*100
 # citations.to_csv("./model/citation_context.csv", encoding="utf-8")
 # citations.to_pickle("./model/citation_context2.pkl")
@@ -532,6 +552,7 @@ main_query = """
     group by wordSentence, citationSentence, articleyear, articleid, percent
     order by articleyear
     """
+all_years = citations["articleyear"].unique().tolist()
 # ix = open_dir(dirname="./model/index")
 # searcher = ix.searcher()
 # qp = QueryParser("content", schema=ix.schema)
