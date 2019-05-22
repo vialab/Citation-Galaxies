@@ -410,6 +410,7 @@ function processAllSignals() {
         "Distribution can now be viewed by sentiment."
       );
       $("#changeLabelItem2").removeClass("disabled");
+      $("#downloadDataButton").removeAttr("disabled");
       createVisualization(transformScores());
     },
     error: function(err) {

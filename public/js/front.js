@@ -101,15 +101,19 @@ function normalizationChange(value) {
   let all_max = 0;
   // get the max across all data
   Object.keys(front_data).forEach(year => {
-    if (front_data[year]["max"] > all_max) {
-      all_max = front_data[year]["max"];
+    let d = front_data[year];
+    if (currentLabel == 1) d = front_data[year]["papers"];
+    if (d["max"] > all_max) {
+      all_max = d["max"];
     }
   });
   // draw the squares with the respective box/text color
   Object.keys(front_data).forEach(year => {
-    let max = front_data[year]["max"];
-    Object.keys(front_data[year]["content"]).forEach(box_id => {
-      let freq = front_data[year]["content"][box_id];
+    let d = front_data[year];
+    if (currentLabel == 1) d = front_data[year]["papers"];
+    let max = d["max"];
+    Object.keys(d["content"]).forEach(box_id => {
+      let freq = d["content"][box_id];
       // Used to change the text color if the background is too dark
       let group = d3.select("#box-group-" + year + "-" + box_id);
       let rect = group.select(".minsqr");
@@ -223,6 +227,15 @@ function changeLabel(choice) {
   //Based on a int in the label's id, make one label white (or grey) and make the other transparent
   //Change the old label to be invisible, show the new one
   // sentiment
+  //Change the active label
+  for (var i = 0; i < maxLabels + 1; i++) {
+    if (i != choice) {
+      d3.select("#changeLabelItem" + i.toString()).classed("active", false);
+    } else {
+      d3.select("#changeLabelItem" + i.toString()).classed("active", true);
+    }
+  }
+
   if (choice == 2) {
     Object.keys(score_data).forEach(year => {
       drawSentimentColumn(year);
@@ -230,44 +243,15 @@ function changeLabel(choice) {
     $(".sentiment").show();
     overlay_sentiment = true;
     return;
-  } else {
-    overlay_sentiment = false;
-    $(".sentiment").hide();
-    return;
-  }
-  currentLabel = choice;
-  //Clear the paper glyph and recalculate the lines
-  $(svgContainers[0].node()).empty();
-  paperGlyphLines = [];
-  lineColors = [];
-  drawFirstColumn(
-    110,
-    (100 / currIncrement) * 16,
-    80,
-    svgContainers[0],
-    100 / currIncrement
-  );
-  for (var i = 0; i < years.length; i++) {
-    if (filteredYearCounts[years[i]["articleyear"]] != undefined) {
-      $(svgContainers[i + 1].node()).empty();
-      drawColumn(
-        years[i]["articleyear"],
-        80,
-        64,
-        currBoxHeight,
-        svgContainers[i + 1]
-      );
-    }
   }
 
-  //Change the active label
-  for (var i = 0; i < maxLabels; i++) {
-    if (i != currentLabel) {
-      d3.select("#changeLabelItem" + i.toString()).classed("active", false);
-    } else {
-      d3.select("#changeLabelItem" + i.toString()).classed("active", true);
-    }
-  }
+  overlay_sentiment = false;
+  $(".sentiment").hide();
+
+  if (choice == 1) if (currentLabel == choice) return;
+  currentLabel = choice;
+  prepContainers(currIncrement);
+  drawAllYears();
 }
 
 //Draws the first column (the paper on the home screen)
@@ -867,7 +851,7 @@ function getYears() {
     success: function(data) {
       years = data;
       prepContainers(currIncrement);
-      getAllYears(true);
+      getFilteredYears("", true, undefined, false, true);
     },
     async: true
   });
@@ -1176,27 +1160,14 @@ function drawHome(increment) {
 
 // Remake of previous filterYearResults
 // This now uses a mini server which retains the data in RAM for processing
-function getAllYears(draw = false, callback) {
-  $("#changeLabelItem2").addClass("disabled");
-  $.ajax({
-    type: "POST",
-    url: processURL + "count",
-    data: JSON.stringify({increment: currIncrement}),
-    success: function(results) {
-      let data = JSON.parse(results);
-      loaded_articles = data["nunique"];
-      if (draw) {
-        drawAllYears(data["agg"]);
-        loadCategories(function() {
-          loadSignals(processAllSignals);
-        });
-      }
-      if (typeof callback !== "undefined") callback(data["agg"]);
-    }
-  });
-}
-
-function getFilteredYears(word, draw = false, callback) {
+function getFilteredYears(
+  word,
+  draw = false,
+  callback = undefined,
+  process_signals = true,
+  load_signals = false
+) {
+  $("#downloadDataButton").attr("disabled", true);
   $("#changeLabelItem2").addClass("disabled");
   $.ajax({
     type: "POST",
@@ -1212,7 +1183,12 @@ function getFilteredYears(word, draw = false, callback) {
       loaded_articles = data["nunique"];
       if (draw) {
         drawAllYears(data["agg"]);
-        processAllSignals();
+        if (process_signals) processAllSignals();
+        if (load_signals) {
+          loadCategories(function() {
+            loadSignals(processAllSignals);
+          });
+        }
       }
       if (typeof callback !== "undefined") callback(data["agg"]);
     }
@@ -1220,7 +1196,7 @@ function getFilteredYears(word, draw = false, callback) {
 }
 
 // Draw all of the boxes in the prepared containers all at once using new database
-function drawAllYears(data) {
+function drawAllYears(data = front_data) {
   // save the drawn data for later
   front_data = data;
   d3.select("#clearAllButton").classed("disabled", false);
@@ -1231,10 +1207,12 @@ function drawAllYears(data) {
   $(".year-container").hide();
   let all_max = 0;
   Object.keys(data).forEach(year => {
-    let max = data[year]["max"];
+    let d = data[year];
+    if (currentLabel == 1) d = data[year]["papers"];
+    let max = d["max"];
     let total = 0;
-    Object.keys(data[year]["content"]).forEach(box_id => {
-      let freq = data[year]["content"][box_id];
+    Object.keys(d["content"]).forEach(box_id => {
+      let freq = d["content"][box_id];
       total += freq;
       // Used to change the text color if the background is too dark
       let group = d3.select("#box-group-" + year + "-" + box_id);
@@ -1324,7 +1302,7 @@ function toast(title, text) {
 function searchForQuery(query) {
   prepContainers(currIncrement);
   if (query == "") {
-    getAllYears(true);
+    getFilteredYears("", true, undefined, false, true);
     return;
   }
   query = query.replace(/[^a-zA-Z ]/g, "").split(" ");
@@ -1364,6 +1342,71 @@ function setDivider(pageX) {
   offset = $(window).width() - pageX - 15;
   $("#papers-container").width(offset);
   $("#sortOptions").width(offset);
+}
+
+// zip together front_data with score_data and generate a csv string
+function getCSVData() {
+  let keys = Object.keys(front_data);
+  if (!(keys.length > 0 && Object.keys(score_data).length == keys.length)) {
+    return;
+  }
+  let csv = "year,start,end,freq"; // fill in header row
+  // have each category as sepearte column
+  for (let cat in sentiment_categories) {
+    csv += "," + escape(sentiment_categories[cat].name) + "_" + cat;
+  }
+  csv += "\r\n"; // new line
+  // now iterate through each year
+  for (let key of keys) {
+    let start = 0;
+    // for each year, iterate through increments (start + (i * currIncrement))
+    let d = front_data[key];
+    if (currentLabel == 1) d = front_data[key]["papers"];
+    for (let i in d.content) {
+      let end = start + currIncrement;
+      // fill in the columns, first with front_data, then each cat freq
+      csv += key + "," + start + "," + end + "," + d.content[i];
+      for (let cat in sentiment_categories) {
+        csv += ",";
+        if (score_data[key][cat]) csv += score_data[key][cat].value[i];
+      }
+      csv += "\r\n"; // new line
+      start = end; // start next increment at end of last
+    }
+  }
+  return csv;
+}
+
+function DateString(d) {
+  function pad(n) {
+    return n < 10 ? "0" + n : n;
+  }
+  return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate());
+}
+
+function exportCSVFile() {
+  var csv = getCSVData();
+  let fileTitle = "citations_" + DateString(new Date());
+  var exportedFilenmae = fileTitle + ".csv" || "export.csv";
+
+  var blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+  if (navigator.msSaveBlob) {
+    // IE 10+
+    navigator.msSaveBlob(blob, exportedFilenmae);
+  } else {
+    var link = document.createElement("a");
+    if (link.download !== undefined) {
+      // feature detection
+      // Browsers that support HTML5 download attribute
+      var url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", exportedFilenmae);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  }
 }
 
 $(document).ready(function() {
