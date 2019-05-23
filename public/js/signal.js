@@ -161,7 +161,9 @@ function drawSentimentColumn(year) {
       box_height = $box.height(),
       svgContainer = d3.select("#svg-" + year),
       x_offset = 0,
-      total_val = score_data[year]["total_value"][i];
+      d = score_data[year];
+    if (currentLabel == 1) d = score_data[year]["papers"];
+    let total_val = d["total_value"][i];
     // no sentiment? Make it a completely neutral square
     if (total_val == 0) {
       // obviously this is temporary.. should be a default set by user (if any)
@@ -179,12 +181,10 @@ function drawSentimentColumn(year) {
     // for each of the categories listed by user
     for (let cat of cat_list) {
       // draw a proportional square for this category/square
-      if (!score_data[year][cat]) continue;
-      let cat_width =
-        (score_data[year][cat]["value"][i] / total_val) * box_width;
+      if (!d[cat]) continue;
+      let cat_width = (d[cat]["value"][i] / total_val) * box_width;
       x_offset += cat_width;
-      let ratio =
-        score_data[year][cat]["value"][i] / score_data[year]["max_value"];
+      let ratio = d[cat]["value"][i] / d["max_value"];
       svgContainer
         .append("rect")
         .attr("width", cat_width)

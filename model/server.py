@@ -132,13 +132,16 @@ def do_process_rules():
             for year in processed[key]:
                 y_data = processed[key][year]
                 cat_id = signals[key]["category"]
+                bins = int(100 / increment)
                 if year not in ui:
                     ui[year] = {
-                        "total_value": [0] * int(100 / increment), "max_value": 0
+                        "total_value": [0] * bins, "max_value": 0,
+                        "papers": {"total_value": [0] * bins, "max_value": 0}
                     }
 
                 if cat_id not in ui[year]:
-                    ui[year][cat_id] = {"value": [0] * int(100 / increment)}
+                    ui[year][cat_id] = {"value": [0] * bins}
+                    ui[year]["papers"][cat_id] = {"value": [0] * bins}
 
                 if y_data["max"] > ui[year]["max_value"]:
                     ui[year]["max_value"] = y_data["max"]
@@ -146,6 +149,15 @@ def do_process_rules():
                 for i in y_data["content"]:
                     ui[year][cat_id]["value"][int(i)] += y_data["content"][i]
                     ui[year]["total_value"][int(i)] += y_data["content"][i]
+
+                if y_data["papers"]["max"] > ui[year]["papers"]["max_value"]:
+                    ui[year]["papers"]["max_value"] = y_data["papers"]["max"]
+
+                for x in y_data["papers"]["content"]:
+                    ui[year]["papers"][cat_id]["value"][int(
+                        i)] += y_data["content"][i]
+                    ui[year]["papers"]["total_value"][int(
+                        i)] += y_data["content"][i]
 
         payload = dumps({"front_data": ui, "signal_scores": agg.p})
         encoded = base64.b64encode(payload.encode()).decode("utf-8")
