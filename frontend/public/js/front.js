@@ -1179,7 +1179,7 @@ function getFilteredYears(
       rangeRight: sentenceRangeBelow
     }),
     success: function(results) {
-      let data = JSON.parse(results);
+      let data = results;
       loaded_articles = data["nunique"];
       if (draw) {
         drawAllYears(data["agg"]);

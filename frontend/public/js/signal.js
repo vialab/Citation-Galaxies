@@ -399,7 +399,7 @@ function processAllSignals() {
       query: currSearchQuery
     }),
     success: function(results) {
-      let data = JSON.parse(results);
+      let data = results;
       score_data = data["front_data"];
       signal_scores = data["signal_scores"];
       Object.keys(score_data).forEach(year => {

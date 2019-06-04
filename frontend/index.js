@@ -7,16 +7,11 @@ var crypto = require("crypto");
 var master_cookie = "196d2081988549fb86f38cf1944e79a9";
 var app = express();
 var dbschema = require("./dbschema.js");
+var config = require("./config.js");
 var fs = require("fs");
 var named = require("yesql").pg;
 const {exec} = require("child_process");
-const pool = new pg.Pool({
-  user: process.env.USER,
-  host: process.env.HOST,
-  database: process.env.DATABASE,
-  password: process.env.PASSWORD,
-  port: process.env.PORT
-});
+const pool = new pg.Pool(config.env);
 
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
