@@ -1,5 +1,6 @@
 var express = require("express");
 var cookieParser = require("cookie-parser");
+var url = require("url");
 const pg = require("pg");
 var bodyParser = require("body-parser");
 var path = require("path");
@@ -11,7 +12,8 @@ var config = require("./config.js");
 var fs = require("fs");
 var named = require("yesql").pg;
 const {exec} = require("child_process");
-const pool = new pg.Pool(config.env);
+const DATABASE_URL = url.parse(process.env.DATABASE_URL);
+const pool = new pg.Pool(config.urlparse(DATABASE_URL));
 
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());

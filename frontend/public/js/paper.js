@@ -442,7 +442,7 @@ function drawPapers(signal_id, signal_cat_id) {
       url: processURL + "papers",
       data: JSON.stringify(values),
       success: function(data) {
-        paper_data = JSON.parse(data);
+        paper_data = data;
         drawPapersByIndex(paper_data);
       },
       async: true,
@@ -611,7 +611,7 @@ function loadMorePapers(elem) {
         signals: {}
       }),
       success: function(data) {
-        let extra_papers = JSON.parse(data);
+        let extra_papers = data;
         paper_data["papers"] = $.extend(
           paper_data["papers"],
           extra_papers["papers"]
@@ -1085,7 +1085,7 @@ function getPopoverContent(articleid) {
     type: "GET",
     url: processURL + "paper?id=" + articleid,
     success: function(results) {
-      let data = JSON.parse(results);
+      let data = results;
       let $modal = $("#generic-modal");
       $modal.addClass("full-screen");
       $(".modal-title", $modal).html("");
