@@ -1,12 +1,14 @@
 start_server.sh
 **/.DS_Store
 node_modules
-model/venv
-model/vectors
-model/index
+backend/venv
+backend/vectors
+backend/index
 database.ini
+config.js
 citations.csv
 citation_percent.csv
 articles.csv
 citations.pkl
 citation_context.pkl
+*.pkl

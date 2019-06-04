@@ -2,46 +2,41 @@ import psycopg2
 import pandas as pd
 import pandas.io.sql as sqlio
 import numpy as np
-import bottle
 import base64
 from sqlalchemy import text
 from base64 import b64decode
 from json import loads, dumps
-from whoosh.index import open_dir
-from whoosh.fields import Schema, TEXT, ID
-from whoosh.qparser import QueryParser
-from bottle import route, run, request, response
+# from bottle import route, run, request, response
+from flask import *
+from flask_cors import CORS
 from gensim.models import Word2Vec
 from configparser import ConfigParser
+# from whoosh.index import open_dir
+# from whoosh.fields import Schema, TEXT, ID
+# from whoosh.qparser import QueryParser
 
-# the decorator
-
-
-def enable_cors(fn):
-    def _enable_cors(*args, **kwargs):
-        # set CORS headers
-        response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Origin, Accept, Content-Type, X-Requested-With, X-CSRF-Token'
-
-        if bottle.request.method != 'OPTIONS':
-            # actual request; reply with the actual response
-            return fn(*args, **kwargs)
-    return _enable_cors
+app = Flask(__name__)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 def get_model():
-    model = Word2Vec.load("./model/vectors/word2vec.model")
+    model = Word2Vec.load("./vectors/word2vec.model")
     return model
 
 
-@route("/similar", method="GET")
-@enable_cors
+@app.route("/test", methods=["GET"])
+def do_test():
+
+    return dumps({})
+
+
+@app.route("/similar", methods=["GET"])
 def do_similarity():
     n = 10
-    if "n" in request.query:
-        n = request.query["n"]
-    word_list = w2v.wv.most_similar(request.query["word"], topn=n)
+    if "n" in request.args:
+        n = request.args["n"]
+    word_list = w2v.wv.most_similar(request.args["word"], topn=n)
     if word_list is None:
         word_list = []
     results = []
@@ -50,18 +45,17 @@ def do_similarity():
         temp["word"] = word[0]
         temp["score"] = str(word[1])
         results.append(temp)
-    response.content_type = "application/json"
-    return dumps(results)
+
+    return jsonify(dumps(results))
 
 
-@route("/predict", method="GET")
-@enable_cors
+@app.route("/predict", methods=["GET"])
 def do_related():
     n = 10
-    if "n" in request.query:
-        n = request.query["n"]
+    if "n" in request.args:
+        n = request.args["n"]
     word_list = w2v.predict_output_word(
-        request.query["context"].split(","), topn=n)
+        request.args["context"].split(","), topn=n)
     if word_list is None:
         return dumps({})
     results = []
@@ -70,17 +64,16 @@ def do_related():
         temp["word"] = word[0]
         temp["score"] = str(word[1])
         results.append(temp)
-    response.content_type = "application/json"
-    return dumps(results)
+
+    return jsonify(dumps(results))
 
 
-@route("/search", method="GET")
-@enable_cors
+@app.route("/search", methods=["GET"])
 def do_search():
     # data = request.json
     # regex pattern: \bword1\W+(?:\w+\W+){0,2}?word2\b | need reverse words too
     # matches word1 near word2 with at most two words between them
-    data = request.query
+    data = request.args
     q = qp.parse(data["word"])
     results = []
     with ix.searcher() as searcher:
@@ -91,14 +84,13 @@ def do_search():
         for hit in hits:
             h = dict(hit)
             results.append({"0id": h["id"]})
-        response.content_type = "application/json"
-    return dumps(results)
+
+    return jsonify(dumps(results))
 
 
-@route("/process/signals", method="POST")
-@enable_cors
+@app.route("/process/signals", methods=["POST"])
 def do_process_rules():
-    data = loads(request.body.read())
+    data = request.get_json(force=True, silent=True)
     signals = data["signals"]
     query = data["query"]
     increment = data["increment"]
@@ -111,7 +103,7 @@ def do_process_rules():
     cache = run_query(
         "select querydata from querycache where queryid=%s", data=(ruleHash,))
     if cache.shape[0] > 0:
-        payload = base64.b64decode(cache["querydata"].values[0])
+        payload = loads(base64.b64decode(cache["querydata"].values[0]))
     else:
         if len(loaded) > 0:
             df = citations[citations["id"].isin(loaded)]
@@ -159,17 +151,16 @@ def do_process_rules():
                     ui[year]["papers"]["total_value"][int(
                         i)] += y_data["content"][i]
 
-        payload = dumps({"front_data": ui, "signal_scores": agg.p})
-        encoded = base64.b64encode(payload.encode()).decode("utf-8")
+        payload = {"front_data": ui, "signal_scores": agg.p}
+        encoded = base64.b64encode(dumps(payload).encode()).decode("utf-8")
         run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(
             ruleHash, encoded))
-    return payload
+    return jsonify(payload)
 
 
-@route("/query", method=["POST"])
-@enable_cors
+@app.route("/query", methods=["POST"])
 def do_query():
-    data = loads(request.body.read())
+    data = request.get_json(force=True, silent=True)
     query = data["query"]
     increment = data["increment"]
     agg = Aggregator(increment)
@@ -183,16 +174,16 @@ def do_query():
         "select querydata from querycache where queryid=%s", data=(ruleHash,))
     if cache.shape[0] > 0:
         # we have made this query before!
-        payload = base64.b64decode(cache["querydata"].values[0])
+        payload = loads(base64.b64decode(cache["querydata"].values[0]))
     else:
         if query == "":
             distribution = citations[[
                 "articleyear", "percent", "articleid"]].copy(deep=True)
             agg = Aggregator(increment)
             sorted = agg.aggregate_years(distribution)
-            payload = dumps(
-                {"agg": sorted, "nunique": citations["id"].unique().tolist()})
-            encoded = base64.b64encode(payload.encode()).decode("utf-8")
+            payload = {"agg": sorted,
+                       "nunique": citations["id"].unique().tolist()}
+            encoded = base64.b64encode(dumps(payload).encode()).decode("utf-8")
         else:
             sql = main_query
             df = run_query(sql, data=(query, all_years))
@@ -203,18 +194,16 @@ def do_query():
                           + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
             sorted = agg.aggregate_years(
                 df[["articleyear", "percent", "articleid"]])
-            payload = dumps(
-                {"agg": sorted, "nunique": df["id"].unique().tolist()})
-            encoded = base64.b64encode(payload.encode()).decode("utf-8")
+            payload = {"agg": sorted, "nunique": df["id"].unique().tolist()}
+            encoded = base64.b64encode(dumps(payload).encode()).decode("utf-8")
         run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(
             ruleHash, encoded))
-    return payload
+    return jsonify(payload)
 
 
-@route("/papers", method=["POST"])
-@enable_cors
+@app.route("/papers", methods=["POST"])
 def do_papers():
-    data = loads(request.body.read())
+    data = request.get_json(force=True, silent=True)
     query = data["query"]
     signals = data["signals"]
     # now create a pandas query based off of the ranges
@@ -300,13 +289,12 @@ def do_papers():
         sorted_articles[articleid]["content"][row["bin"]] = x
         if x > sorted_articles[articleid]["max"]:
             sorted_articles[articleid]["max"] = x
-    return dumps({"max": max, "papers": sorted_articles, "years": years, "journals": journals})
+    return jsonify(dumps({"max": max, "papers": sorted_articles, "years": years, "journals": journals}))
 
 
-@route("/paper", method="GET")
-@enable_cors
+@app.route("/paper", methods=["GET"])
 def do_paper():
-    article_id = request.query["id"]
+    article_id = request.args["id"]
     df = citations[citations["articleid"] == article_id]
     query = """select distinct id
         , startlocationpaper
@@ -355,11 +343,11 @@ def do_paper():
         paragraphs.append(temp)
     del df_text["papertext"]  # don't send the whole text over
     df_text["paragraphs"] = paragraphs
-    return dumps(df_text)
+    return jsonify(dumps(df_text))
 
 
 # support postgres database stuff
-def config(filename='./model/database.ini', section='postgresql'):
+def config(filename='./database.ini', section='postgresql'):
     # create a parser
     parser = ConfigParser()
     # read config file
@@ -530,22 +518,19 @@ class Aggregator():
         return sorted
 
 
+# load the connection to the db
 conn = connect()
+# load the word2vec model
+w2v = get_model()
 # citations = pd.read_csv("./model/citation_percent.csv", encoding="utf-8")
-citations = pd.read_pickle("./model/citation_context.pkl")
+citations = pd.read_pickle("./citations_optimized.pkl")
 citations["id"] = np.arange(citations.shape[0])
 # citations.rename(columns={"Unnamed: 0":"id"}, inplace=True)
-# citations = pd.read_csv("./model/citations.csv", encoding="utf-8")
-# articles = pd.read_csv("./model/articles.csv", encoding="utf-8")
+# citations = pd.read_csv("./citations.csv", encoding="utf-8")
+# articles = pd.read_csv("./articles.csv", encoding="utf-8")
 # articles.rename(columns={ "id": "articleid" }, inplace=True)
-# articles = run_query(
-#     "select id as articleid, journaltitle, journalid from article")
-# citations = citations.merge(
-#     articles[["articleid", "journaltitle", "journalid"]], on="articleid", how="left")
 # citations["percent"] = (((citations["startlocationpaper"]+citations["endlocationpaper"])/2)/citations["charcount"])*100
-# citations.to_csv("./model/citation_context.csv", encoding="utf-8")
-# citations.to_pickle("./model/citation_context2.pkl")
-w2v = get_model()
+
 main_query = """
     select *
     , count(*) as count
@@ -569,4 +554,6 @@ all_years = citations["articleyear"].unique().tolist()
 # searcher = ix.searcher()
 # qp = QueryParser("content", schema=ix.schema)
 
-run(host="localhost", port="5431", debug=True, threaded=True)
+if __name__ == "__main__":
+    sess.init_app(app)
+    app.run(debug=True, threaded=True)
