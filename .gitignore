@@ -12,3 +12,4 @@ articles.csv
 citations.pkl
 citation_context.pkl
 *.pkl
+*.pyc

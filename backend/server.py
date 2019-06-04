@@ -3,6 +3,7 @@ import pandas as pd
 import pandas.io.sql as sqlio
 import numpy as np
 import base64
+import os
 from sqlalchemy import text
 from base64 import b64decode
 from json import loads, dumps
@@ -11,6 +12,7 @@ from flask import *
 from flask_cors import CORS
 from gensim.models import Word2Vec
 from configparser import ConfigParser
+from urllib.parse import urlparse
 # from whoosh.index import open_dir
 # from whoosh.fields import Schema, TEXT, ID
 # from whoosh.qparser import QueryParser
@@ -348,20 +350,31 @@ def do_paper():
 
 # support postgres database stuff
 def config(filename='./database.ini', section='postgresql'):
-    # create a parser
-    parser = ConfigParser()
-    # read config file
-    parser.read(filename)
-
-    # get section, default to postgresql
     db = {}
-    if parser.has_section(section):
-        params = parser.items(section)
-        for param in params:
-            db[param[0]] = param[1]
+    env = os.environ.get("DEPLOY_ENV")
+    if env is not None and env == "PROD":
+        connstr = os.environ.get("DATABASE_URL")
+        if connstr is None:
+            raise Exception("DATABASE_URL was not provided")
+        url =  urlparse(connstr)
+        db["host"] = url.host
+        db["username"] = url.username
+        db["password"] = url.password
+        db["port"] = url.port
+        db["db"] = "citationdb"
     else:
-        raise Exception(
-            'Section {0} not found in the {1} file'.format(section, filename))
+        # create a parser
+        parser = ConfigParser()
+        # read config file
+        parser.read(filename)
+        # get section, default to postgresql
+        if parser.has_section(section):
+            params = parser.items(section)
+            for param in params:
+                db[param[0]] = param[1]
+        else:
+            raise Exception(
+                'Section {0} not found in the {1} file'.format(section, filename))
 
     return db
 
