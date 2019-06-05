@@ -8,3 +8,4 @@ index/
 *.csv
 run.sh
 venv/
+*.pkl
