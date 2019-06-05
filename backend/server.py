@@ -264,9 +264,15 @@ def do_papers():
     # get the size of each bin
     bin_size = df.groupby(["articleid", "bin"]
                           ).size().reset_index(name="binsize")
+    bin_size["bin"] = bin_size["bin"].astype("category")
+    bin_size["articleid"] = bin_size["articleid"].astype("object")
     df = df.merge(bin_size, on=["articleid", "bin"], how="left")
     # save max and list of years and journals for display
-    max = df["binsize"].max().item()
+    max = df["binsize"].max()
+    if np.isnan(max):
+        max = 1
+    else:
+        max = int(max)
     years = sorted(df["articleyear"].unique().tolist())
     journals = {}
     # transform data for consumption
@@ -475,6 +481,7 @@ class Aggregator():
                 self.p[id] += agg[key]["total"]
 
         filtered = None
+        print(signals)
         for fid in signal["filters"]:
             filter = signals[str(fid)]
             new_base = self.aggregate_signals(base, filter, signals)

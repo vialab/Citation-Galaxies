@@ -259,6 +259,11 @@ function getAliasSelect(target, alias, data) {
 }
 
 function bindRowFunctions() {
+  $("input[type='color']").change(function(event) {
+    $(this).attr("value", $(this).val());
+    $(this).parent().css("background-color", $(this).val());
+  });
+
   $(".edit-cell").click(function(event) {
     editCrudRow(event);
   });
@@ -286,10 +291,10 @@ function showAddRow() {
   if ($row.length >= 1 && $row.is(":visible")) {
     $row = $row.clone();
     $row.insertBefore($("#start-add-row"));
-    bindRowFunctions();
   }
   $row.show();
   $row.addClass("showing");
+  bindRowFunctions();
   setTimeout(function() {
     $row.removeClass("showing");
   }, 500);
@@ -314,6 +319,11 @@ function drawTableRow(headers, signal, signalID, aliases) {
       headers[i] == loaded_parent.col
     ) {
       html += "'>" + loaded_parent.id;
+    } else if(headers[i] == "color") {
+      let c = signal[headers[i]] ? signal[headers[i]] : "#FFFFFF";
+      html += "' style='background-color:" + c
+        + ";box-shadow: inset 0 0 0 5px " + c
+        + ";'><input type='color' value='" + c + "'/><label>" + c + "</label>";
     } else if (signal[headers[i]]) {
       html += "'>" + signal[headers[i]];
     } else {
@@ -398,7 +408,12 @@ function deselectCrudRows(update) {
             if (row_element.hasClass("empty")) {
               row_element.text("<empty>");
             } else {
-              row_element.text(row_element_val);
+              if(row_element.attr("id") == "color") {
+                row_element.css("background-color", $("label",row_element).html());
+                $("input[type=color]", row_element).attr("value", $("label",row_element).html());
+              } else {
+                row_element.text(row_element_val);
+              }
             }
           }
           row_element.removeAttr("contenteditable");
@@ -417,6 +432,8 @@ function deselectCrudRows(update) {
 
 // Allow a row to be edited
 function editCrudRow(event) {
+  let $color_picker = $("input[type='color']", event.target);
+  if($color_picker.length > 0) $color_picker[0].click();
   let selected_row = $(event.target).parents(".edit-row");
   let row_elements = selected_row.children();
   // If the row hasn't been selected for editing already
@@ -532,6 +549,9 @@ function insertRow(elem) {
       );
       return false;
     }
+    if(field_name == "color") {
+      val = $("input[type='color']", this).val();
+    }
     // add to our values to update
     if (val == "") values[field_name] = null;
     else values[field_name] = val;
@@ -576,7 +596,9 @@ function updateRow(elem) {
         return false;
       }
     }
-
+    if(field_name == "color") {
+      val = $("input[type='color']", this).val();
+    }
     // add to our values to update
     if (val == "") values[field_name] = null;
     else values[field_name] = val;
@@ -719,4 +741,13 @@ function getTableTitle(tableName) {
     default:
       break;
   }
+}
+
+function rgbToHex(rgb) {
+  rgb = rgb.replace("rgb(", "").replace(")","");
+  let colors = rgb.split(",")
+    , r = colors[0]
+    , g = colors[1]
+    , b = colors[2];
+  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }

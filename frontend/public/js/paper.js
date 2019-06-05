@@ -422,6 +422,7 @@ function drawPapers(signal_id, signal_cat_id) {
     signals: {},
     journalid: ""
   };
+
   // add a set of signals based on their category
   if (typeof signal_cat_id != "undefined") {
     for (let id in sentiment_signals) {
@@ -434,6 +435,12 @@ function drawPapers(signal_id, signal_cat_id) {
     // alternatively, filter by a single signal
     if (typeof signal_id != "undefined") {
       values["signals"][signal_id] = sentiment_signals[signal_id];
+      for(let f of sentiment_signals[signal_id].filters) {
+        values["signals"][f] = sentiment_signals[f];
+      }
+      for(let f of sentiment_signals[signal_id].restrictions) {
+        values["signals"][f] = sentiment_signals[f];
+      }
     }
   }
   paperRequests.push(
@@ -442,7 +449,7 @@ function drawPapers(signal_id, signal_cat_id) {
       url: processURL + "papers",
       data: JSON.stringify(values),
       success: function(data) {
-        paper_data = data;
+        paper_data = JSON.parse(data);
         drawPapersByIndex(paper_data);
       },
       async: true,
@@ -1085,7 +1092,7 @@ function getPopoverContent(articleid) {
     type: "GET",
     url: processURL + "paper?id=" + articleid,
     success: function(results) {
-      let data = results;
+      let data = JSON.parse(results);
       let $modal = $("#generic-modal");
       $modal.addClass("full-screen");
       $(".modal-title", $modal).html("");

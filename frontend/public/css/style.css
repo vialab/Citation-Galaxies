@@ -503,6 +503,9 @@ span.query-text {
 
 #add-new-row,
 .edit-row:not(:hover) .edit-cell {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
   -webkit-transition: all ease 0.5s;
   transition: all ease 0.5s;
 }
@@ -552,6 +555,10 @@ tr.edit-row td:last-child {
 
 .edit-row:not(.editing) .edit-cell.empty {
   color: lightgray;
+}
+
+input[type="color"] {
+  display: none;
 }
 
 g text {

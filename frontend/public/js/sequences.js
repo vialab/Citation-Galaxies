@@ -211,8 +211,12 @@ function arcTweenPath(a, i) {
 }
 
 function click(d) {
-  if (d.data.name == "root") clicked_cat = null;
-  else clicked_cat = d.data.catid;
+  let id = d.data.name;
+  if (id == "root" || !id.includes("cat")) {
+    clicked_cat = null;
+  } else {
+    clicked_cat = id.replace("cat");
+  }
 
   node = d;
   const total = d.x1 - d.x0;
@@ -243,12 +247,12 @@ function click(d) {
     .html(
       "<strong>Please Wait</strong> - the computation might take awhile. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>"
     );
-  if (d.data.name == "root") {
+  if (id == "root") {
     drawPapers();
-  } else if (d.data.name.includes("cat")) {
-    drawPapers(undefined, d.data.catid);
+  } else if (clicked_cat) {
+    drawPapers(undefined, clicked_cat);
   } else {
-    drawPapers(parseInt(d.data.name));
+    drawPapers(parseInt(id));
   }
 }
 
