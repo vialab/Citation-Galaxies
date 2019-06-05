@@ -46,7 +46,7 @@ var yearResults = {}; //Place to store the results from the year
 var yearResultsRequests = []; //Place to store the requests made to the server
 
 var currentURL = "http://localhost:5432/"; //The url to access the backend
-var processURL = "http://localhost:5431/"; //The url to access the backend
+var processURL = "http://localhost:5000/"; //The url to access the backend
 
 var currSearchQuery = ""; //The current search query
 var loaded_articles = [];

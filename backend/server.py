@@ -4,6 +4,8 @@ import pandas.io.sql as sqlio
 import numpy as np
 import base64
 import os
+import gzip
+import pickle as pkl
 from sqlalchemy import text
 from base64 import b64decode
 from json import loads, dumps
@@ -12,7 +14,7 @@ from flask import *
 from flask_cors import CORS
 from gensim.models import Word2Vec
 from configparser import ConfigParser
-from urllib.parse import urlparse
+from urllib.parse import urlparse,urlsplit
 # from whoosh.index import open_dir
 # from whoosh.fields import Schema, TEXT, ID
 # from whoosh.qparser import QueryParser
@@ -47,7 +49,6 @@ def do_similarity():
         temp["word"] = word[0]
         temp["score"] = str(word[1])
         results.append(temp)
-
     return jsonify(dumps(results))
 
 
@@ -358,16 +359,16 @@ def do_paper():
 def config(filename='./database.ini', section='postgresql'):
     db = {}
     env = os.environ.get("DEPLOY_ENV")
-    if env is not None and env == "PROD":
-        connstr = os.environ.get("DATABASE_URL")
+    connstr = os.environ.get("DATABASE_URL")
+    if env is None or env == "PROD":
         if connstr is None:
             raise Exception("DATABASE_URL was not provided")
         url =  urlparse(connstr)
-        db["host"] = url.host
-        db["username"] = url.username
-        db["password"] = url.password
+        db["host"] = url.hostname
         db["port"] = url.port
-        db["db"] = "citationdb"
+        db["user"] = url.username
+        db["password"] = url.password
+        db["database"] = url.path[1:]
     else:
         # create a parser
         parser = ConfigParser()
@@ -464,6 +465,10 @@ def get_bins(increment):
         n += 1
     return bins, labels
 
+def load_zipped_pickle(filename):
+    with gzip.open(filename, 'rb') as f:
+        loaded_object = pkl.load(f)
+        return loaded_object
 
 class Aggregator():
     def __init__(self, _increment, ):
@@ -481,7 +486,6 @@ class Aggregator():
                 self.p[id] += agg[key]["total"]
 
         filtered = None
-        print(signals)
         for fid in signal["filters"]:
             filter = signals[str(fid)]
             new_base = self.aggregate_signals(base, filter, signals)
@@ -543,7 +547,10 @@ conn = connect()
 # load the word2vec model
 w2v = get_model()
 # citations = pd.read_csv("./model/citation_percent.csv", encoding="utf-8")
-citations = pd.read_pickle("./citations_optimized.pkl")
+citations = load_zipped_pickle("./citations_optimized.gzip")
+# with gzip.open("citations_optimized.gzip", 'wb') as f:
+#     pkl.dump(citations, f, -1)
+# print("done")
 citations["id"] = np.arange(citations.shape[0])
 # citations.rename(columns={"Unnamed: 0":"id"}, inplace=True)
 # citations = pd.read_csv("./citations.csv", encoding="utf-8")

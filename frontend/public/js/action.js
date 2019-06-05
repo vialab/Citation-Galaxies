@@ -4,7 +4,7 @@ function getSimilarWords(word, callback) {
     type: "GET",
     url: processURL + "similar?word=" + word,
     success: function(results) {
-      callback(results);
+      callback(JSON.parse(results));
     },
     async: true
   });

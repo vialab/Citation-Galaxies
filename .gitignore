@@ -13,3 +13,4 @@ citations.pkl
 citation_context.pkl
 *.pkl
 *.pyc
+*.gzip
