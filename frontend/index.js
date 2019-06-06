@@ -8,12 +8,12 @@ var crypto = require("crypto");
 var master_cookie = "196d2081988549fb86f38cf1944e79a9";
 var app = express();
 var dbschema = require("./dbschema.js");
-var config = require("./config.js");
+// var config = require("./config.js");
 var fs = require("fs");
 var named = require("yesql").pg;
 const {exec} = require("child_process");
 const DATABASE_URL = url.parse(process.env.DATABASE_URL);
-const pool = new pg.Pool(config.urlparse(DATABASE_URL));
+const pool = new pg.Pool(urlparse(DATABASE_URL));
 
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
@@ -470,6 +470,21 @@ app.post("/process/signals", function(req, res, next) {
       });
   });
 });
+
+function urlparse(db_url) {
+  let db = {
+    user: db_url.auth.substr(0, db_url.auth.indexOf(":")),
+    host: db_url.host.split(":")[0],
+    password: db_url.auth.substr(
+      db_url.auth.indexOf(":") + 1,
+      db_url.auth.length
+    ),
+    database: db_url.path.replace("/",""),
+    port: db_url.port
+  };
+  return db;
+}
+
 
 // async function that returns/calculates the sentiment for a specific query
 async function getScores(client, query, values, ruleSet, ruleHash, recache) {
