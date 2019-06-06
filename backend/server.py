@@ -547,7 +547,7 @@ conn = connect()
 # load the word2vec model
 w2v = get_model()
 # citations = pd.read_csv("./model/citation_percent.csv", encoding="utf-8")
-citations = load_zipped_pickle("./citations_optimized.gzip")
+citations = load_zipped_pickle("./vectors/citations_optimized.gzip")
 # with gzip.open("citations_optimized.gzip", 'wb') as f:
 #     pkl.dump(citations, f, -1)
 # print("done")
