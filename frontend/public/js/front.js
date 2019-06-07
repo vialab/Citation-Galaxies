@@ -45,7 +45,7 @@ var years = []; //Used to hold all the years from the server
 var yearResults = {}; //Place to store the results from the year
 var yearResultsRequests = []; //Place to store the requests made to the server
 
-var currentURL = "http://localhost:5432/"; //The url to access the backend
+var currentURL = ""; //The url to access the backend
 var processURL = "http://localhost:5431/"; //The url to access the backend
 
 var currSearchQuery = ""; //The current search query
@@ -1180,7 +1180,7 @@ function getFilteredYears(
     }),
     success: function(results) {
       let data = results;
-      loaded_articles = data["nunique"];
+      // loaded_articles = data["nunique"];
       if (draw) {
         drawAllYears(data["agg"]);
         if (process_signals) processAllSignals();
@@ -1412,6 +1412,7 @@ function exportCSVFile() {
 $(document).ready(function() {
   $(".toast").toast({delay: 2000});
   currentURL = window.location.origin + "/";
+  processURL = currentURL + "gateway/";
   $("#papers-container").height(
     $(window).height() - 82 - $("#sortOptions").height
   );
@@ -1420,11 +1421,11 @@ $(document).ready(function() {
   );
   // hide the rules testing harness for local use only
   // though we hide it, it should not contain system breaking functionality
-  if (currentURL.indexOf("localhost") >= 0) {
-    $("#pills-rules-tab").show();
-  } else {
-    $("#pills-rules-tab").hide();
-  }
+  // if (currentURL.indexOf("localhost") >= 0) {
+  //   $("#pills-rules-tab").show();
+  // } else {
+  //   $("#pills-rules-tab").hide();
+  // }
 
   minimizeDivider();
   var $dragging = null;

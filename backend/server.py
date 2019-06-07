@@ -97,7 +97,7 @@ def do_process_rules():
     signals = data["signals"]
     query = data["query"]
     increment = data["increment"]
-    loaded = data["loaded_articles"]
+    # loaded = data["loaded_articles"]
     df = citations
     signal_key = base64.b64encode(dumps(signals).encode())
     query_key = base64.b64encode(dumps(query).encode())
@@ -108,8 +108,10 @@ def do_process_rules():
     if cache.shape[0] > 0:
         payload = loads(base64.b64decode(cache["querydata"].values[0]))
     else:
-        if len(loaded) > 0:
-            df = citations[citations["id"].isin(loaded)]
+        if query != "" and query is not None:
+            sql = main_query
+            articles = run_query(sql, data=(query, all_years))
+            df = citations[citations["articleid"].isin(articles["articleid"])]
         # recursively get all counts for each signal>filter>restriction
         # this is easy because filters and restrictions have same structure :)
         processed = {}

@@ -1,4 +1,5 @@
 var express = require("express");
+var util = require('util')
 var cookieParser = require("cookie-parser");
 var url = require("url");
 const pg = require("pg");
@@ -14,9 +15,9 @@ var named = require("yesql").pg;
 const {exec} = require("child_process");
 const DATABASE_URL = url.parse(process.env.DATABASE_URL);
 const pool = new pg.Pool(urlparse(DATABASE_URL));
-
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(bodyParser.json());
+const axios = require('axios');
+app.use(bodyParser.json({limit: '500mb'}));
+app.use(bodyParser.urlencoded({limit: '500mb', extended: false}));
 // need cookieParser middleware before we can do anything with cookies
 app.use(cookieParser());
 app.use(express.static(`${__dirname}/public`)); // statics
@@ -369,6 +370,27 @@ app.post("/api/*", function(req, res, next) {
       });
     });
   });
+});
+
+app.post("/gateway/*", function(req, res, next) {
+  let cookie_id = req.cookies.cookieName;
+  if (master_cookie != "") cookie_id = master_cookie;
+
+  let full_url = req.originalUrl.split("/");
+  let hook_name = full_url[full_url.length - 1];
+  for(let i=full_url.length-2; i > 0; i--) {
+    if(full_url[i] == "gateway") break;
+    hook_name = full_url[i] + "/" + hook_name;
+  }
+  let body = JSON.parse(Object.keys(req.body)[0]);
+  axios.post('http://localhost:5000/' + hook_name, body)
+    .then((data) => {
+      return res.send(data.data);
+    })
+    .catch((error) => {
+      console.log(error);
+      return res.sendStatus(500);
+    });
 });
 
 // get search engine results
