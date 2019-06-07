@@ -394,7 +394,7 @@ function processAllSignals() {
     url: processURL + "process/signals",
     data: JSON.stringify({
       increment: currIncrement,
-      loaded_articles: loaded_articles,
+      // loaded_articles: loaded_articles,
       signals: sentiment_signals,
       query: currSearchQuery
     }),
