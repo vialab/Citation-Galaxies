@@ -66,6 +66,15 @@ Deployment for this project has been automated, and so please be aware that push
 
 In order to ensure the appropriate database connections are made, committed versions of this project should always have `ENV DEPLOY_ENV PROD` in line 6 of the Dockerfile for the `/backend` sub folder.
 
+
+## Built With
+
+* [NodeJS](https://nodejs.org/en/) - The web framework / packaging system used
+* [Bootstrap](https://getbootstrap.com/) - Front-end component library
+* [D3](https://d3js.org/) - Visualization Library
+* [Docker](https://www.docker.com/) - Container / Dependency management
+* [Flask](http://flask.pocoo.org/) - The web framework used (PYTHON 2.7)
+
 ## Authors
 
 * Adam Bradley, PhD. - Research Associate
