@@ -30,31 +30,34 @@ A connection to the database must be made in order for the proper functioning of
 Backend:
   - Create a file in the `/backend` sub-folder with the name `database.ini`
   - Paste the following into the `database.ini` file, edit the values as appropriate and save
-  `[postgresql]
+  ```
+  [postgresql]
   host=<host>
   database=citationdb
   user=citationdb
   password=<password>
-  `
+  ```
   - You may now run this project as you would for a regular FLASK project
   - Example:
-  `#!/bin/bash
+  ```
+  #!/bin/bash
   echo "Starting python server.."
   source venv/bin/activate
   export FLASK_APP=server.py
   export DEPLOY_ENV=TEST
   flask run --port=5000
   echo "Python listening on http://localhost:5000"
-  `
+  ```
 
 Frontend: 
   - First navigate to the `/frontend` sub-folder in your terminal
   - Run the command `npm install`
   - Running the frontend project will require environment variables be set available to the nodejs project, and so we would recommend you to write your own bash script to handle this (or whatever is available for your respective system)
   - Example:
-  `#!/bin/bash
+  ```
+  #!/bin/bash
   DATABASE_URL="postgresql://citationdb:<password>@<host>:<port>/citationdb" DEPLOY_ENV="PROD" node index.js
-  `
+  ```
   
 Alternatively, you may edit the Dockerfiles as you see fit for your setup. However, please DO NOT commit/push any changes to the Dockerfiles unless you know what you are doing.
 
@@ -62,6 +65,13 @@ Alternatively, you may edit the Dockerfiles as you see fit for your setup. Howev
 Deployment for this project has been automated, and so please be aware that pushes to this repository will automatically build, run, and deploy to the VIALAB production servers at https://citation.vialab.ca/. Deployment will automatically handle database connections, as well as mount volumes to hold the larger files not part of the github repository (citation caching and word2vec models) through Kubernetes.
 
 In order to ensure the appropriate database connections are made, committed versions of this project should always have `ENV DEPLOY_ENV PROD` in line 6 of the Dockerfile for the `/backend` sub folder.
+
+## Authors
+
+* Adam Bradley, PhD. - Research Associate
+* Christopher Collins, PhD. - Research Supervisor
+* Kevin Desousa - Research Assistant
+* Victor (Jay) Sawal, BSc. - Software Developer
 
 # License
 This research was conducted as part of the CO.SHS project (co-shs.ca) and has received financial support from the Canada Foundation for Innovation (Cyberinfrastructure Initiative – Challenge 1 – First competition).
