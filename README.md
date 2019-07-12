@@ -1,5 +1,5 @@
 # Citation-Galaxies
-A web application to view, and markup, citations and their surrounding context
+Bibliometric experts use statistical analysis of natural language texts to provide a quantitative view of academic literature. Bibliometric techniques, such as citation analysis, are often used by funding agencies to understand and evaluate the publishing results of grant money distribution. While this field of scholarship in general, and citation analysis in particular, have been studied extensively, there still remains a lack of tools and techniques for evaluating the surrounding natural language context of individual citations on the network scale. The goal of this project is to aid in the identification of language patterns as they occur across a large corpus of academic texts, allow users to create and edit rule sets for evaluation, and then use vector space models to suggest expansions of the user defined natural language rules. Although originally developed for citation analysis, the tool can be customized for any number of categories and rules that apply to a given domain problem.
 
 ## Getting Started
 This project was built as two different servers: 
