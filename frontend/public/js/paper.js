@@ -1090,7 +1090,7 @@ function switchToPapers() {
 function getPopoverContent(articleid) {
   $.ajax({
     type: "GET",
-    url: currentURL + "paper?id=" + articleid,
+    url: processURL + "paper?id=" + articleid,
     success: function(results) {
       let data = JSON.parse(results);
       let $modal = $("#generic-modal");
