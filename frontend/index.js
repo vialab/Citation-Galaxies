@@ -372,6 +372,27 @@ app.post("/api/*", function(req, res, next) {
   });
 });
 
+
+app.get("/gateway/*", function(req, res, next) {
+  let cookie_id = req.cookies.cookieName;
+  if (master_cookie != "") cookie_id = master_cookie;
+
+  let full_url = req.originalUrl.split("/");
+  let hook_name = full_url[full_url.length - 1];
+  for(let i=full_url.length-2; i > 0; i--) {
+    if(full_url[i] == "gateway") break;
+    hook_name = full_url[i] + "/" + hook_name;
+  }
+  axios.get('http://localhost:5000/'+hook_name)
+    .then((data) => {
+      return res.send(data.data);
+    })
+    .catch((error) => {
+      console.log(error);
+      return res.sendStatus(500);
+    });
+});
+
 app.post("/gateway/*", function(req, res, next) {
   let cookie_id = req.cookies.cookieName;
   if (master_cookie != "") cookie_id = master_cookie;

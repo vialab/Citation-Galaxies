@@ -1,5 +1,5 @@
 // Total size of all segments; we set this later, after loading the data.
-let total_size = 0,
+let total_size = 8990313,
   total_tagged = 0,
   clicked_cat = null,
   clicked_depth = null;
@@ -600,6 +600,7 @@ function transformScores(filtered_data = sentiment_signals) {
   let csv = [];
   let cat_size = {};
   total_size = loaded_articles.length;
+  if(total_size === 0) total_size = 8990313;
   Object.keys(filtered_data).forEach(key => {
     let signal = filtered_data[key];
     let id = signal.id.toString();
