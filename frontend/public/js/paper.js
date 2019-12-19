@@ -449,7 +449,8 @@ function drawPapers(signal_id, signal_cat_id) {
       url: processURL + "papers",
       data: JSON.stringify(values),
       success: function(data) {
-        paper_data = JSON.parse(data);
+        // paper_data = JSON.parse(data);
+        paper_data = data;
         drawPapersByIndex(paper_data);
       },
       async: true,
