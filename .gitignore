@@ -14,3 +14,10 @@ citation_context.pkl
 *.pkl
 *.pyc
 *.gzip
+
+out_docker
+*.prof
+*.bak
+
+**/tmp
+misc/postgresql.conf.sample

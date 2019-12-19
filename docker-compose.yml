@@ -1,10 +1,41 @@
-version:    '2'
+version:    '3.3'
 services:
-  frontend:
-    build:  frontend
+  citationdb:
+    # image: postgres:12
+    build: ./database
+    restart: unless-stopped
+    container_name: citationdb
+    environment:
+      POSTGRES_PASSWORD: citationdb
+      POSTGRES_USER: citationdb
+      POSTGRES_DB: citationdb
     ports:
-      - "5432:5432"
+      - '5432:5432'
+    volumes:
+      - ./citationdb-data:/var/lib/postgresql/data
+      - ./misc:/mnt
+      - ./citationdb-conf:/etc/postgresql/postgresql.conf
+    # networks:
+      # - mysql-db
+
+  frontend:
+    network_mode: host
+    build:  frontend
+    # ports:
+      # - "5432:5432"
+    environment:
+      # DATABASE_URL: 'postgresql://citationdb:aed2IeMie=ph6dahboovoshoosh2quoisidiethai1Vahra8aicoh)Y*ahroh5Fo@compute00:5432/citationdb-dev'
+      DATABASE_URL: 'postgresql://citationdb:aed2IeMie=ph6dahboovoshoosh2quoisidiethai1Vahra8aicoh)Y*ahroh5Fo@compute00:5432/citationdb-dev'
+      DEPLOY_ENV: 'PROD'
   backend:
-    build:  backend
+    # build:  backend
+    image: vialab/citation-galaxies:backend-latest
     ports:
       - "5000:5000"
+    environment:
+      # DATABASE_URL: 'postgresql://citationdb:aed2IeMie=ph6dahboovoshoosh2quoisidiethai1Vahra8aicoh)Y*ahroh5Fo@compute00:5432/citationdb-dev'
+      DATABASE_URL: 'postgresql://citationdb:aed2IeMie=ph6dahboovoshoosh2quoisidiethai1Vahra8aicoh)Y*ahroh5Fo@compute00:5432/citationdb-dev'
+      DEPLOY_ENV: 'PROD'
+
+# networks: 
+  # db-net:

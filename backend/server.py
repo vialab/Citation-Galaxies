@@ -25,9 +25,28 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 def get_model():
+    print("loading model")
     model = Word2Vec.load("./vectors/word2vec.model")
+    print("loaded model")
     return model
 
+import time
+from flask import g
+
+@app.before_request
+def before_request():
+    g.start = time.time()
+
+@app.after_request
+def after_request(response):
+    diff = time.time() - g.start
+    print("Execution Time:",diff)
+    # if ((response.response) and
+    #     (200 <= response.status_code < 300) and
+    #     (response.content_type.startswith('text/html'))):
+    #     response.set_data(response.get_data().replace(
+    #         b'__EXECUTION_TIME__', bytes(str(diff), 'utf-8')))
+    return response
 
 @app.route("/test", methods=["GET"])
 def do_test():
@@ -175,8 +194,8 @@ def do_query():
     query_key = base64.b64encode(dumps(query).encode())
     ruleKey = str(increment).encode() + b"_" + query_key
     ruleHash = base64.b64encode(ruleKey).decode("utf-8")
-    cache = run_query(
-        "select querydata from querycache where queryid=%s", data=(ruleHash,))
+
+    cache = run_query( "select querydata from querycache where queryid=%s", data=(ruleHash,))
     if cache.shape[0] > 0:
         # we have made this query before!
         payload = loads(base64.b64decode(cache["querydata"].values[0]))
@@ -186,8 +205,8 @@ def do_query():
                 "articleyear", "percent", "articleid"]].copy(deep=True)
             agg = Aggregator(increment)
             sorted = agg.aggregate_years(distribution)
-            payload = {"agg": sorted,
-                       "nunique": citations["id"].unique().tolist()}
+            payload = {"agg": sorted }
+                    #    "nunique": citations["id"].unique().tolist()}
             encoded = base64.b64encode(dumps(payload).encode()).decode("utf-8")
         else:
             sql = main_query
@@ -199,12 +218,17 @@ def do_query():
                           + ") or (rightdist >= 0 and rightdist <= " + str(right_bound) + ")")
             sorted = agg.aggregate_years(
                 df[["articleyear", "percent", "articleid"]])
-            payload = {"agg": sorted, "nunique": df["id"].unique().tolist()}
+            # payload = {"agg": sorted, "nunique": df["id"].unique().tolist()}
+            payload = {"agg": sorted }
             encoded = base64.b64encode(dumps(payload).encode()).decode("utf-8")
-        run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=(
-            ruleHash, encoded))
-    return jsonify(payload)
 
+        run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=( ruleHash, encoded))
+    # print("NUNUQUE NO")
+    return jsonify(payload)
+    # return jsonify({"agg": sorted})
+
+# import line_profiler
+# @profile
 
 @app.route("/papers", methods=["POST"])
 def do_papers():
@@ -227,6 +251,7 @@ def do_papers():
         filter += "(articleyear == " + \
             r[0] + " and percent >= " + r[1] + " and percent <= " + r[2] + ")"
 
+    print("DO PAPERS: ",query,"\n\nFILT:",filter,"\n\ndat:",data)
     if len(query) > 0:
         left_bound = int(data["rangeLeft"])
         right_bound = int(data["rangeRight"])
@@ -235,18 +260,25 @@ def do_papers():
         df = run_query(sql, data=(query, years))
     else:
         df = citations.copy(deep=True)
+        # df = citations #.copy(deep=True)
 
     increment = int(data["increment"])
     bins, labels = get_bins(increment)
+
     # now we can select our ranges and group by article
+    # df = df.query(filter,inplace=False)
     df = df.query(filter)
+
     ref_count = df.groupby("articleid").size().reset_index(name="refcount")
+
     # merge in any additional columns we need for display/filtering
     if len(query) > 0:
         df = df.merge(citations[["articleid", "journaltitle",
                                  "journalid", "context"]], on="articleid", how="left")
     if journal_id != "":
         df = df[df["journalid"] == journal_id]
+
+    
     # if we have signals associated to this query, filter
     if len(signals.items()) > 0:
         agg = Aggregator(increment)
@@ -256,13 +288,15 @@ def do_papers():
             df_filtered = pd.concat(
                 [df_filtered, df_new]).drop_duplicates().reset_index(drop=True)
         df = df_filtered
+
     # get total amount of references per paper for ranking
     df = df.merge(ref_count, on="articleid", how="left")
-    df["rank"] = df.groupby(["articleyear"])[
-        "refcount"].rank("dense", ascending=False)
+    df["rank"] = df.groupby(["articleyear"])["refcount"].rank("dense", ascending=False)
+
     # filter for only top 5 results in each year
     df = df.query("rank>" + str(last_rank) +
                   " and rank<=" + str(last_rank + 5))
+
     df["bin"] = pd.cut(df["percent"], bins=bins, labels=labels)
     # get the size of each bin
     bin_size = df.groupby(["articleid", "bin"]
@@ -300,7 +334,16 @@ def do_papers():
         sorted_articles[articleid]["content"][row["bin"]] = x
         if x > sorted_articles[articleid]["max"]:
             sorted_articles[articleid]["max"] = x
+
+    
     return jsonify(dumps({"max": max, "papers": sorted_articles, "years": years, "journals": journals}))
+
+    # payload = {"max": max, "papers": sorted_articles, "years": years, "journals": journals}
+            
+    # return jsonify({"test":payload})
+    # return jsonify({"test":"hi"})
+    
+    # return jsonify({"max": max, "papers": sorted_articles, "years": years, "journals": journals})
 
 
 @app.route("/paper", methods=["GET"])
@@ -395,7 +438,9 @@ def connect():
         # read connection parameters
         params = config()
         # connect to the PostgreSQL server
+        print("boutta conn",params)
         conn = psycopg2.connect(**params)
+        print("con fin")
         conn.autocommit = True
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
@@ -543,13 +588,16 @@ class Aggregator():
                 sorted[year]["papers"]["max"] = y
         return sorted
 
-
+print("precon")
 # load the connection to the db
 conn = connect()
+print("postcon")
 # load the word2vec model
 w2v = get_model()
-# citations = pd.read_csv("./model/citation_percent.csv", encoding="utf-8")
+print("post mod pre opt")
+# citations = pd.read_csv(".lll/citation_percent.csv", encoding="utf-8")
 citations = load_zipped_pickle("./vectors/citations_optimized.gzip")
+print("done o hope")
 # with gzip.open("citations_optimized.gzip", 'wb') as f:
 #     pkl.dump(citations, f, -1)
 # print("done")
@@ -583,6 +631,15 @@ all_years = citations["articleyear"].unique().tolist()
 # searcher = ix.searcher()
 # qp = QueryParser("content", schema=ix.schema)
 
+# import cProfile
+
 if __name__ == "__main__":
-    sess.init_app(app)
-    app.run(debug=True, threaded=True)
+    # sess.init_app(app)
+    # app.run(debug=True, threaded=True)
+    # app.run(debug=True, threaded=False, processes=1)
+    # with cProfile.Profile() as pr:
+    #     pr.enable()
+    app.run(debug=False, threaded=False, processes=2)
+    
+    # pr.disable()
+    # pr.dump_stats("server-06.prof")

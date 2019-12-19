@@ -1,0 +1,13 @@
+diff --git a/src/include/tsearch/ts_type.h b/src/include/tsearch/ts_type.h
+index 559cf84cbc..b26e173b65 100644
+--- a/src/include/tsearch/ts_type.h
++++ b/src/include/tsearch/ts_type.h
+@@ -83,7 +83,7 @@ typedef struct
+ #define WEP_SETPOS(x,v)		( (x) = ( (x) & 0xc000 ) | ( (v) & 0x3fff ) )
+ 
+ #define MAXENTRYPOS (1<<14)
+-#define MAXNUMPOS	(256)
++#define MAXNUMPOS	(4096)
+ #define LIMITPOS(x) ( ( (x) >= MAXENTRYPOS ) ? (MAXENTRYPOS-1) : (x) )
+ 
+ /* This struct represents a complete tsvector datum */
