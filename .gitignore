@@ -21,3 +21,6 @@ out_docker
 
 **/tmp
 misc/postgresql.conf.sample
+database/postgres
+
+**/citationdb-data
