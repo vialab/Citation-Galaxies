@@ -49,32 +49,7 @@ pathh = '/archive/datasets/PubMed/Rev_Bras_Ortop/PMC4563043.nxml'
 pubmed_dict = pp.parse_pubmed_xml(pathh) # dictionary output
 full_dat = pp.parse_pubmed_paragraph(pathh,"||")
 
-# print(full_dat)
-# @profile
-def to_tsvector( text ):
-    # features = nltk.tokenize.sent_tokenize( text )
-    # features = [ token.lower() for sentence in features for token in tbwt.tokenize(sentence) ]
-    features = [ token.lower() for token in tbwt.tokenize( text.translate(translate) ) ]
-    word_dict = {}
 
-    word_pos = 0
-    for token in features:
-        # token = wnl.lemmatize( token )
-
-        if token not in punctuation:
-            word_pos += 1
-
-            if token not in stopwords and len(token)>0:
-                # token = sbs.stem( token )
-                datum = word_dict.setdefault( sbs.stem( token ), [] )
-
-                datum.append( word_pos )
-            
-    tsvector = sorted( ( (word,pos) for word,pos in word_dict.items() ), key=lambda tup: tup[0])
-
-    return tsvector
-
-# to_tsvector("hello world i hello")
 
 
 dat = [ ('hello',[1,4]), ('world',[2]) ]
@@ -120,24 +95,32 @@ async def main():
 
         # recs.append( (vec,) )
 
-    xmls = pp.list_xml_path('/archive/datasets/PubMed/J_Cell_Sci')
+    # xmls = pp.list_xml_path('/archive/datasets/PubMed/J_Cell_Sci')
+    # xmls = pp.list_xml_path('/archive/datasets/PubMed/Mol_Cancer')
+    # xmls = pp.list_xml_path('/archive/datasets/PubMed/Brain_Struct_Funct')[1:10]
+    xmls= ['/archive/datasets/PubMed/Mol_Cancer/PMC4676894.nxml']
 
-    for path in xmls:
-        dat = parse_pubmed.receive_xml(path)
-        print(dat)
+    recs = [ parse_pubmed.receive_xml(path) for path in xmls ]
+    # for path in xmls:
+    #     dat = parse_pubmed.receive_xml(path)
+    #     print(dat)
     # recs = ( (dat[0],dat[1],dat[2]), )
-    recs = ( dat, )
+    # recs = ( dat, )
 
-    text = dat[3]
+    # text = dat[3]
+
+    print("wa")
+    dat = recs[0]
 
     # result = await con.execute( "insert into article_search values($1,to_tsvector($2),$3)",dat[0],dat[3],dat[2])
-    result = await con.fetchval( "select to_tsvector($1)",dat[3])
-    print("pg to_ts: ",result)
+    # result = await con.fetchval( "select to_tsvector($1)",dat[3])
+    # print("pg to_ts: ",result)
 
 
     result = await con.copy_records_to_table( 'article_search', records = recs, columns=['id','ts_search','pub_year'] )
     print("INSERT res: ",result)
 
+    print("catch")
 
     # result = await con.fetchval(
     #     "SELECT to_tsvector('hello world i be going hello exquisite place of decorum and another hello')")

@@ -12,9 +12,9 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ./citationdb-data:/var/lib/postgresql/data
-      - ./misc:/mnt
-      - ./citationdb-conf:/etc/postgresql/postgresql.conf
+      - ${PWD}/citationdb-data:/var/lib/postgresql/data
+      - ${PWD}/misc:/mnt
+      - ${PWD}/citationdb-conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
     # networks:
       # - mysql-db
 

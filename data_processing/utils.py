@@ -74,16 +74,17 @@ def to_tsvector( text ):
     for token in features:
         # token = wnl.lemmatize( token )
 
-        if token not in punctuation:
+        if token not in punctuation and (len(token)>0) and (word_pos<=65535):
             word_pos += 1
 
-            if token not in stopwords and len(token)>0:
+            if (token not in stopwords):
                 # token = sbs.stem( token )
                 datum = word_dict.setdefault( sbs.stem( token ), [] )
 
                 datum.append( word_pos )
+                # datum.sort()
             
-    tsvector = sorted( ( (word,pos) for word,pos in word_dict.items() ), key=lambda tup: tup[0])
+    tsvector = sorted( ( (word,sorted(pos)) for word,pos in word_dict.items() ), key=lambda tup: tup[0])
 
     return tsvector
 
