@@ -1,3 +1,10 @@
+.env
+
+database/data
+
+
+
+
 start_server.sh
 **/.DS_Store
 node_modules
@@ -24,3 +31,4 @@ misc/postgresql.conf.sample
 database/postgres
 
 **/citationdb-data
+.env

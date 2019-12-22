@@ -24,6 +24,8 @@ import struct
 
 import io
 
+import numpy as np
+
 from dateutil.relativedelta import relativedelta
 import datetime
 import utils
@@ -82,25 +84,12 @@ async def main():
     con = await asyncpg.connect(user='citationdb',password='citationdb',database='citationdb')
     await con.set_type_codec( 'tsvector', schema='pg_catalog', encoder=utils.encode_tsvector, decoder=utils.decode_tsvector, format='binary')
 
-    # for fileid in nltk.corpus.gutenberg.fileids()[1:4]:
-    #     text = nltk.corpus.gutenberg.raw( fileid )[0:500]
-
-    #     vec = to_tsvector( text )
-
-    #     result = await con.fetchval(
-    #         "SELECT to_tsvector('"+ text +"')")
-
-        # print(result)
-        # print("Vector compare: ",comp_vecs(result,vec))
-
-        # recs.append( (vec,) )
-
-    # xmls = pp.list_xml_path('/archive/datasets/PubMed/J_Cell_Sci')
+    xmls = pp.list_xml_path('/archive/datasets/PubMed/J_Cell_Sci')
     # xmls = pp.list_xml_path('/archive/datasets/PubMed/Mol_Cancer')
     # xmls = pp.list_xml_path('/archive/datasets/PubMed/Brain_Struct_Funct')[1:10]
-    xmls= ['/archive/datasets/PubMed/Mol_Cancer/PMC4676894.nxml']
+    # xmls= ['/archive/datasets/PubMed/Mol_Cancer/PMC4676894.nxml']
 
-    recs = [ parse_pubmed.receive_xml(path) for path in xmls ]
+    recs = [ parse_pubmed.receive_xml_ts(path) for path in xmls ]
     # for path in xmls:
     #     dat = parse_pubmed.receive_xml(path)
     #     print(dat)
@@ -117,8 +106,8 @@ async def main():
     # print("pg to_ts: ",result)
 
 
-    result = await con.copy_records_to_table( 'article_search', records = recs, columns=['id','ts_search','pub_year'] )
-    print("INSERT res: ",result)
+    # result = await con.copy_records_to_table( 'article_search', records = recs, columns=['id','ts_search','pub_year'] )
+    # print("INSERT res: ",result)
 
     print("catch")
 
@@ -129,6 +118,27 @@ async def main():
     # result = await con.fetchval(
     #     "INSERT into test4 (vec) values(to_tsvector('hello world i hello') )")
     # print("INSERT res: ",result)
+
+    # counts = [i for i in range(0,100)]
+    # for i in range(0,100000):
+    #     result = await con.execute('insert into test5(cite_counts) values($1)',counts)
+    # result = (await con.fetchrow('select * from test5'))
+
+    tot = np.zeros(100)
+    ret = []
+    print("strart")
+    async with con.transaction():
+        # Postgres requires non-scrollable cursors to be created
+        # and used in a transaction.
+        # async for record in con.cursor('SELECT cite_counts from test5'):
+        async for record in con.cursor('SELECT sections::json from article_text limit 5'):
+            print(record)
+            # tot += np.array(record.get('cite_counts'),dtype=np.uint8)
+            # ret.append( np.array( record.get('cite_counts'), dtype=np.uint32 ) )
+
+    tot = np.sum(ret,axis=0,dtype=np.int32)
+    # print("result",tot)
+    print("2done",res)
 
 
 if __name__ == "__main__":

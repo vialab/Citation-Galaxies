@@ -99,7 +99,6 @@ RUN set -ex; \
     esac; \
     # tempDir="$(mktemp -d)"; \
     tempDir="$(pwd)"; \
-    # tempDir="/tmp/build"; \
     cd "$tempDir"; \
     \
     savedAptMark="$(apt-mark showmanual)"; \
