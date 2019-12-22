@@ -286,7 +286,8 @@ def parse_pubmed_paragraph(path, ref_replace='', all_paragraph=False):
     paragraphs = tree.xpath('//body//p')
     dict_pars = list()
     for paragraph in paragraphs:
-        paragraph_text = replace_refs(paragraph,ref_replace)
+        # paragraph_text = replace_refs(paragraph,ref_replace)
+        paragraph_text = inplace_refs(paragraph)
         citation_distribution = [ 0 for i in range(100) ]
         orig_text = inplace_refs(paragraph)
         orig_len = len(orig_text)
