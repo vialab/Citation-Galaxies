@@ -32,3 +32,4 @@ database/postgres
 
 **/citationdb-data
 .env
+database/postgres
