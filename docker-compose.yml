@@ -25,8 +25,7 @@ services:
     # ports:
       # - "5432:5432"
     environment:
-      # DATABASE_URL: 'postgresql://citationdb:aed2IeMie=ph6dahboovoshoosh2quoisidiethai1Vahra8aicoh)Y*ahroh5Fo@compute00:5432/citationdb-dev'
-      DATABASE_URL: 'postgresql://citationdb:aed2IeMie=ph6dahboovoshoosh2quoisidiethai1Vahra8aicoh)Y*ahroh5Fo@compute00:5432/citationdb-dev'
+      # DATABASE_URL: '' Defined in .env file
       DEPLOY_ENV: 'PROD'
   backend:
     # build:  backend
@@ -34,8 +33,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      # DATABASE_URL: 'postgresql://citationdb:aed2IeMie=ph6dahboovoshoosh2quoisidiethai1Vahra8aicoh)Y*ahroh5Fo@compute00:5432/citationdb-dev'
-      DATABASE_URL: 'postgresql://citationdb:aed2IeMie=ph6dahboovoshoosh2quoisidiethai1Vahra8aicoh)Y*ahroh5Fo@compute00:5432/citationdb-dev'
+      # DATABASE_URL: '' Defined in .env file
       DEPLOY_ENV: 'PROD'
 
 # networks: 
