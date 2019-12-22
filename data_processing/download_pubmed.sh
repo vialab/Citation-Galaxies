@@ -29,11 +29,6 @@ download_urls() {
 extract_urls() {
 	echo -e "Extracting PubMed Data"
 
-#	for file in "${wd}/pubmed_download_bulk/"*.gz; do
-#		#tar -xzf "${wd}/pubmed_download_bulk"
-#		echo $file
-#	done
-
 	mkdir -p "${wd}/non_commercial"
 	mkdir -p "${wd}/commercial"
 
@@ -47,8 +42,6 @@ extract_urls() {
 		tar -xzf "${file}" -C "${wd}/commercial"
 	done
 }
-
-#echo $wd
 
 #download_urls
 extract_urls

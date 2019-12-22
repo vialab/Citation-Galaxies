@@ -95,6 +95,7 @@ def parse_pubmed_xml(path, include_path=False, nxml=False):
         abstracts = list()
         abstract_tree = tree.findall('.//abstract')
         for a in abstract_tree:
+            
             for t in a.itertext():
                 text = t.replace('\n', ' ').replace('\t', ' ').strip()
                 abstracts.append(text)
@@ -264,9 +265,10 @@ def replace_refs(node,rep):
              list(chain(*([c.text if c.tag !='xref' else rep, c.tail] for c in node.getchildren()))) +
              [node.tail])
     return ''.join(filter(None, parts))
+
 def inplace_refs(node):
     parts = ([node.text] +
-             list(chain(*([c.text, c.tail] for c in node.getiterator()))) +
+             list(chain(*([c.text if c.tag !='xref' else c.attrib.get('rid',''), c.tail] for c in node.getiterator()))) +
              [node.tail])
     return ''.join(filter(None, parts))
 import math
@@ -286,9 +288,9 @@ def parse_pubmed_paragraph(path, ref_replace='', all_paragraph=False):
     paragraphs = tree.xpath('//body//p')
     dict_pars = list()
     for paragraph in paragraphs:
-        # paragraph_text = replace_refs(paragraph,ref_replace)
-        paragraph_text = inplace_refs(paragraph)
-        citation_distribution = [ 0 for i in range(100) ]
+        paragraph_text = replace_refs(paragraph,ref_replace)
+        # paragraph_text = inplace_refs(paragraph)
+        # citation_distribution = [ 0 for i in range(100) ]
         orig_text = inplace_refs(paragraph)
         orig_len = len(orig_text)
 
@@ -330,12 +332,12 @@ def parse_pubmed_paragraph(path, ref_replace='', all_paragraph=False):
         #         ref_ids.append(ref_id)
 
         dict_par = {
-            'pmc': pmc,
-            'pmid': pmid,
-            'reference_ids': ref_ids,
+            # 'pmc': pmc,
+            # 'pmid': pmid,
             'section': section,
             'text': paragraph_text,
-            'citation_counts': citation_distribution
+            'reference_ids': ref_ids,
+            # 'citation_counts': citation_distribution
         }
         if len(ref_ids) >= 1 or all_paragraph:
             dict_pars.append(dict_par)

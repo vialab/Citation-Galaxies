@@ -2,7 +2,7 @@ version:    '3.3'
 services:
   citationdb:
     # image: postgres:12
-    build: ./database
+    build: ${PWD}/database/build
     restart: unless-stopped
     container_name: citationdb
     environment:
@@ -12,29 +12,23 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ${PWD}/citationdb-data:/var/lib/postgresql/data
+      - ${PWD}/database/data:/var/lib/postgresql/data
+      # - ${PWD}/database/conf/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
+      - ${PWD}/database/conf/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ${PWD}/database/conf/DDL.sql:/docker-entrypoint-initdb.d/DDL.sql # Table structure will auto-create the first time the database starts up with an empty data directory
       - ${PWD}/misc:/mnt
-      # - ${PWD}/citationdb-conf/postgresql.conf:/etc/postgresql/postgresql.conf:ro
-      - ${PWD}/citationdb-conf/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
-    # networks:
-      # - mysql-db
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql/postgresql.conf"
 
   frontend:
     network_mode: host
-    build:  frontend
+    build: ${PWD}/frontend
     # ports:
       # - "5432:5432"
-    environment:
-      # DATABASE_URL: '' Defined in .env file
-      DEPLOY_ENV: 'PROD'
   backend:
     # build:  backend
     image: vialab/citation-galaxies:backend-latest
     ports:
       - "5000:5000"
-    environment:
-      # DATABASE_URL: '' Defined in .env file
-      DEPLOY_ENV: 'PROD'
-
-# networks: 
-  # db-net:
