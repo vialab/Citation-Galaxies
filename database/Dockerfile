@@ -96,12 +96,10 @@ RUN set -ex; \
 # TODO remove this once we hit buster+
             echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list.d/pgdg.list; \
             ;; \
-    esac;
-
-RUN set -ex; \
-    ls -lha; \
+    esac; \
     # tempDir="$(mktemp -d)"; \
     tempDir="$(pwd)"; \
+    # tempDir="/tmp/build"; \
     cd "$tempDir"; \
     \
     savedAptMark="$(apt-mark showmanual)"; \
@@ -111,38 +109,27 @@ RUN set -ex; \
     apt-get build-dep -y \
         postgresql-common pgdg-keyring \
         "postgresql-$PG_MAJOR=$PG_VERSION" \
-    ;
-RUN set -ex; \
-    pwd; \
-    ls -lha; \
+    ; \
     apt-get source \
         "postgresql-$PG_MAJOR=$PG_VERSION" \
     ; \
-	find /tmp -type f | xargs sed 's/\s-O2/ -O3 -march=native/g'; \
-
-RUN set -ex; \
-    ls -lha; \
-    cd "postgresql-$PG_MAJOR-12.1"; \
+	find /tmp -type f | xargs sed -i 's/\s-O2/ -O3 -march=native/g'; \
+    cd "postgresql-$PG_MAJOR"-*; \
     patch -p1 < ../tsvector.patch; \
-    # cat src/include/tsearch/ts_type.h; \
-    # pwd; \
-    ls -lha; \
     DEB_BUILD_OPTIONS="nocheck parallel=$(nproc)" \
         dpkg-buildpackage -uc -us -d -b \
     ; \
+    cd ..;\
 # we don't remove APT lists here because they get re-downloaded and removed later
     apt-get source --compile \
         postgresql-common pgdg-keyring \
     ; \
 # reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
 # (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
-    savedAptMark="$(apt-mark showmanual)"; \
     apt-mark showmanual | xargs apt-mark auto > /dev/null; \
     apt-mark manual $savedAptMark; \
-    \
 # create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
-    ls -lAFh; \
-    dpkg-scanpackages . > Packages; \
+	dpkg-scanpackages . > Packages; \
     grep '^Package: ' Packages; \
     echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list; \
 # work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
