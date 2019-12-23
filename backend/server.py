@@ -221,8 +221,9 @@ def do_query():
             # payload = {"agg": sorted, "nunique": df["id"].unique().tolist()}
             payload = {"agg": sorted }
             encoded = base64.b64encode(dumps(payload).encode()).decode("utf-8")
-
         run_update("insert into querycache(queryid, querydata) values(%s, %s)", data=( ruleHash, encoded))
+
+        
     # print("NUNUQUE NO")
     return jsonify(payload)
     # return jsonify({"agg": sorted})
@@ -404,16 +405,23 @@ def do_paper():
 def config(filename='./database.ini', section='postgresql'):
     db = {}
     env = os.environ.get("DEPLOY_ENV")
-    connstr = os.environ.get("DATABASE_URL")
+    # connstr = os.environ.get("DATABASE_URL")
+    connstr="postgresql://citationdb:ao0Eish4eogh%oh\shepohf>ie~ree!W<ievuNaethook5veelahveegakieNg6y@compute00:5432/citationdb-dev"
+    # print(os.environ.get("DATABASE_URL"))
     if env is None or env == "PROD":
         if connstr is None:
             raise Exception("DATABASE_URL was not provided")
         url =  urlparse(connstr)
-        db["host"] = url.hostname
-        db["port"] = url.port
-        db["user"] = url.username
-        db["password"] = url.password
-        db["database"] = url.path[1:]
+        # db["host"] = url.hostname
+        # db["port"] = url.port
+        # db["user"] = url.username
+        # db["password"] = url.password
+        # db["database"] = url.path[1:]
+        db["host"] = "compute00"
+        db["port"] = "5432"
+        db["user"] = "citationdb"
+        db["password"] = "ao0Eish4eogh%oh\shepohf>ie~ree!W<ievuNaethook5veelahveegakieNg6y"
+        db["database"] = "citationdb-dev"
     else:
         # create a parser
         parser = ConfigParser()

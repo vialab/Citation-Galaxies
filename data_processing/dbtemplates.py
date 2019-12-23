@@ -19,7 +19,7 @@ art_text_tbl = """create table article_text_{} (
 
 for i in range(100):
     # print( f'cite_in_{i+1:02d} smallint,',sep=' ',end=' ')
-    print( f'sum(cite_in_{i+1:02d}) as c{i},',sep=' ',end=' ')
+    print( f'\'sum(cite_in_{i+1:02d}) as c{i}\',',sep=' ',end=' ')
     # print( f'${i+4},',sep=' ',end=' ')
     pass
 

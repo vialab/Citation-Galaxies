@@ -11,6 +11,17 @@
             "program": "${file}",
             "console": "internalConsole",
             // "justMyCode": false,
+        },
+        {
+            "name": "Python: newbackend",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/newbackend",
+            // "program": "-m aiohttpdemo_polls",
+            "args": ["-m","citation_galaxy"],
+            // "program": "-m ${file}",
+            "console": "internalConsole",
+            // "justMyCode": false,
         }
     ]
 }

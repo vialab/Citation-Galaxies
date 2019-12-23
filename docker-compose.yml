@@ -24,6 +24,8 @@ services:
 
   frontend:
     network_mode: host
+    env_file:
+      - ${PWD}/.env
     build: ${PWD}/frontend
     # ports:
       # - "5432:5432"

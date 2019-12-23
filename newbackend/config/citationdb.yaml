@@ -1,0 +1,15 @@
+postgres:
+  database: citationdb
+  user: citationdb
+  password: citationdb
+  host: localhost
+  port: 5432
+  min_size: 32
+  max_size: 64
+
+host: 127.0.0.1
+port: 8081
+
+year_range: # inclusive year range, I.E [min,max], not [min,max)
+  min: 2003
+  max: 2019

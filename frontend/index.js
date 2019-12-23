@@ -15,6 +15,7 @@ var named = require("yesql").pg;
 const {exec} = require("child_process");
 const DATABASE_URL = url.parse(process.env.DATABASE_URL);
 const pool = new pg.Pool(urlparse(DATABASE_URL));
+// const pool = new pg.Pool(DATABASE_URL);
 const axios = require('axios');
 app.use(bodyParser.json({limit: '500mb'}));
 app.use(bodyParser.urlencoded({limit: '500mb', extended: false}));
@@ -515,6 +516,9 @@ app.post("/process/signals", function(req, res, next) {
 });
 
 function urlparse(db_url) {
+  console.log("ASFASF",process.env.DATABASE_URL)
+  console.log("ASFASF",url.parse(process.env.DATABASE_URL))
+  // db_url = "postgresql://citationdb:ao0Eish4eogh%oh\shepohf>ie~ree!W<ievuNaethook5veelahveegakieNg6y@compute00:5434/citationdb-dev"
   let db = {
     user: db_url.auth.substr(0, db_url.auth.indexOf(":")),
     host: db_url.host.split(":")[0],
@@ -601,6 +605,6 @@ async function getScores(client, query, values, ruleSet, ruleHash, recache) {
   return scores;
 }
 
-var server = app.listen(5432, function() {
-  console.log("Node listening on http://localhost:5432/");
+var server = app.listen(5434, function() {
+  console.log("Node listening on http://localhost:5434/");
 });
