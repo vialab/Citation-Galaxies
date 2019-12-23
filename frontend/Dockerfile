@@ -5,6 +5,6 @@ WORKDIR /usr/src/app
 
 RUN npm install
 
-EXPOSE 5432
+EXPOSE 5434
 
 CMD ["node","index.js"]

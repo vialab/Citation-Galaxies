@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Citation Analysis</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!--External Resources-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.4.1/tinycolor.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+
+  <!--Local files, mainly script and stylesheet-->
+  <script src="js/front.js"></script>
+  <script src="js/paper.js"></script>
+  <script src="js/manager.js"></script>
+  <script src="js/signal.js"></script>
+  <script src="js/rule.js"></script>
+  <script src="js/action.js"></script>
+  <script src="js/sequences.js"></script>
+  <link rel="stylesheet" type="text/css" href="css/style.css">
+  <link rel="stylesheet" type="text/css" href="css/sequences.css">
+</head>
+
+<body>
+  <!-- Fixed Navbar -->
+  <nav class="navbar navbar-expand-xl navbar-light bg-light" id="mainNav">
+    <div class="navbar" id="collapsingNavbar">
+      <ul class="nav nav-pills">
+        <li class="nav-item">
+          <a class="navbar-brand abs" href="#">Citation Analysis</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link active" id="pills-home-tab" data-toggle="pill" href="#pills-home" role="tab" aria-controls="pills-home" aria-selected="true" onclick="$('#navOptions').show();">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="pills-papers-tab" data-toggle="pill" href="#pills-papers" role="tab" aria-controls="pills-papers" aria-selected="false" onclick="switchToPapers();">Papers</a>
+        </li>
+        <!-- <li class="nav-item">
+                    <a class="nav-link" id="pills-rules-tab" data-toggle="pill" href="#pills-rules" role="tab"
+                        aria-controls="pills-rules" aria-selected="false" onclick="">Rules</a>
+                </li> -->
+        <li class="nav-item">
+          <a class="nav-link" id="pills-admin-tab" data-toggle="pill" href="#pills-admin" role="tab" aria-controls="pills-rules" aria-selected="false" onclick="loadTable('signalcategory', undefined, true, transformCategoryData);">Rules</a>
+        </li>
+      </ul>
+      <div id="navOptions">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item">
+            <button class="btn btn-outline-secondary" type="button" id="exportButton" style="margin-right: 20px; display: none;" onclick="exportJSON();">
+              Export
+            </button>
+          </li>
+          <li class="nav-item">
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="groupByButton" style="margin-right: 20px; display: none;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Group By
+              </button>
+              <div class="dropdown-menu" aria-labelledby="groupByButton">
+                <a class="dropdown-item active" id="groupByButton1" href="#" onclick="changeGroup(3)">Year</a>
+                <a class="dropdown-item" id="groupByButton2" href="#" onclick="changeGroup(4)">Journal</a>
+                <a class="dropdown-item" id="groupByButton3" href="#" onclick="changeGroup(5)">Paper Length</a>
+              </div>
+            </div>
+          </li>
+          <ul class="list-inline">
+            <li class="list-inline-item">
+              <input type="range" innertext="0" min="-10" max="0" value="0" step="-1" class="form-control-range slider" id="rangeBefore"
+                oninput="updateTextInput(document.getElementById('citationRange'), document.getElementById('rangeBefore').value , document.getElementById('rangeAfter').value, '', 1);">
+            </li>
+            <li class="list-inline-item align-middle">
+              <label class="text-center" for="formControlRange" style="margin: 0 0 10px 0;" id="citationRange">[
+                0
+                <- Citation -> 0 ]</label>
+            </li>
+            <li class="list-inline-item">
+              <input type="range" innertext="0" min="0" max="10" value="0" step="1" class="form-control-range slider" id="rangeAfter"
+                oninput="updateTextInput(document.getElementById('citationRange'), document.getElementById('rangeBefore').value , document.getElementById('rangeAfter').value, '', 1);">
+            </li>
+          </ul>
+          <li class="nav-item">
+            <div class="input-group">
+              <input type="text" class="form-control" id="searchBox" placeholder="Enter your query here">
+              <div id="searchButtonContainer" class="input-group-append">
+                <button class="btn btn-outline-secondary" id="searchButton" onclick="searchForQuery(document.getElementById('searchBox').value); switchToHome();" type="button">
+                  <i id="searchIcon" class="fa fa-search" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          </li>
+          <!-- Used to pad out the search box from dropdowns
+                  <li id="seperator" class="nav-item">
+                  <p>&nbsp&nbsp</p>
+                  </li> -->
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <div id="container" class="d-flex flex-column">
+    <div class="tab-content" id="pills-tabContent">
+      <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
+        <!-- Buttons on home pane -->
+        <div class="container-fluid">
+          <div class="row" style="padding: 0 0 10px 0;">
+
+            <div id="searchQueryLabel" class="col-sm-6" style="color: #6C757D; opacity: 0.9; font: 33px Roboto;"></div>
+            <div class="col-sm-6 btn-row">
+              <div class="row filter-query-options">
+
+                <div class="dropdown filter-option">
+                  <button class="btn btn-outline-secondary dropdown-toggle disabled" id="incrementButton" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Increment By
+                  </button>
+                  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                    <a class="dropdown-item" id="changeIncrementItem1" href="#" onclick="changeIncrement(1);">1%</a>
+                    <a class="dropdown-item" id="changeIncrementItem2" href="#" onclick="changeIncrement(10);">10%</a>
+                    <a class="dropdown-item" id="changeIncrementItem3" href="#" onclick="changeIncrement(25);">25%</a>
+                    <a class="dropdown-item" id="changeIncrementItem4" href="#" onclick="changeIncrement(50);">50%</a>
+                  </div>
+                </div>
+
+                <div class="dropdown filter-option">
+                  <button class="btn btn-outline-secondary dropdown-toggle disabled" id="viewByButton" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    View By
+                  </button>
+                  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                    <a class="dropdown-item active" id="changeLabelItem0" href="#" onclick="changeLabel(0);">Amount
+                      of hits</a>
+                    <a class="dropdown-item" id="changeLabelItem1" href="#" onclick="changeLabel(1);">Amount
+                      of papers</a>
+                    <a class="dropdown-item" id="changeLabelItem2" href="#" onclick="changeLabel(2);">Sentiment</a>
+                  </div>
+                </div>
+
+                <div class="dropdown filter-option">
+                  <button class="btn btn-outline-secondary dropdown-toggle disabled" id="normByButton" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Normalize
+                  </button>
+                  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                    <a class="dropdown-item norm-change active" id="normByItem0" href="#" onclick="normalizationChange(0);">Between years</a>
+                    <a class="dropdown-item norm-change" id="normByItem1" href="#" onclick="normalizationChange(1);">Within years</a>
+                  </div>
+                </div>
+
+              </div>
+              <div class="row filter-query-options">
+                <button class="btn btn-outline-secondary filter-option" id="viewPapersButton" type="button" onclick="selectAllYears();">Select All</button>
+
+                <button class="btn btn-outline-secondary filter-option disabled" id="clearAllButton" data-toggle="modal" data-target="#clearAllModal" type="button">Clear All
+                </button>
+
+                <button class="btn btn-primary filter-option" id="viewPapersButton" type="button" onclick="switchToPapers();">View Papers</button>
+                <button class="btn btn-secondary filter-option" id="downloadDataButton" type="button" onclick="exportCSVFile();">Download</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="pills-papers" role="tabpanel" aria-labelledby="pills-papers-tab">
+        <div id="sortOptions">
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" id="paperSortButton" style="margin-right: 20px; display: none;" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Sort By
+            </button>
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+              <a class="dropdown-item paper-sort active" id="sortByYear" href="#" onclick="changePaperSort('articleyear')">Year</a>
+              <a class="dropdown-item paper-sort" id="sortByJournal" href="#" onclick="changePaperSort('journaltitle')">Journal</a>
+              <!-- <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a> -->
+            </div>
+          </div>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" id="paperNormButton" style="margin-right: 20px; display: none;" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Normalize
+            </button>
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+              <a class="dropdown-item paper-norm active" id="normGlobal" href="#" onclick="drawPapersByIndex(paper_data, false);">Global</a>
+              <a class="dropdown-item paper-norm" id="normLocal" href="#" onclick="drawPapersByIndex(paper_data, true);">Local</a>
+              <!-- <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a> -->
+            </div>
+          </div>
+        </div>
+        <div id="papers-container" class="row transition"></div>
+        <div id="window-divider" class="transition">
+          <ul>
+            <li onclick="maximizeDivider();">&gt;</li>
+            <li onclick="minimizeDivider();">&lt;</li>
+          </ul>
+        </div>
+        <div id="sunburst-container" class="transition">
+          <div id="sunburst" style="display: none;">
+            <div id="sequence"></div>
+            <div id="chart">
+              <div id="explanation" class="noselect">
+                <span id="percentage"></span><br />
+                of citations are matched with this set of signals
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="pills-rules" role="tabpanel" aria-labelledby="pills-rules-tab">
+        <div id="vis-container">
+          <button class="btn btn-primary" onclick="processAllSignals();">Reprocess</button>
+          <button class="btn btn-primary" onclick="createVisualization(transformScores());">Redraw</button>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="pills-admin" role="tabpanel" aria-labelledby="pills-admin-tab">
+        <div class="btn-group" role="group" style="float: right;">
+          <button type="button" class="btn btn-outline-secondary" onclick="loadTable('signalcategory', undefined, true, transformCategoryData)">Categories</button>
+          <button type="button" class="btn btn-outline-secondary" onclick="loadTable('signal', undefined, true, transformSignalData)">Signals</button>
+        </div>
+        <div style="clear:both;">
+          <h4 id="last-table-title" onclick="loadPreviousTable();"></h4>
+          <h2 id="rule-table-title"></h2>
+        </div>
+        <!-- Table for the results -->
+        <div class="">
+          <table class="table" id="ruleTable">
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="generic-modal" tabindex="-1" role="dialog" aria-labelledby="generic-modal" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"></h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+        </div>
+        <div class="modal-footer">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="clearAllModal" tabindex="-1" role="dialog" aria-labelledby="clearAllModal" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLongTitle">Clear All?</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          Selecting "yes" will clear all the selections. Are you sure you want to do that?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="removeAllSelections();">Yes</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" style="position: fixed; bottom: 10px; right: 15px;">
+    <div class="toast-header">
+      <strong class="mr-auto"></strong>
+      <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <div class="toast-body"></div>
+  </div>
+  <div id="popover_content_wrapper" style="display: none;">
+    <nav class="navbar fixed-top navbar-expand bg-light" style="overflow:hidden; height: 60px; margin-top: 20px;" id="popoverNav">
+      <ul class="navbar-nav ml-auto">
+        <ul class="list-inline">
+          <li class="list-inline-item">
+            <button class="btn btn-outline-secondary pull-left" id="updateButton" onclick="cycleVisibility(this);" type="button">
+              Change Boundary
+            </button>
+          </li>
+          <li class="list-inline-item">
+            <button class="btn btn-outline-secondary pull-right" id="addNegativeIcon" onclick="overrideSentiment(-1);" style="margin-left: 197px" type="button">
+              <i class="fa fa-times-circle" aria-hidden="true"></i>
+            </button>
+          </li>
+          <li class="list-inline-item">
+            <button class="btn btn-outline-secondary pull-right" id="addNeutralIcon" onclick="overrideSentiment(0);" type="button">
+              <i class="fa fa-minus-circle" aria-hidden="true"></i>
+            </button>
+          </li>
+          <li class="list-inline-item">
+            <button class="btn btn-outline-secondary pull-right" id="addPositiveIcon" onclick="overrideSentiment(1);" type="button">
+              <i class="fa fa-check-circle" aria-hidden="true"></i>
+            </button>
+          </li>
+          <li class="list-inline-item">
+            <button class="btn btn-outline-secondary" id="updateButton" onclick="var id = currentPaperSelected.selectAll('rect').filter(function (d, i) { return i === 2;}).attr('id');
+                             updateTextInput(this.parentElement.parentElement.childNodes[13].childNodes[1], this.parentElement.parentElement.childNodes[11].childNodes[1].value, this.parentElement.parentElement.childNodes[15].childNodes[1].value,id.substring(0,id.indexOf('_')), 0);
+                                changePaperTextBoundary(id.substring(0,id.indexOf('_')), id.substring(id.indexOf('_') + 1,id.length));" type="button" style="display: none;">
+              Update Boundary
+            </button>
+          </li>
+          <li class="list-inline-item">
+            <input type="range" innertext="0" min="-10" max="0" value="0" step="-1" class="form-control-range slider" id="rangeBeforePopover" oninput="
+                            var id = currentPaperSelected.selectAll('rect').filter(function (d, i) { return i === 2;}).attr('id');
+                            updateTextInput(this.parentElement.parentElement.childNodes[13].childNodes[1], this.value , this.parentElement.parentElement.childNodes[15].childNodes[1].value,           id.substring(0,id.indexOf('_')), 2);"
+              style="display: none;">
+          </li>
+          <li class="list-inline-item align-middle">
+            <label class="text-center" for="formControlRange" style="margin: 0 0 10px 0; display: none;" id="citationRangePopOver">[
+              0 <- Citation -> 0 ]
+            </label>
+          </li>
+          <li class="list-inline-item">
+            <input type="range" innertext="0" min="0" max="10" value="0" step="1" class="form-control-range slider" id="rangeAfterPopover" oninput="
+                            var id = currentPaperSelected.selectAll('rect').filter(function (d, i) { return i === 2;}).attr('id');
+                            updateTextInput(this.parentElement.parentElement.childNodes[13].childNodes[1], this.parentElement.parentElement.childNodes[11].childNodes[1].value , this.value,           id.substring(0,id.indexOf('_')), 2);"
+              style="display: none;">
+          </li>
+
+        </ul>
+      </ul>
+    </nav>
+    <!-- Other nav that could be used for info
+            <nav class="navbar fixed-top navbar-expand bg-light" style = "overflow:hidden; margin-top: 59px;" id="paperInfoNav">
+
+        </nav>-->
+    <div id="popover_text" style="overflow-y: scroll; height: 365px; margin-top: -20px;"></div>
+  </div>
+  <ul class='custom-menu'>
+  </ul>
+  <div class="tooltip" style="opacity: 0;"></div>
+  <input type="hidden" id="text-selection" />
+</body>
+
+<!-- Scripts -->
+<script>
+  $(window).on('load', function() {
+    //Get the year data
+    getYears();
+    //Filter the main screen by the amount of hits
+    //changeLabel(0);
+  });
+
+  //Get the input field
+  var input = document.getElementById("searchBox");
+  //Execute a function when the user releases a key on the keyboard
+  input.addEventListener("keyup", function(event) {
+    // Cancel the default action, if needed
+    event.preventDefault();
+    // Number 13 is the "Enter" key on the keyboard
+    if (event.keyCode === 13) {
+      // Trigger the button element with a click
+      document.getElementById("searchButton").click();
+    }
+  });
+</script>
+
+</html>
