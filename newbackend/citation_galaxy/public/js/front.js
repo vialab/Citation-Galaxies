@@ -845,14 +845,15 @@ function prepContainers(increment) {
 }
 
 //Get the list of years from the database
-function getYears() {
+function getYears( done ) {
   $.ajax({
     type: "GET",
     url: currentURL + "years",
     success: function(data) {
       years = data;
       prepContainers(currIncrement);
-      getFilteredYears("", true, undefined, false, true);
+      done();
+      // getFilteredYears("", true, undefined, false, true);
     },
     async: true
   });
@@ -1172,7 +1173,7 @@ function getFilteredYears(
   $("#changeLabelItem2").addClass("disabled");
   $.ajax({
     type: "POST",
-    url: processURL2 + "query",
+    url: currentURL + "query",
     contentType: 'application/json',
     data: JSON.stringify({
       query: word,
