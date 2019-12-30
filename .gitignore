@@ -26,6 +26,7 @@ out_docker
 *.prof
 *.bak
 
+**/errors
 **/tmp
 misc/postgresql.conf.sample
 database/postgres

@@ -7,74 +7,107 @@ from . import db
 import time
 
 from citation_galaxy.settings import config as conf
-from citation_galaxy.db import NUMBER_COLS
+from citation_galaxy.db import NUMBER_COLS, QueryManager
 
 
-count_columns = [ (i+1) for i in range(NUMBER_COLS) ]
 
-def reshape_count_columns( percent_range = 10 ):
-    if (NUMBER_COLS % percent_range) != 0:
-        raise ValueError(f'percent_range={percent_range} must evenly divide NUMBER_COLS={NUMBER_COLS}, division remainder: {NUMBER_COLS%percent_range}')
 
-    # for (i,count) in zip(range(0,NUMBER_COLS,percent_range), range(0,int(NUMBER_COLS/percent_range))):
-        # yield count_columns[i:i+percent_range], count+1
-    return [ (count_columns[i:i+percent_range], count+1) for (i,count) in zip(range(0,NUMBER_COLS,percent_range), range(0,int(NUMBER_COLS/percent_range))) ]
-
-def build_summing_query( percent_range = 10 ):
-    columns_in_bins = reshape_count_columns( percent_range )
-    body = ' from (select * from {0}) as d {1}'
-    return 'select ' + ', '.join( ( '+'.join( ( f'sum(cite_in_{el:02d})' for el in chunk ) ) + f' as c{count}' for (chunk,count) in columns_in_bins ) ) + body
-
-def build_counting_query( percent_range = 10 ):
-    columns_in_bins = reshape_count_columns( percent_range )
-    body = ' from (select ts_search, pub_year,' + ', '.join( ( f'case when (' + '+'.join( ( f'coalesce(cite_in_{el:02d},0)' for el in chunk ) ) + f')>1 then 1 else 0 end as c{count}' for (chunk,count) in columns_in_bins ) ) 
-    body += ' from {0}) as d {1}'  
-    
-    return 'select ' + ', '.join( ( f'sum(c{count}) as c{count}' for (chunk,count) in columns_in_bins ) ) + body
-
-def fill_in_query_conditions( query , search, values ):
-    pass
-
-print("hi")
-async def query_row_sums():
-    pass
 
 async def query(request):
+    db = request.app['db']
+
     # print("query:",request,db.question.select())
     query_params = await request.json()
     num_bins = query_params.get('increment', 10)
-    search_text = query_params.get('query', '')
+    search_input = query_params.get('query', '')
     words_left = query_params.get('rangeLeft',0)
     words_right = query_params.get('rangeRight',0)
 
-    query_text = build_summing_query( num_bins )
+    # query_text = build_summing_query( num_bins )
+    query_text=''
+
     query_search = ''
-    query_values = 
+    
+    search_text = ''
+    subsearch_text = ''
+    search_params = []
 
-    if len(search_text) > 0:
-        # do something about range left & rangeright
+    if len(search_input) > 0:
+        # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
+        search_text = 'article_search where ts_search @@ to_tsquery($1)'#.format( ' & '.join( ( word for word in search_input ) ) )
+        search_params.append( ' & '.join( ( word for word in search_input ) ) )
         
-        query_search = 'where ts_search @@ to_tsquery($1)'
-        query_values = ' & '.join( ( word for word in search_text.split(' ') ) )
+        if words_left>0 or words_right>0:
+            subsearch_text = 'where ts_search @@ to_tsquery($2) '
+            
+            subsearch_params = []
+            for word in search_input:
+                for dist in range(1,words_left+1):
 
-        query_text
+                    subsearch_params.append( f'{word} <{dist}> ЉЉ' )
+                
+                for dist in range(1,words_right+1):
+                    subsearch_params.append( f'ЉЉ <{dist}> {word}' )
+            
+            search_params.append( ' | '.join(subsearch_params) )
+
+        # search_values = ' & '.join( ( word for word in search_input.split(' ') ) )
+
+    else:
+        search_text = 'article_search'
+
+    subsearch_text += 'group by pub_year order by pub_year'
 
     
-    tasks = []
-    for year in range(conf['year_range']['min'],conf['year_range']['max']):
-        print('year:',year)
-        # tasks.append( asyncio.create_task( request.app['db'].fetchrow( 'select count(id) as count, ' + quer + f' from article_search_{year}' ) ) )
-        tasks.append( asyncio.create_task( request.app['db'].fetchrow( querytext + f' from article_search_{year}' ) ) )
-        await asyncio.sleep(0.05)
+    # tasks = []
+    # for year in range(conf['year_range']['min'],conf['year_range']['max']+1):
+    #     print('year:',year)
+    #     # tasks.append( asyncio.create_task( request.app['db'].fetchrow( 'select count(id) as count, ' + quer + f' from article_search_{year}' ) ) )
+    #     tasks.append( asyncio.create_task( request.app['db'].fetchrow( query_text + f' from article_search_{year}' ) ) )
+    #     await asyncio.sleep(0.05)
 
-    print("tasks: ",tasks)
+    # print("tasks: ",tasks)
     # print("wait: ",await tasks[15])
-    print("done")
 
-    sums = [ [val for val in (await task).values()] for task in tasks ]
+    # task = asyncio.create_task( req)
+    # tasks = await db.fetch( query_text )
+
+    # sums = [ [val for val in task.values()] for task in tasks ]
+    # agg = {}
+    # for year in range(2003,2019):
+    #     agg.setdefault(str(year), {'content': sums[year-2003],'max': max(sums[year-2003])} )
+
+    querymanager = QueryManager( db, num_bins, search_text, subsearch_text, search_params)
+
+    results = await asyncio.gather(
+        querymanager.do_summing_query(),
+        querymanager.do_counting_query()
+        # do_summing_query( db, num_bins, search_text, subsearch_text, search_params),
+        # do_counting_query( db, num_bins, search_text, subsearch_text, search_params)
+    )
+
+    # results = await do_summing_query(db, num_bins, '' )
     agg = {}
-    for year in range(2003,2019):
-        agg.setdefault(str(year), {'content': sums[year-2003],'max': max(sums[year-2003])} )
+    for row in results[0]:
+        year = row.get('pub_year')
+        counts = list( row.values() )[1:]
+        counts = [0 if v is None else v for v in counts]
+
+        agg.setdefault( str(year), {
+            'content':  counts,
+            'max':      max( counts )
+        })
+
+    for row in results[1]:
+        year = row.get('pub_year')
+        counts = list( row.values() )[1:]
+        counts = [0 if v is None else v for v in counts]
+
+        data = agg.get( str(year), {} )
+        data.setdefault( 'papers', {
+            'content':  counts,
+            'max':      max( counts )
+        })
 
 
     return web.json_response( {'agg':agg} )
@@ -90,12 +123,11 @@ async def query(request):
     #         print(time.time(),record)
 
 async def years(request):
-    returnvalue = []
+    # returnvalue = []
+    # for year in range(conf['year_range']['min'],conf['year_range']['max']+1):
+    #     returnvalue.append( {'articleyear': year} )
 
-    for year in range(2003,2019):
-        returnvalue.append( {'articleyear': year} )
-
-    return web.json_response( returnvalue )
+    return web.json_response( [ {'articleyear': year} for year in range(conf['year_range']['min'],conf['year_range']['max']+1)] )
 
 # @aiohttp_jinja2.template('index.html')
 async def index(request):

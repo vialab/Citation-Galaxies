@@ -75,9 +75,9 @@ def to_tsvector( text ):
         # token = wnl.lemmatize( token )
 
         if token not in punctuation and (len(token)>0) and (word_pos<=65535):
-            word_pos += 1
 
             if (token not in stopwords):
+                word_pos += 1
                 # token = sbs.stem( token )
                 datum = word_dict.setdefault( sbs.stem( token ), [] )
 

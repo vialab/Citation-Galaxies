@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 from pprint import pprint
+import uvloop
+uvloop.install()
+
 
 import multiprocessing
 from multiprocessing import Pool, TimeoutError
@@ -19,12 +22,14 @@ import pubmed_parser as pp
 
 import asyncio
 import asyncpg
-import uvloop
-uvloop.install()
 
 import utils
 import json
 import math
+
+from random import randint
+
+
 
 def xml_path_iterator( path_dir ):
     fullpath = ( os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(path_dir)) for f in fn if os.path.splitext(f)[-1] in ('.nxml', '.xml') )
@@ -34,12 +39,11 @@ def xml_path_list( path_dir ):
     fullpath = [os.path.join(dp, f) for dp, dn, fn in os.walk(os.path.expanduser(path_dir)) for f in fn if os.path.splitext(f)[-1] in ('.nxml', '.xml') ]
     return fullpath
 
-
 its = 0
 
 def receive_xml_ts( path ):
     general_data = pp.parse_pubmed_xml( path )
-    fulltext_data = pp.parse_pubmed_paragraph( path, ref_replace=' †‡ ' )
+    fulltext_data = pp.parse_pubmed_paragraph( path, ref_replace=' ЉЉ ' )
     # pprint(fulltext_data)
     pub_year = int(general_data['publication_year'])
 
@@ -49,7 +53,7 @@ def receive_xml_ts( path ):
     find = True
     lastpos = 0
     while find:
-        pos = fulltext.find( '†‡', lastpos )
+        pos = fulltext.find( 'ЉЉ', lastpos )
 
         if pos >= 0:
             percent = ((pos+2) / len(fulltext)) * 100
@@ -64,9 +68,9 @@ def receive_xml_ts( path ):
     if pub_year >= 2003 and pub_year <= 2019:
         return (    int(general_data['pmc'] ),
                     # utils.to_tsvector( ' '.join([general_data['full_title'], general_data['abstract'], fulltext]) ),
-                    fulltext,
                     pub_year,
-                    *citation_distribution
+                    *citation_distribution,
+                    fulltext
                 )
     else:
         return None
@@ -79,17 +83,18 @@ async def insert_ts( data ):
 
     con = await asyncpg.connect(user='citationdb',password='citationdb',database='citationdb')
     await con.set_type_codec( 'tsvector', schema='pg_catalog', encoder=utils.encode_tsvector, decoder=utils.decode_tsvector, format='binary')
-    result = await con.copy_records_to_table( 'article_search', records=filt_results, columns=['id','body','pub_year','cite_in_01', 'cite_in_02', 'cite_in_03', 'cite_in_04', 'cite_in_05', 'cite_in_06', 'cite_in_07', 'cite_in_08', 'cite_in_09', 'cite_in_10', 'cite_in_11', 'cite_in_12', 'cite_in_13', 'cite_in_14', 'cite_in_15', 'cite_in_16', 'cite_in_17', 'cite_in_18', 'cite_in_19', 'cite_in_20', 'cite_in_21', 'cite_in_22', 'cite_in_23', 'cite_in_24', 'cite_in_25', 'cite_in_26', 'cite_in_27', 'cite_in_28', 'cite_in_29', 'cite_in_30', 'cite_in_31', 'cite_in_32', 'cite_in_33', 'cite_in_34', 'cite_in_35', 'cite_in_36', 'cite_in_37', 'cite_in_38', 'cite_in_39', 'cite_in_40', 'cite_in_41', 'cite_in_42', 'cite_in_43', 'cite_in_44', 'cite_in_45', 'cite_in_46', 'cite_in_47', 'cite_in_48', 'cite_in_49', 'cite_in_50', 'cite_in_51', 'cite_in_52', 'cite_in_53', 'cite_in_54', 'cite_in_55', 'cite_in_56', 'cite_in_57', 'cite_in_58', 'cite_in_59', 'cite_in_60', 'cite_in_61', 'cite_in_62', 'cite_in_63', 'cite_in_64', 'cite_in_65', 'cite_in_66', 'cite_in_67', 'cite_in_68', 'cite_in_69', 'cite_in_70', 'cite_in_71', 'cite_in_72', 'cite_in_73', 'cite_in_74', 'cite_in_75', 'cite_in_76', 'cite_in_77', 'cite_in_78', 'cite_in_79', 'cite_in_80', 'cite_in_81', 'cite_in_82', 'cite_in_83', 'cite_in_84', 'cite_in_85', 'cite_in_86', 'cite_in_87', 'cite_in_88', 'cite_in_89', 'cite_in_90', 'cite_in_91', 'cite_in_92', 'cite_in_93', 'cite_in_94', 'cite_in_95', 'cite_in_96', 'cite_in_97', 'cite_in_98', 'cite_in_99', 'cite_in_100'] )
+    # result = await con.copy_records_to_table( 'article_search', records=filt_results, columns=['id','ts_search','pub_year','cite_in_01', 'cite_in_02', 'cite_in_03', 'cite_in_04', 'cite_in_05', 'cite_in_06', 'cite_in_07', 'cite_in_08', 'cite_in_09', 'cite_in_10', 'cite_in_11', 'cite_in_12', 'cite_in_13', 'cite_in_14', 'cite_in_15', 'cite_in_16', 'cite_in_17', 'cite_in_18', 'cite_in_19', 'cite_in_20', 'cite_in_21', 'cite_in_22', 'cite_in_23', 'cite_in_24', 'cite_in_25', 'cite_in_26', 'cite_in_27', 'cite_in_28', 'cite_in_29', 'cite_in_30', 'cite_in_31', 'cite_in_32', 'cite_in_33', 'cite_in_34', 'cite_in_35', 'cite_in_36', 'cite_in_37', 'cite_in_38', 'cite_in_39', 'cite_in_40', 'cite_in_41', 'cite_in_42', 'cite_in_43', 'cite_in_44', 'cite_in_45', 'cite_in_46', 'cite_in_47', 'cite_in_48', 'cite_in_49', 'cite_in_50', 'cite_in_51', 'cite_in_52', 'cite_in_53', 'cite_in_54', 'cite_in_55', 'cite_in_56', 'cite_in_57', 'cite_in_58', 'cite_in_59', 'cite_in_60', 'cite_in_61', 'cite_in_62', 'cite_in_63', 'cite_in_64', 'cite_in_65', 'cite_in_66', 'cite_in_67', 'cite_in_68', 'cite_in_69', 'cite_in_70', 'cite_in_71', 'cite_in_72', 'cite_in_73', 'cite_in_74', 'cite_in_75', 'cite_in_76', 'cite_in_77', 'cite_in_78', 'cite_in_79', 'cite_in_80', 'cite_in_81', 'cite_in_82', 'cite_in_83', 'cite_in_84', 'cite_in_85', 'cite_in_86', 'cite_in_87', 'cite_in_88', 'cite_in_89', 'cite_in_90', 'cite_in_91', 'cite_in_92', 'cite_in_93', 'cite_in_94', 'cite_in_95', 'cite_in_96', 'cite_in_97', 'cite_in_98', 'cite_in_99', 'cite_in_100'] )
+    result = await con.copy_records_to_table( 'article_search', records=filt_results, columns=['id','pub_year','cite_in_01', 'cite_in_02', 'cite_in_03', 'cite_in_04', 'cite_in_05', 'cite_in_06', 'cite_in_07', 'cite_in_08', 'cite_in_09', 'cite_in_10', 'cite_in_11', 'cite_in_12', 'cite_in_13', 'cite_in_14', 'cite_in_15', 'cite_in_16', 'cite_in_17', 'cite_in_18', 'cite_in_19', 'cite_in_20', 'cite_in_21', 'cite_in_22', 'cite_in_23', 'cite_in_24', 'cite_in_25', 'cite_in_26', 'cite_in_27', 'cite_in_28', 'cite_in_29', 'cite_in_30', 'cite_in_31', 'cite_in_32', 'cite_in_33', 'cite_in_34', 'cite_in_35', 'cite_in_36', 'cite_in_37', 'cite_in_38', 'cite_in_39', 'cite_in_40', 'cite_in_41', 'cite_in_42', 'cite_in_43', 'cite_in_44', 'cite_in_45', 'cite_in_46', 'cite_in_47', 'cite_in_48', 'cite_in_49', 'cite_in_50', 'cite_in_51', 'cite_in_52', 'cite_in_53', 'cite_in_54', 'cite_in_55', 'cite_in_56', 'cite_in_57', 'cite_in_58', 'cite_in_59', 'cite_in_60', 'cite_in_61', 'cite_in_62', 'cite_in_63', 'cite_in_64', 'cite_in_65', 'cite_in_66', 'cite_in_67', 'cite_in_68', 'cite_in_69', 'cite_in_70', 'cite_in_71', 'cite_in_72', 'cite_in_73', 'cite_in_74', 'cite_in_75', 'cite_in_76', 'cite_in_77', 'cite_in_78', 'cite_in_79', 'cite_in_80', 'cite_in_81', 'cite_in_82', 'cite_in_83', 'cite_in_84', 'cite_in_85', 'cite_in_86', 'cite_in_87', 'cite_in_88', 'cite_in_89', 'cite_in_90', 'cite_in_91', 'cite_in_92', 'cite_in_93', 'cite_in_94', 'cite_in_95', 'cite_in_96', 'cite_in_97', 'cite_in_98', 'cite_in_99', 'cite_in_100', 'body'] )
     
     print("Insert res: ",len(data))
-    return True
+    return len(data)
 
 
 
 
 def receive_xml_text( path ):
     general_data = pp.parse_pubmed_xml( path )
-    fulltext_data = pp.parse_pubmed_paragraph( path, ref_replace=' †‡ ' )
+    fulltext_data = pp.parse_pubmed_paragraph( path, ref_replace=' ЉЉ ' )
     # pprint(fulltext_data)
     # fulltext = "".join( (section['text'] for section in fulltext_data ) )
 
@@ -139,10 +144,17 @@ async def insert_text( data ):
 async def run( data ):
     done = 0
     try:
-        # done = await insert_ts( data )
-        done = await insert_text( data )
+        done = await insert_ts( data )
+        donee = await insert_text( data )
     except Exception as ex:
         print("Caught Insert EX: ",ex,'\n')
+        
+        # try:
+        with open('errors/'+str(randint(0,1000000))+'.txt','wb') as fp:
+            json.dump(fp,data)
+        # except Exception as ex:
+            # print("caught inner write ex")
+            # pass
         # print("data: ",data)
         # print("data: ",data[1],data[-1])
     return done
@@ -164,7 +176,7 @@ if __name__ == '__main__':
     # res = asyncio.run( run() )
     # print("RES: ",res)
     # start 4 worker processes
-    with Pool(processes=20) as pool:
+    with Pool(processes=24) as pool:
     # with Pool(processes=1) as pool:
         print("Building path list")
         # pubmed_dict = pp.parse_pubmed_xml(path_xml[0]) # dictionary output

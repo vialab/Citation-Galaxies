@@ -30,26 +30,28 @@ from dateutil.relativedelta import relativedelta
 import datetime
 import utils
 
+
 import string
-import nltk
-from nltk.tokenize.treebank import TreebankWordTokenizer, TreebankWordDetokenizer
-from nltk.stem import WordNetLemmatizer
-wnl = WordNetLemmatizer()
-sbs = nltk.stem.snowball.EnglishStemmer()
-tbwt = TreebankWordTokenizer()
-stopwords = set( nltk.corpus.stopwords.words('english') )
-punctuation = string.punctuation + "''``"
-translate = str.maketrans('', '', string.punctuation)
+# import nltk
+# from nltk.tokenize.treebank import TreebankWordTokenizer, TreebankWordDetokenizer
+# from nltk.stem import WordNetLemmatizer
+
+# wnl = WordNetLemmatizer()
+# sbs = nltk.stem.snowball.EnglishStemmer()
+# tbwt = TreebankWordTokenizer()
+# stopwords = set( nltk.corpus.stopwords.words('english') )
+# punctuation = string.punctuation + "''``"
+# translate = str.maketrans('', '', string.punctuation)
 # translate.setdefault(58,' ')
 
-path_xml = pp.list_xml_path('/archive/datasets/PubMed/Adipocyte') # list all xml paths under directory
-# path_xml = pp.list_xml_path('/archive/datasets/PubMed') # list all xml paths under directory
-# path_xml = pp.list_xml_path('/home/nbeals/pubmed_data/full_corp') # list all xml paths under directory
-# print(len(path_xml))
+# path_xml = pp.list_xml_path('/archive/datasets/PubMed/Adipocyte') # list all xml paths under directory
+# # path_xml = pp.list_xml_path('/archive/datasets/PubMed') # list all xml paths under directory
+# # path_xml = pp.list_xml_path('/home/nbeals/pubmed_data/full_corp') # list all xml paths under directory
+# # print(len(path_xml))
 
-pathh = '/archive/datasets/PubMed/Rev_Bras_Ortop/PMC4563043.nxml'
-pubmed_dict = pp.parse_pubmed_xml(pathh) # dictionary output
-full_dat = pp.parse_pubmed_paragraph(pathh,"||")
+# pathh = '/archive/datasets/PubMed/Rev_Bras_Ortop/PMC4563043.nxml'
+# pubmed_dict = pp.parse_pubmed_xml(pathh) # dictionary output
+# full_dat = pp.parse_pubmed_paragraph(pathh,"||")
 
 
 
@@ -77,12 +79,59 @@ def comp_vecs(t1,t2):
 
 import parse_pubmed
 
+import pickle
+import copyreg
+
+class asyncpgRecordProxy():
+    def __init__(self, data):
+        self._data = data
+        self._keymap = {}
+
+        for (key,value) in self._data:
+            self._keymap[key]=value
+
+    def items(self):
+        return self._data
+
+    def values(self):
+        for (key,value) in self._data:
+            yield value
+
+    def keys(self):
+        for (key,value) in self._data:
+            yield key
+    
+    def get(self, key, default):
+        return self._keymap.get(key,default)
+
+    def __getitem__(self, key):
+        # return self.get(key)
+        return self._data[key][1]
+
+    def __repr__(self):
+        return '<Record ' + ' '.join( (f'{key}={value}' for (key,value) in self._data) ) + '>'
+
+    # def __contains__(self, item):
+
+def pickle_asyncpgRecord( rec ):
+    return ( asyncpgRecordProxy, (list(rec.items()),) )
+
+copyreg.pickle(asyncpg.Record,pickle_asyncpgRecord)
+
 async def main():
     # recs = ( (dat,) ,)
     # recs = [ (5,to_tsvector("hello world hello again") )]
 
     con = await asyncpg.connect(user='citationdb',password='citationdb',database='citationdb')
     await con.set_type_codec( 'tsvector', schema='pg_catalog', encoder=utils.encode_tsvector, decoder=utils.decode_tsvector, format='binary')
+
+    row = await con.fetch('select * from article_text limit 100')
+    pik = pickle.dumps( row )
+    print('pik! ',len(pik))
+
+    unpik = pickle.loads(pik)
+
+    print("unpik: ",unpik)
 
     xmls = pp.list_xml_path('/archive/datasets/PubMed/J_Cell_Sci')
     # xmls = pp.list_xml_path('/archive/datasets/PubMed/Mol_Cancer')

@@ -21,3 +21,4 @@ TRAFARET = T.Dict({
             'max': T.Int()
         }),
 })
+
