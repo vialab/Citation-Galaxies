@@ -1,5 +1,5 @@
 postgres:
-  database: citationdb
+  database: citationdb2
   user: citationdb
   password: citationdb
   host: localhost

@@ -1,18 +1,137 @@
 # views.py
+import time
+
 import asyncio
 import aiohttp_jinja2
+
 from aiohttp import web
 
-from . import db
-import time
+from . import db as dblib
 
 from citation_galaxy.settings import config as conf
 from citation_galaxy.db import NUMBER_COLS, QueryManager
 
 
 
+routes = web.RouteTableDef()
 
 
+import re
+def parseRangeString(str):
+    return tuple( map(int, re.findall(r'\d+', str) ) )
+
+
+@routes.post('/gateway/papers')
+async def papers(request):
+    db = request.app['db']
+
+    # print("query:",request,db.question.select())
+    query_params = await request.json()
+    increment = int(query_params.get('increment', 10))
+    # range_list = query_params.get('selections', None)
+    range_list = list( map( parseRangeString, query_params.get('selections', None) ) )
+    year = range_list[0]
+    
+    search_input = query_params.get('query', '')
+    words_left = query_params.get('rangeLeft', 0)
+    words_right = query_params.get('rangeRight', 0)
+
+    last_rank = int(query_params.get('lastRank', 0))
+    n_rank = query_params.get('nrank', 0)
+    signals = query_params.get('signals', {})
+    journal_id = query_params.get('journalid', "")
+
+
+
+    print("BP after param read")
+
+    query_text=''
+
+    query_search = ''
+    
+    # search_text = f'article_search_{year}'
+    search_text = ''
+    subsearch_text = ''
+    search_params = []
+    if len(search_input) > 0:
+        # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
+        search_text += ' where ts_search @@ to_tsquery($1)'#.format( ' & '.join( ( word for word in search_input ) ) )
+        search_params.append( ' & '.join( ( word for word in search_input ) ) )
+        
+        if words_left>0 or words_right>0:
+            subsearch_text = 'where ts_search @@ to_tsquery($2) '
+            
+            subsearch_params = []
+            for word in search_input:
+                for dist in range(1,words_left+1):
+
+                    subsearch_params.append( f'{word} <{dist}> ЉЉ' )
+                
+                for dist in range(1,words_right+1):
+                    subsearch_params.append( f'ЉЉ <{dist}> {word}' )
+            
+            search_params.append( ' | '.join(subsearch_params) )
+
+        # search_values = ' & '.join( ( word for word in search_input.split(' ') ) )
+
+    # else:
+        # search_text = 'article_search'
+
+    # subsearch_text += 'group by pub_year order by pub_year'
+
+
+    querymanager = QueryManager( db, increment , search_text, subsearch_text, search_params)
+    
+    tasks = [ querymanager.do_paper_query( year_range_tup, n_rank, last_rank ) for year_range_tup in range_list ]
+    results = await asyncio.gather( *tasks )
+    # for year_range_tup in range_list:
+        # text = querymanager.build_paper_query( year_range_tup, n_rank, last_rank )
+    
+
+
+    sorted_articles = {}
+    years = set()
+    journals = {}
+
+    for yearResults in results:
+        for (count,row) in enumerate(yearResults):
+            rec = {
+                "content": {},
+                'max': 0,
+                'year': row['pub_year'],
+                'rank': (count+1) + last_rank,
+                'total': 0,
+            }
+
+            for (chunk,count) in dblib.reshape_count_columns( increment ):
+                rec['content'][count] = row[f'ref_count_{count}']
+
+            journal_id = int(row.get('journalid', 0))
+            # journals.setdefault(journal_id, {"title": row["journaltitle"], "years": set()})
+            # journals[journal_id]['years'].add(row['pub_year'])
+            years.add(row['pub_year'])
+
+            rec['max'] = max( rec['content'].values() )
+
+            sorted_articles[row['id']] = rec
+
+    maxCount = max( d['max'] for d in sorted_articles.values() )
+
+    return web.json_response({"max": maxCount, "papers": sorted_articles, "years": list(years), "journals": journals})
+
+
+@routes.get("/gateway/paper")
+async def paper(request):
+    db = request.app['db']
+
+    paper_id = int( request.rel_url.query['id'] )
+
+    
+
+    return False
+
+
+#Query route
 async def query(request):
     db = request.app['db']
 
@@ -122,12 +241,12 @@ async def query(request):
     #                                     ''',prefetch=1):
     #         print(time.time(),record)
 
-async def years(request):
-    # returnvalue = []
-    # for year in range(conf['year_range']['min'],conf['year_range']['max']+1):
-    #     returnvalue.append( {'articleyear': year} )
 
-    return web.json_response( [ {'articleyear': year} for year in range(conf['year_range']['min'],conf['year_range']['max']+1)] )
+
+async def years(request):
+    """ Returns a list of dictionaries where the dicts have an entry named "articleyear" and an integer associated with it
+    """
+    return web.json_response( [ {'articleyear': year} for year in range(conf['year_range']['min'],conf['year_range']['max']+1) ] )
 
 # @aiohttp_jinja2.template('index.html')
 async def index(request):

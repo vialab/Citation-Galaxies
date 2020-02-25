@@ -11,10 +11,11 @@ art_tbl = """create table article_search_{} (
 
 art_text_tbl = """create table article_text_{} (
     id              SERIAL PRIMARY KEY,
+    pub_year		smallint,
     title 		    varchar,
     abstract		varchar,
-    sections        jsonb,
-    pub_year		smallint
+    general         jsonb,
+    sections        jsonb
  ) inherits( article_text );"""
 
 for i in range(100):

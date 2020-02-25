@@ -1,11 +1,13 @@
 import hashlib
 import copyreg
+import pickle
+
+import math as m
 
 import asyncpg
 
-import pickle
 
-class asyncpgRecordProxy():
+class asyncpgRecordProxy(object):
     def __init__(self, data):
         self._data = data
         self._keymap = {}
@@ -28,7 +30,18 @@ class asyncpgRecordProxy():
         return self._keymap.get(key,default)
 
     def __getitem__(self, key):
-        return self._data[key][1]
+        if isinstance(key, str):
+            return self.__getattribute__(key)
+        else:
+            return self._data[key][1]
+
+    def __getattribute__(self, key):
+        if object.__getattribute__(self, '_keymap').get(key,None) is not None:
+            return object.__getattribute__(self, '_keymap')[key]
+        else:
+            return object.__getattribute__(self, key)
+            # if key[0] == '_':
+            # return getattr(self, key)
 
     def __repr__(self):
         return '<Record ' + ' '.join( (f'{key}={value}' for (key,value) in self._data) ) + '>'
@@ -37,6 +50,8 @@ class asyncpgRecordProxy():
 def pickle_asyncpgRecord( rec ):
     return ( asyncpgRecordProxy, (list(rec.items()),) )
 copyreg.pickle(asyncpg.Record,pickle_asyncpgRecord)
+
+
 
 
 NUMBER_COLS = 100
@@ -83,6 +98,26 @@ class QueryManager():
 
     async def do_counting_query(self):
         query_text = self.build_counting_query().format( self.search_text, self.subsearch_text )
+
+        return await self.do_query( query_text )
+
+
+    def build_paper_query(self, year_range_tup, rowLimit = 10, rowOffset = 0):
+        columns_in_bins = reshape_count_columns( self.percent_range )
+        year = year_range_tup[0]
+        left_col = year_range_tup[1]
+        right_col = year_range_tup[2]
+
+
+        body = f' from (select * from article_search_{year}'+' {0}) as t1 ' + f'inner join article_text_{year} as t2 on t1.id = t2.id ' + '{1}'
+        body += f' order by ref_count_{ int(right_col/self.percent_range ) } desc limit {rowLimit} offset {rowOffset}'
+
+        return 'select t2.id, t2.pub_year, t2.title, t2.abstract, t2.article_data, t2.sections, ' + ', '.join( ( '('+'+'.join( ( f'coalesce(cite_in_{col:02d},0)' for col in chunk ) ) + f') as ref_count_{count}' for (chunk,count) in columns_in_bins ) ) + body
+        # return 'select title, abstract, article_data, sections, ' +  ', '.join( ( '+'.join( f'coalesce(cite_in_{col:02d},0)' for col in range(sel[1]+1,sel[2]+1) ) + f' as ref_count' for sel in range_list ) )
+        # return 'select title, abstract, article_data, section_data, ' +  ', '.join( ( '+'.join( ( f'coalesce(cite_in_{el:02d},0)' for el in chunk ) ) + f' as c{count}' for (chunk,count) in columns_in_bins ) ) + body
+
+    async def do_paper_query(self, *args, **kwargs):
+        query_text = self.build_paper_query( *args, **kwargs ).format( self.search_text, self.subsearch_text )
 
         return await self.do_query( query_text )
 
@@ -167,6 +202,10 @@ async def init_pg(app):
 async def close_pg(app):
     app['db'].close()
     await app['db'].wait_closed()
+
+
+
+
 
 
 async def get_question(conn, question_id):
