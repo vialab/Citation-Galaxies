@@ -1093,7 +1093,8 @@ function getPopoverContent(articleid) {
     type: "GET",
     url: processURL + "paper?id=" + articleid,
     success: function(results) {
-      let data = JSON.parse(results);
+      // let data = JSON.parse(results);
+      let data = results;
       let $modal = $("#generic-modal");
       $modal.addClass("full-screen");
       $(".modal-title", $modal).html("");
@@ -1128,7 +1129,7 @@ function getPopoverContent(articleid) {
           }
         }
         let citations = [];
-        full_text = tagCitationSentiment(articleid, full_text);
+        // full_text = tagCitationSentiment(articleid, full_text);
         p.citations.forEach(c => {
           let citation_text = c.citationtext;
           if (!citations.includes(citation_text)) {

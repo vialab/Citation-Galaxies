@@ -54,6 +54,7 @@ def xml_path_list( path_dir ):
 
 
 
+
 its = 0
 
 def receive_xml_ts( path ):
@@ -110,6 +111,7 @@ async def insert_ts( data ):
 def receive_xml_text( path ):
     general_data = pp.parse_pubmed_xml( path )
     fulltext_data = pp.parse_pubmed_paragraph( path, ref_replace=' ЉЉ ' )
+    ref_data = pp.parse_pubmed_references( path )
     # pprint(fulltext_data)
     # fulltext = "".join( (section['text'] for section in fulltext_data ) )
 
@@ -169,16 +171,10 @@ async def run( data ):
         print("Caught Insert EX: ",ex,'\n',str(ex))
     return done
 
-
-
 def process_main( data ):
     return asyncio.run( run( data ) )
 
-# print("any process",__name__,multiprocessing.current_process())
 if __name__ == '__main__':
-    # print("in __main__")
-    # res = asyncio.run( run() )
-    # print("RES: ",res)
     # start 4 worker processes
     with Pool(processes=24) as pool:
     # with Pool(processes=1) as pool:
@@ -208,10 +204,4 @@ if __name__ == '__main__':
         if len(chunk)>0:
             res.append( pool.apply_async( process_main, (chunk,) ) )
 
-        print("waiting")
-        # res = pool.map_async( process_main, chunks )
-        # res = pool.imap_unordered( process_main, chunks, chunksize=10 )
-        # res = pool.imap_unordered( process_main, path_xml )
-        # res = pool.imap_unordered( process_main, chunks )
-        # print("res: ",res)
         print("Total Records inserted: ",sum( [r.get() for r in res] ) )

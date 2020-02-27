@@ -1,6 +1,8 @@
 # views.py
 import time
 
+from json import loads, dumps
+
 import asyncio
 import aiohttp_jinja2
 
@@ -10,7 +12,6 @@ from . import db as dblib
 
 from citation_galaxy.settings import config as conf
 from citation_galaxy.db import NUMBER_COLS, QueryManager
-
 
 
 routes = web.RouteTableDef()
@@ -40,7 +41,6 @@ async def papers(request):
     n_rank = query_params.get('nrank', 0)
     signals = query_params.get('signals', {})
     journal_id = query_params.get('journalid', "")
-
 
 
     print("BP after param read")
@@ -82,7 +82,7 @@ async def papers(request):
 
     querymanager = QueryManager( db, increment , search_text, subsearch_text, search_params)
     
-    tasks = [ querymanager.do_paper_query( year_range_tup, n_rank, last_rank ) for year_range_tup in range_list ]
+    tasks = [ querymanager.do_papers_query( year_range_tup, n_rank, last_rank ) for year_range_tup in range_list ]
     results = await asyncio.gather( *tasks )
     # for year_range_tup in range_list:
         # text = querymanager.build_paper_query( year_range_tup, n_rank, last_rank )
@@ -126,9 +126,35 @@ async def paper(request):
 
     paper_id = int( request.rel_url.query['id'] )
 
-    
+    querymanager = QueryManager( db )
+    results = (await querymanager.do_paper_query( paper_id ))[0]
+    sections = loads(results['sections'])
 
-    return False
+    data = {
+        'id': results['id'],
+        'papertext': '',
+        'charcount': 0,
+        'articletitle': results.get('title',''),
+        'articleyear': results['pub_year'],
+        'journaltitle': '',
+        # 'paragraphs': results['sections'],
+    }
+
+    paragraphs = {}
+    for section in sections:
+        c = 0 #replace counter
+        for ref in section['reference_ids']:
+            section['text'] = section['text'].replace( 'ЉЉ', ref, c )
+
+            section.setdefault('citations', []).append({
+                'citationtext': ref,
+            })
+
+            c += 1
+
+    data['paragraphs'] = sections
+
+    return web.json_response(data)
 
 
 #Query route

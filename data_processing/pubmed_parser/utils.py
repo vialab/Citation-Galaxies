@@ -19,7 +19,7 @@ def remove_namespace(tree):
         if has_namespace:
             node.tag = node.tag.split('}', 1)[1]
 
-@functools.lru_cache(maxsize=4)
+@functools.lru_cache(maxsize=8)
 def read_xml(path, nxml=False):
     """
     Parse tree from given XML path

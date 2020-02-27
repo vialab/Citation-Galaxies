@@ -102,7 +102,7 @@ class QueryManager():
         return await self.do_query( query_text )
 
 
-    def build_paper_query(self, year_range_tup, rowLimit = 10, rowOffset = 0):
+    def build_papers_query(self, year_range_tup, rowLimit = 10, rowOffset = 0):
         columns_in_bins = reshape_count_columns( self.percent_range )
         year = year_range_tup[0]
         left_col = year_range_tup[1]
@@ -112,15 +112,22 @@ class QueryManager():
         body = f' from (select * from article_search_{year}'+' {0}) as t1 ' + f'inner join article_text_{year} as t2 on t1.id = t2.id ' + '{1}'
         body += f' order by ref_count_{ int(right_col/self.percent_range ) } desc limit {rowLimit} offset {rowOffset}'
 
-        return 'select t2.id, t2.pub_year, t2.title, t2.abstract, t2.article_data, t2.sections, ' + ', '.join( ( '('+'+'.join( ( f'coalesce(cite_in_{col:02d},0)' for col in chunk ) ) + f') as ref_count_{count}' for (chunk,count) in columns_in_bins ) ) + body
-        # return 'select title, abstract, article_data, sections, ' +  ', '.join( ( '+'.join( f'coalesce(cite_in_{col:02d},0)' for col in range(sel[1]+1,sel[2]+1) ) + f' as ref_count' for sel in range_list ) )
-        # return 'select title, abstract, article_data, section_data, ' +  ', '.join( ( '+'.join( ( f'coalesce(cite_in_{el:02d},0)' for el in chunk ) ) + f' as c{count}' for (chunk,count) in columns_in_bins ) ) + body
+        return 'select t2.id, t2.pub_year, ' + ', '.join( ( '('+'+'.join( ( f'coalesce(cite_in_{col:02d},0)' for col in chunk ) ) + f') as ref_count_{count}' for (chunk,count) in columns_in_bins ) ) + body
+        # return 'select t2.id, t2.pub_year, t2.title, t2.abstract, t2.article_data, t2.sections, ' + ', '.join( ( '('+'+'.join( ( f'coalesce(cite_in_{col:02d},0)' for col in chunk ) ) + f') as ref_count_{count}' for (chunk,count) in columns_in_bins ) ) + body
 
-    async def do_paper_query(self, *args, **kwargs):
-        query_text = self.build_paper_query( *args, **kwargs ).format( self.search_text, self.subsearch_text )
+    async def do_papers_query(self, *args, **kwargs):
+        query_text = self.build_papers_query( *args, **kwargs ).format( self.search_text, self.subsearch_text )
 
         return await self.do_query( query_text )
 
+
+    def build_paper_query(self, id):
+        return f'select * from article_text where id = {id}'
+
+    async def do_paper_query(self, *args, **kwargs):
+        query_text = self.build_paper_query( *args, **kwargs )
+
+        return await self.do_query( query_text )
 
     async def do_query(self, query_text, use_cache = True):
         sha = hashlib.shake_256( query_text.lower().encode('utf-8') )

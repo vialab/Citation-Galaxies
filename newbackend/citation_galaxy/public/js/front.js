@@ -1186,12 +1186,12 @@ function getFilteredYears(
       // loaded_articles = data["nunique"];
       if (draw) {
         drawAllYears(data["agg"]);
-        // if (process_signals) processAllSignals();
-        // if (load_signals) {
-        //   loadCategories(function() {
-        //     loadSignals(processAllSignals);
-        //   });
-        // }
+        if (process_signals) processAllSignals();
+        if (load_signals) {
+          loadCategories(function() {
+            loadSignals(processAllSignals);
+          });
+        }
       }
       if (typeof callback !== "undefined") callback(data["agg"]);
     }
