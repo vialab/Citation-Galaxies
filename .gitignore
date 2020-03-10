@@ -1,4 +1,6 @@
-.env
+**/.env
+*.env
+**.env
 
 database/data
 

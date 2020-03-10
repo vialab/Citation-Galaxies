@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/newbackend",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Backend",
             "type": "python",
             "request": "launch",
@@ -12,27 +20,5 @@
             "module": "citation_galaxy",
             "console": "internalConsole"
         },
-        {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "internalConsole",
-            // "justMyCode": false,
-        },
-        {
-            "name": "Python: newbackend",
-            "type": "python",
-            "request": "launch",
-            "cwd": "${workspaceFolder}/newbackend",
-            // "program": "-m aiohttpdemo_polls",
-            "args": [
-                "-m",
-                "citation_galaxy"
-            ],
-            // "program": "-m ${file}",
-            "console": "internalConsole",
-            // "justMyCode": false,
-        }
     ]
 }

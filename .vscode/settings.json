@@ -1,5 +1,31 @@
 {
     "python.pythonPath": "/home/nbeals/miniconda3/envs/citation-galaxy/bin/python",
-    "hexdump.width":32,
-    // "hexdump.littleEndian": false,
+    "hexdump.width": 32,
+
+
+    "python.analysis.downloadChannel": "daily",
+    "python.formatting.provider": "black",
+    
+    "python.jediEnabled": false,
+    "python.linting.pylintArgs": ["--disable=all","--enable=F,E,R,unreachable,duplicate-key,unnecessary-semicolon,global-variable-not-assigned,unused-variable,binary-op-exception,bad-format-string,anomalous-backslash-in-string,bad-open-mode","--disable=too-many-function-args"],
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.analysis.cachingLevel": "System",
+    
+    // "[python]": {
+    //     // "editor.formatOnSave": true
+    // },
+
+    "files.exclude": {
+        "/home/nbeals/work/maintenance/Citation-Galaxies/database/data": true,
+        "database/data": true
+    },
+
+
+    "vsintellicode.features.python.deepLearning": "enabled",
+    "python.analysis.memory.keepLibraryLocalVariables": true,
+    "python.analysis.memory.keepLibraryAst": true,
+    "python.analysis.symbolsHierarchyDepthLimit": 20,
+    "python.autoComplete.addBrackets": true,
+    "python.condaPath": "/home/nbeals/miniconda3/condabin/conda",
 }

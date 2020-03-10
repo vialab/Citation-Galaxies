@@ -1,0 +1,10 @@
+.git
+.DS_Store
+Dockerfile
+README.md
+.vscode
+sproc
+*.csv
+*.txt
+run.sh
+node_modules
