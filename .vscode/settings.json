@@ -5,12 +5,13 @@
 
     "python.analysis.downloadChannel": "daily",
     "python.formatting.provider": "black",
+    "python.formatting.blackArgs": ["--line-length","120"],
     
     "python.jediEnabled": false,
     "python.linting.pylintArgs": ["--disable=all","--enable=F,E,R,unreachable,duplicate-key,unnecessary-semicolon,global-variable-not-assigned,unused-variable,binary-op-exception,bad-format-string,anomalous-backslash-in-string,bad-open-mode","--disable=too-many-function-args"],
     "python.linting.enabled": true,
     "python.linting.pylintEnabled": true,
-    "python.analysis.cachingLevel": "System",
+    "python.analysis.cachingLevel": "Library",
     
     // "[python]": {
     //     // "editor.formatOnSave": true
@@ -22,10 +23,13 @@
     },
 
 
-    "vsintellicode.features.python.deepLearning": "enabled",
+    "vsintellicode.features.python.deepLearning": "disabled",
     "python.analysis.memory.keepLibraryLocalVariables": true,
     "python.analysis.memory.keepLibraryAst": true,
     "python.analysis.symbolsHierarchyDepthLimit": 20,
     "python.autoComplete.addBrackets": true,
     "python.condaPath": "/home/nbeals/miniconda3/condabin/conda",
+    "python.linting.banditEnabled": false,
+    "python.linting.flake8Enabled": false,
+    "python.linting.prospectorEnabled": false,
 }

@@ -42,15 +42,10 @@ class asyncpgRecordProxy(object):
             return object.__getattribute__(self, key)
 
     def __repr__(self):
-        return (
-            "<Record "
-            + " ".join((f"{key}={value}" for (key, value) in self._data))
-            + ">"
-        )
+        return "<Record " + " ".join((f"{key}={value}" for (key, value) in self._data)) + ">"
 
 
 def pickle_asyncpgRecord(rec):
     return (asyncpgRecordProxy, (list(rec.items()),))
-
 
 copyreg.pickle(asyncpg.Record, pickle_asyncpgRecord)

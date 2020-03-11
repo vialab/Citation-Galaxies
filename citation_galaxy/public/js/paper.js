@@ -1134,10 +1134,10 @@ function getPopoverContent(articleid) {
           let citation_text = c.citationtext;
           if (!citations.includes(citation_text)) {
             full_text = full_text.replace(
-              citation_text,
-              "<span class='citation'>" + citation_text + "</span>"
+              ' ' + citation_text + ' ',
+              " <span class='citation'>" + citation_text + "</span> " // Have to add spaces to we replace the text correctly
             );
-            citations.push(citation_text);
+            // citations.push(citation_text); // TODO: decide to highlight them all, or just once
           }
         });
         // use the markup text

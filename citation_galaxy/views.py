@@ -15,191 +15,177 @@ routes = web.RouteTableDef()
 
 
 def parseRangeString(str):
-    return tuple( map(int, re.findall(r'\d+', str) ) )
+    return tuple(map(int, re.findall(r"\d+", str)))
 
 
-@routes.post('/gateway/papers')
+@routes.post("/gateway/papers")
 async def papers(request):
-    db = request.app['db']
+    db = request.app["db"]
 
     # print("query:",request,db.question.select())
     query_params = await request.json()
-    increment = int(query_params.get('increment', 10))
+    increment = int(query_params.get("increment", 10))
     # range_list = query_params.get('selections', None)
-    range_list = list( map( parseRangeString, query_params.get('selections', None) ) )
-    year = range_list[0]
-    
-    search_input = query_params.get('query', '')
-    words_left = query_params.get('rangeLeft', 0)
-    words_right = query_params.get('rangeRight', 0)
+    range_list = list(map(parseRangeString, query_params.get("selections", None)))
 
-    last_rank = int(query_params.get('lastRank', 0))
-    n_rank = query_params.get('nrank', 0)
-    signals = query_params.get('signals', {})
-    journal_id = query_params.get('journalid', "")
+    search_input = query_params.get("query", "")
+    words_left = query_params.get("rangeLeft", 0)
+    words_right = query_params.get("rangeRight", 0)
 
+    last_rank = int(query_params.get("lastRank", 0))
+    n_rank = query_params.get("nrank", 0)
+    signals = query_params.get("signals", {})
+    journal_id = query_params.get("journalid", "")
 
-    print("BP after param read")
-
-    query_text=''
-
-    query_search = ''
-    
-    # search_text = f'article_search_{year}'
-    search_text = ''
-    subsearch_text = ''
+    search_text = ""
+    subsearch_text = ""
     search_params = []
     if len(search_input) > 0:
         # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
-        search_text += ' where ts_search @@ to_tsquery($1)'#.format( ' & '.join( ( word for word in search_input ) ) )
-        search_params.append( ' & '.join( ( word for word in search_input ) ) )
-        
-        if words_left>0 or words_right>0:
-            subsearch_text = 'where ts_search @@ to_tsquery($2) '
-            
+        search_text += (
+            " where ts_search @@ to_tsquery($1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
+        )
+        search_params.append(" & ".join((word for word in search_input)))
+
+        if words_left > 0 or words_right > 0:
+            subsearch_text = "where ts_search @@ to_tsquery($2) "
+
             subsearch_params = []
             for word in search_input:
-                for dist in range(1,words_left+1):
+                for dist in range(1, words_left + 1):
 
-                    subsearch_params.append( f'{word} <{dist}> ЉЉ' )
-                
-                for dist in range(1,words_right+1):
-                    subsearch_params.append( f'ЉЉ <{dist}> {word}' )
-            
-            search_params.append( ' | '.join(subsearch_params) )
+                    subsearch_params.append(f"{word} <{dist}> ЉЉ")
+
+                for dist in range(1, words_right + 1):
+                    subsearch_params.append(f"ЉЉ <{dist}> {word}")
+
+            search_params.append(" | ".join(subsearch_params))
 
         # search_values = ' & '.join( ( word for word in search_input.split(' ') ) )
 
     # else:
-        # search_text = 'article_search'
+    # search_text = 'article_search'
 
     # subsearch_text += 'group by pub_year order by pub_year'
 
+    querymanager = QueryManager(db, increment, search_text, subsearch_text, search_params)
 
-    querymanager = QueryManager( db, increment , search_text, subsearch_text, search_params)
-    
-    tasks = [ querymanager.do_papers_query( year_range_tup, n_rank, last_rank ) for year_range_tup in range_list ]
-    results = await asyncio.gather( *tasks )
-    # for year_range_tup in range_list:
-        # text = querymanager.build_paper_query( year_range_tup, n_rank, last_rank )
-    
-
+    tasks = [querymanager.do_papers_query(year_range_tup, n_rank, last_rank) for year_range_tup in range_list]
+    results = await asyncio.gather(*tasks)
 
     sorted_articles = {}
     years = set()
     journals = {}
 
     for yearResults in results:
-        for (count,row) in enumerate(yearResults):
+        for (count, row) in enumerate(yearResults):
             rec = {
                 "content": {},
-                'max': 0,
-                'year': row['pub_year'],
-                'rank': (count+1) + last_rank,
-                'total': 0,
+                "max": 0,
+                "year": row["pub_year"],
+                "rank": (count + 1) + last_rank,
+                "total": 0,
             }
 
-            for (chunk,count) in dblib.reshape_count_columns( increment ):
-                rec['content'][count] = row[f'ref_count_{count}']
+            for (chunk, count) in dblib.reshape_count_columns(increment):
+                rec["content"][count] = row[f"ref_count_{count}"]
 
-            journal_id = int(row.get('journalid', 0))
+            journal_id = int(row.get("journalid", 0))
             # journals.setdefault(journal_id, {"title": row["journaltitle"], "years": set()})
             # journals[journal_id]['years'].add(row['pub_year'])
-            years.add(row['pub_year'])
+            years.add(row["pub_year"])
 
-            rec['max'] = max( rec['content'].values() )
+            rec["max"] = max(rec["content"].values())
 
-            sorted_articles[row['id']] = rec
+            sorted_articles[row["id"]] = rec
 
-    maxCount = max( d['max'] for d in sorted_articles.values() )
+    maxCount = max(d["max"] for d in sorted_articles.values())
 
-    return web.json_response({"max": maxCount, "papers": sorted_articles, "years": list(years), "journals": journals})
+    return web.json_response({"max": maxCount, "papers": sorted_articles, "years": list(years), "journals": journals,})
 
 
 @routes.get("/gateway/paper")
 async def paper(request):
-    db = request.app['db']
+    db = request.app["db"]
 
-    paper_id = int( request.rel_url.query['id'] )
+    paper_id = int(request.rel_url.query["id"])
 
-    querymanager = QueryManager( db )
-    results = (await querymanager.do_paper_query( paper_id ))[0]
-    sections = loads(results['sections'])
+    querymanager = QueryManager(db)
+    results = (await querymanager.do_paper_query(paper_id))[0]
+    sections = loads(results["sections"])
 
     data = {
-        'id': results['id'],
-        'papertext': '',
-        'charcount': 0,
-        'articletitle': results.get('title',''),
-        'articleyear': results['pub_year'],
-        'journaltitle': '',
+        "id": results["id"],
+        "papertext": "",
+        "charcount": 0,
+        "articletitle": results.get("title", ""),
+        "articleyear": results["pub_year"],
+        "journaltitle": "",
         # 'paragraphs': results['sections'],
     }
 
-    paragraphs = {}
     for section in sections:
-        c = 0 #replace counter
-        for ref in section['reference_ids']:
-            section['text'] = section['text'].replace( 'ЉЉ', ref, c )
+        c = 1  # replace counter
+        for ref in section["reference_ids"]:
+            section["text"] = section["text"].replace("ЉЉ", ref, 1)
 
-            section.setdefault('citations', []).append({
-                'citationtext': ref,
-            })
+            section.setdefault("citations", []).append(
+                {"citationtext": ref,}
+            )
 
             c += 1
 
-    data['paragraphs'] = sections
+    data["paragraphs"] = sections
 
     return web.json_response(data)
 
 
-#Query route
+# Query route
 async def query(request):
-    db = request.app['db']
+    db = request.app["db"]
 
     # print("query:",request,db.question.select())
     query_params = await request.json()
-    num_bins = query_params.get('increment', 10)
-    search_input = query_params.get('query', '')
-    words_left = query_params.get('rangeLeft',0)
-    words_right = query_params.get('rangeRight',0)
+    num_bins = query_params.get("increment", 10)
+    search_input = query_params.get("query", "")
+    words_left = query_params.get("rangeLeft", 0)
+    words_right = query_params.get("rangeRight", 0)
 
     # query_text = build_summing_query( num_bins )
-    query_text=''
+    query_text = ""
 
-    query_search = ''
-    
-    search_text = ''
-    subsearch_text = ''
+    query_search = ""
+
+    search_text = ""
+    subsearch_text = ""
     search_params = []
 
     if len(search_input) > 0:
         # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
-        search_text = 'article_search where ts_search @@ to_tsquery($1)'#.format( ' & '.join( ( word for word in search_input ) ) )
-        search_params.append( ' & '.join( ( word for word in search_input ) ) )
-        
-        if words_left>0 or words_right>0:
-            subsearch_text = 'where ts_search @@ to_tsquery($2) '
-            
+        search_text = "article_search where ts_search @@ to_tsquery($1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
+        search_params.append(" & ".join((word for word in search_input)))
+
+        if words_left > 0 or words_right > 0:
+            subsearch_text = "where ts_search @@ to_tsquery($2) "
+
             subsearch_params = []
             for word in search_input:
-                for dist in range(1,words_left+1):
+                for dist in range(1, words_left + 1):
 
-                    subsearch_params.append( f'{word} <{dist}> ЉЉ' )
-                
-                for dist in range(1,words_right+1):
-                    subsearch_params.append( f'ЉЉ <{dist}> {word}' )
-            
-            search_params.append( ' | '.join(subsearch_params) )
+                    subsearch_params.append(f"{word} <{dist}> ЉЉ")
+
+                for dist in range(1, words_right + 1):
+                    subsearch_params.append(f"ЉЉ <{dist}> {word}")
+
+            search_params.append(" | ".join(subsearch_params))
 
         # search_values = ' & '.join( ( word for word in search_input.split(' ') ) )
 
     else:
-        search_text = 'article_search'
+        search_text = "article_search"
 
-    subsearch_text += 'group by pub_year order by pub_year'
+    subsearch_text += "group by pub_year order by pub_year"
 
-    
     # tasks = []
     # for year in range(conf['year_range']['min'],conf['year_range']['max']+1):
     #     print('year:',year)
@@ -218,7 +204,7 @@ async def query(request):
     # for year in range(2003,2019):
     #     agg.setdefault(str(year), {'content': sums[year-2003],'max': max(sums[year-2003])} )
 
-    querymanager = QueryManager( db, num_bins, search_text, subsearch_text, search_params)
+    querymanager = QueryManager(db, num_bins, search_text, subsearch_text, search_params)
 
     results = await asyncio.gather(
         querymanager.do_summing_query(),
@@ -230,29 +216,21 @@ async def query(request):
     # results = await do_summing_query(db, num_bins, '' )
     agg = {}
     for row in results[0]:
-        year = row.get('pub_year')
-        counts = list( row.values() )[1:]
+        year = row.get("pub_year")
+        counts = list(row.values())[1:]
         counts = [0 if v is None else v for v in counts]
 
-        agg.setdefault( str(year), {
-            'content':  counts,
-            'max':      max( counts )
-        })
+        agg.setdefault(str(year), {"content": counts, "max": max(counts)})
 
     for row in results[1]:
-        year = row.get('pub_year')
-        counts = list( row.values() )[1:]
+        year = row.get("pub_year")
+        counts = list(row.values())[1:]
         counts = [0 if v is None else v for v in counts]
 
-        data = agg.get( str(year), {} )
-        data.setdefault( 'papers', {
-            'content':  counts,
-            'max':      max( counts )
-        })
+        data = agg.get(str(year), {})
+        data.setdefault("papers", {"content": counts, "max": max(counts)})
 
-
-    return web.json_response( {'agg':agg} )
-
+    return web.json_response({"agg": agg})
 
     # async with con.transaction():
     #     # Postgres requires non-scrollable cursors to be created
@@ -264,11 +242,13 @@ async def query(request):
     #         print(time.time(),record)
 
 
-
 async def years(request):
     """ Returns a list of dictionaries where the dicts have an entry named "articleyear" and an integer associated with it
     """
-    return web.json_response( [ {'articleyear': year} for year in range(conf['year_range']['min'],conf['year_range']['max']+1) ] )
+    return web.json_response(
+        [{"articleyear": year} for year in range(conf["year_range"]["min"], conf["year_range"]["max"] + 1)]
+    )
+
 
 # @aiohttp_jinja2.template('index.html')
 async def index(request):
@@ -277,12 +257,7 @@ async def index(request):
     #     records = await cursor.fetchall()
     #     questions = [dict(q) for q in records]
     #     return {'questions': questions}
-    return web.FileResponse('./citation_galaxy/public/index.html')
-
-
-
-
-
+    return web.FileResponse("./citation_galaxy/public/index.html")
 
 
 # @aiohttp_jinja2.template('detail.html')

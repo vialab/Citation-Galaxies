@@ -8,7 +8,7 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "cwd": "${workspaceFolder}/newbackend",
+            "cwd": "${workspaceFolder}",
             "program": "${file}",
             "console": "integratedTerminal"
         },
@@ -16,7 +16,7 @@
             "name": "Python: Backend",
             "type": "python",
             "request": "launch",
-            "cwd": "${workspaceFolder}/newbackend",
+            "cwd": "${workspaceFolder}",
             "module": "citation_galaxy",
             "console": "internalConsole"
         },
