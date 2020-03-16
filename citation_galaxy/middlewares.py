@@ -15,13 +15,13 @@ def create_error_middleware(overrides):
 
     @web.middleware
     async def error_middleware(request, handler):
-
         try:
             response = await handler(request)
 
             override = overrides.get(response.status)
             if override:
                 return await override(request)
+
 
             return response
 

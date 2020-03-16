@@ -26,81 +26,81 @@ const b = {
 };
 
 function createVisualization(json) {
-  $("#sunburst").show();
-  initializeBreadcrumbTrail();
-  d3.select("#chart svg").remove();
-  svg = d3
-    .select("#chart")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", height)
-    .append("g")
-    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
-    .attr("id", "donut-container");
+  // $("#sunburst").show();
+  // initializeBreadcrumbTrail();
+  // d3.select("#chart svg").remove();
+  // svg = d3
+  //   .select("#chart")
+  //   .append("svg")
+  //   .attr("width", width)
+  //   .attr("height", height)
+  //   .append("g")
+  //   .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
+  //   .attr("id", "donut-container");
 
-  let nodes = d3.hierarchy(json).sum(d => d.size);
-  let gSlices = svg
-    .selectAll("g")
-    .data(partition(nodes).descendants(), d => d.data.id)
-    .enter()
-    .append("g")
-    .attr("id", function(d) {
-      return "bite-group-" + d.data.name;
-    });
+  // let nodes = d3.hierarchy(json).sum(d => d.size);
+  // let gSlices = svg
+  //   .selectAll("g")
+  //   .data(partition(nodes).descendants(), d => d.data.id)
+  //   .enter()
+  //   .append("g")
+  //   .attr("id", function(d) {
+  //     return "bite-group-" + d.data.name;
+  //   });
 
-  gSlices.exit().remove();
+  // gSlices.exit().remove();
 
-  gSlices
-    .append("path")
-    .attr("fill-rule", "evenodd")
-    .attr("id", function(d) {
-      if (d.data.name == "root") return "root-path";
-      return "bite-" + d.data.name;
-    })
-    .style("fill", getSBColor)
-    .style("opacity", 1)
-    .on("click", click)
-    .on("mouseover", mouseover);
+  // gSlices
+  //   .append("path")
+  //   .attr("fill-rule", "evenodd")
+  //   .attr("id", function(d) {
+  //     if (d.data.name == "root") return "root-path";
+  //     return "bite-" + d.data.name;
+  //   })
+  //   .style("fill", getSBColor)
+  //   .style("opacity", 1)
+  //   .on("click", click)
+  //   .on("mouseover", mouseover);
 
-  gSlices
-    .append("text")
-    .attr("dy", ".35em")
-    .text(function(d) {
-      return d.parent ? d.data.signal : "";
-    })
-    .attr("id", function(d) {
-      return "bite-text-" + d.data.name;
-    })
-    .attr("fill", "#fff");
+  // gSlices
+  //   .append("text")
+  //   .attr("dy", ".35em")
+  //   .text(function(d) {
+  //     return d.parent ? d.data.signal : "";
+  //   })
+  //   .attr("id", function(d) {
+  //     return "bite-text-" + d.data.name;
+  //   })
+  //   .attr("fill", "#fff");
 
-  svg
-    .selectAll("path")
-    .transition("update")
-    .duration(750)
-    .attrTween("d", arcTweenPath);
+  // svg
+  //   .selectAll("path")
+  //   .transition("update")
+  //   .duration(750)
+  //   .attrTween("d", arcTweenPath);
 
-  svg
-    .selectAll("text")
-    .transition("update")
-    .duration(750)
-    .attrTween("transform", arcTweenText)
-    .attr("text-anchor", function(d) {
-      return d.textAngle > 180 ? "start" : "end";
-    })
-    .attr("dx", function(d) {
-      return d.textAngle > 180 ? 27 : 27;
-    })
-    .attr("opacity", function(e) {
-      return e.x1 - e.x0 > 0.01 ? 1 : 0;
-    });
+  // svg
+  //   .selectAll("text")
+  //   .transition("update")
+  //   .duration(750)
+  //   .attrTween("transform", arcTweenText)
+  //   .attr("text-anchor", function(d) {
+  //     return d.textAngle > 180 ? "start" : "end";
+  //   })
+  //   .attr("dx", function(d) {
+  //     return d.textAngle > 180 ? 27 : 27;
+  //   })
+  //   .attr("opacity", function(e) {
+  //     return e.x1 - e.x0 > 0.01 ? 1 : 0;
+  //   });
 
-  d3.select("#percentage").text(
-    ((total_tagged / total_size) * 100).toFixed(2) + "%"
-  );
-  // fill the root node with its distribution
-  fillRootDistribution(svg, (total_tagged / total_size) * 100);
-  d3.select("#root-path").style("fill", "url(#grad)");
-  d3.select("#chart").on("mouseleave", mouseleave);
+  // d3.select("#percentage").text(
+  //   ((total_tagged / total_size) * 100).toFixed(2) + "%"
+  // );
+  // // fill the root node with its distribution
+  // fillRootDistribution(svg, (total_tagged / total_size) * 100);
+  // d3.select("#root-path").style("fill", "url(#grad)");
+  // d3.select("#chart").on("mouseleave", mouseleave);
 }
 
 function fillRootDistribution(svg, percentage) {

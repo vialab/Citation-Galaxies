@@ -19,3 +19,7 @@ TRAFARET = T.Dict(
         T.Key("year_range"): T.Dict({"min": T.Int(), "max": T.Int()}),
     }
 )
+
+
+def list_in_string( list_of_words, string_containing ):
+    return any( ( True for searchword in list_of_words if searchword in string_containing ) )

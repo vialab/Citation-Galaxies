@@ -7,7 +7,8 @@ from trafaret_config import commandline
 from citation_galaxy.utils import TRAFARET
 
 BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
-DEFAULT_CONFIG_PATH = BASE_DIR / "config" / "citationdb.yaml"
+CONF_DIR = BASE_DIR / "config"
+DEFAULT_CONFIG_PATH = CONF_DIR / "citationdb.yaml"
 
 
 def get_config(argv=None):
@@ -23,3 +24,5 @@ def get_config(argv=None):
 
 
 config = get_config()
+
+

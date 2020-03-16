@@ -27,9 +27,9 @@ function loadData(url, callback, params = {}, _async = true) {
   $.ajax({
     type: "POST",
     url: currentURL + "api/" + url,
-    data: {
-      values: JSON.stringify(params)
-    },
+    data: JSON.stringify( {
+      values: params
+    } ),
     success: function(results) {
       // console.log(results);
       callback(

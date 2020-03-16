@@ -342,7 +342,7 @@ app.post("/api/*", function(req, res, next) {
   let full_url = req.originalUrl.split("/");
   let table_name = full_url[full_url.length - 1];
 
-  if (!Object.keys(dbschema.api).includes(table_name)) {
+  if (!Object.keys(dbschema.api).includes(table_name)) {cookie
     return res.json({});
   }
 

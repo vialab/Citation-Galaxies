@@ -36,3 +36,4 @@ database/postgres
 **/citationdb-data
 .env
 database/postgres
+config/session.key

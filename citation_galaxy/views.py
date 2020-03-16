@@ -6,10 +6,14 @@ from json import dumps, loads
 
 import aiohttp_jinja2
 from aiohttp import web
+from aiohttp_session import setup, get_session
+
 
 import citation_galaxy.database as dblib
 from citation_galaxy.database import NUMBER_COLS, QueryManager
 from citation_galaxy.settings import config as conf
+
+from citation_galaxy.utils import list_in_string
 
 routes = web.RouteTableDef()
 
@@ -18,9 +22,101 @@ def parseRangeString(str):
     return tuple(map(int, re.findall(r"\d+", str)))
 
 
+def get_db(request):
+    return request.app['db']
+
+async def get_db_sess(request):
+    return request.app['db'], await get_session(request)
+
+# select id, name, type from signaltype
+
+@routes.post("/api/signalcategory")
+async def signalCategory(request):
+    db = get_db(request)
+
+    # signcalcategoryid = 
+
+
+    cookieid = "196d2081988549fb86f38cf1944e79a9"
+    # # TODO Generate cookie ID
+    #   if (cookie === undefined) {
+    # // no: set a new cookie
+    # let nonce = Math.random().toString(),
+    #   cookie_id =
+    #     nonce.substring(2, nonce.length) + "_" + req.connection.remoteAddress;
+    # cookie_id = crypto
+    #   .createHash("md5")
+    #   .update(cookie_id)
+    #   .digest("hex");
+    # res.cookie("cookieName", cookie_id, {expires: new Date(253402300000000)});
+
+    results = await db.fetch("select id, catname, score, color from signalcategory where enabled and cookieid=$1", cookieid)
+
+    data = []
+    for result in results:
+        data.append({
+            'id':       result['id'],
+            'catname':  result['catname'],
+            'score':    result['score'],
+            'color':    result['color']
+        })
+
+    return web.json_response( {
+        'data': data,
+        'aliases': {},
+        'links': {},
+        'name': 'signalcategory',
+        'schema': {},
+        'parent': {}
+    })
+
+
+@routes.post("/api/signalbytype")
+async def signalByType(request):
+    db = get_db(request)
+
+    post_data = await request.json()
+    query_params = post_data.get('values')
+    signaltypeid = int(query_params.get("signaltypeid", 10))
+
+    cookieid = "196d2081988549fb86f38cf1944e79a9"
+
+    results = await db.fetch("select id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal where enabled and signaltypeid=$1 and cookieid=$2;", signaltypeid, cookieid)
+
+    data = [{
+            'catname': result['catname'],
+            'score': result['score'],
+            'color': result['color']
+        } for result in results ]
+
+    return web.json_response( {
+        'data': data,
+        'aliases': {},
+        'links': {},
+        'name': 'signalcategory',
+        'schema': {},
+        'parent': {}
+    })
+
+
+@routes.post('/gateway/process/signals')
+async def process_signal(request):
+    db, session = await get_db_sess(request)
+
+    query_params = await request.json()
+
+    data = {
+        'front_data': {},
+        'signal_scores': {}
+    }
+
+    return web.json_response(data)
+
+
+
 @routes.post("/gateway/papers")
 async def papers(request):
-    db = request.app["db"]
+    db = get_db(request)
 
     # print("query:",request,db.question.select())
     query_params = await request.json()
@@ -106,9 +202,13 @@ async def papers(request):
 
 @routes.get("/gateway/paper")
 async def paper(request):
-    db = request.app["db"]
-
+    # db = request.app["db"]
+    db, session = await get_db_sess(request)
     paper_id = int(request.rel_url.query["id"])
+
+    # session = await get_session(request)
+    query_params = session.get('query_params',{})
+    query_list = query_params.get('query',[])
 
     querymanager = QueryManager(db)
     results = (await querymanager.do_paper_query(paper_id))[0]
@@ -124,32 +224,42 @@ async def paper(request):
         # 'paragraphs': results['sections'],
     }
 
+    keep_sections = []
     for section in sections:
-        c = 1  # replace counter
-        for ref in section["reference_ids"]:
-            section["text"] = section["text"].replace("ЉЉ", ref, 1)
+        if len(query_list)==0 or list_in_string(query_list, section['text'].lower()) or list_in_string(query_list, section['section'].lower()):
+            for ref in section["reference_ids"]:
+                section["text"] = section["text"].replace("ЉЉ", ref, 1)
 
-            section.setdefault("citations", []).append(
-                {"citationtext": ref,}
-            )
+                section.setdefault("citations", []).append(
+                    {"citationtext": ref,}
+                )
 
-            c += 1
+            keep_sections.append( section )
 
-    data["paragraphs"] = sections
+    data["paragraphs"] = keep_sections
 
     return web.json_response(data)
 
 
 # Query route
 async def query(request):
-    db = request.app["db"]
+    # db = request.app["db"]
+    db, session = await get_db_sess(request)
 
     # print("query:",request,db.question.select())
     query_params = await request.json()
     num_bins = query_params.get("increment", 10)
-    search_input = query_params.get("query", "")
+    search_input = query_params.get("query", [])
     words_left = query_params.get("rangeLeft", 0)
     words_right = query_params.get("rangeRight", 0)
+
+    # Session
+    # session = await get_session(request)
+    session['query_params'] = query_params
+    session['query_params']['query'] = search_input
+    # last_visit = session['last_visit'] if 'last_visit' in session else None
+    # session['last_visit'] = time.time()
+    # text = 'Last visited: {}'.format(last_visit)
 
     # query_text = build_summing_query( num_bins )
     query_text = ""

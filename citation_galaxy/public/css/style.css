@@ -354,7 +354,7 @@ span.sentiment-text {
 }
 
 span.citation {
-  background-color: #9dc4df;
+  background-color: #9dc4df3f;
   user-select: none; /* Standard */
   -webkit-user-select: none; /* Safari */
   -moz-user-select: none; /* Firefox */
@@ -362,7 +362,7 @@ span.citation {
 }
 
 span.query-text {
-  background-color: #f4d442;
+  background-color: #ffdd1e;
 }
 
 .del-rule-btn {
