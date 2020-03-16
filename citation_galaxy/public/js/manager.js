@@ -618,10 +618,10 @@ function postUpdate(table_name, values, callback) {
   $.ajax({
     type: "POST",
     url: currentURL + "api/update",
-    data: {
+    data: JSON.stringify({
       table_name: table_name,
-      values: JSON.stringify(values)
-    },
+      values: values
+    }),
     success: function(results) {
       if (typeof callback != "undefined") callback(results);
     }
@@ -633,10 +633,10 @@ function postInsert(table_name, values, callback) {
   $.ajax({
     type: "POST",
     url: currentURL + "api/insert",
-    data: {
+    data: JSON.stringify({
       table_name: table_name,
-      values: JSON.stringify(values)
-    },
+      values: values
+    }),
     success: function(results) {
       if (typeof callback != "undefined") callback(results);
     }

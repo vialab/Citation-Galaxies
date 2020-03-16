@@ -98,6 +98,48 @@ async def signalByType(request):
         'parent': {}
     })
 
+@routes.post("/api/insert")
+async def insert_signal(request):
+    db, session = await get_db_sess(request)
+
+    post_data = await request.json()
+    query_params = session.get('query_params',{}).copy()
+    query_params.update( post_data.get('values') )
+    # query_params = post_data.get('values')
+
+    signal_category = query_params.get('signalcategoryid', None)
+    signal_text = query_params.get('signal', None)
+    signal_base = query_params.get('query',[])
+
+    if signal_text and signal_category:
+        if len(signal_base)>0:
+            
+            pass
+
+        else:
+            pass # TODO What to do here?
+    # signaltypeid = int(query_params.get("signaltypeid", 10))
+
+    # cookieid = "196d2081988549fb86f38cf1944e79a9"
+
+    # results = await db.fetch("select id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal where enabled and signaltypeid=$1 and cookieid=$2;", signaltypeid, cookieid)
+    data = []
+    # data = [{
+    #         'catname': result['catname'],
+    #         'score': result['score'],
+    #         'color': result['color']
+    #     } for result in results ]
+
+    return web.json_response( {} )
+    # return web.json_response( {
+    #     'data': data,
+    #     'aliases': {},
+    #     'links': {},
+    #     'name': 'signalcategory',
+    #     'schema': {},
+    #     'parent': {}
+    # })
+
 
 @routes.post('/gateway/process/signals')
 async def process_signal(request):
@@ -250,8 +292,8 @@ async def query(request):
     query_params = await request.json()
     num_bins = query_params.get("increment", 10)
     search_input = query_params.get("query", [])
-    words_left = query_params.get("rangeLeft", 0)
-    words_right = query_params.get("rangeRight", 0)
+    words_left = query_params.get("rangeLeft", -1)
+    words_right = query_params.get("rangeRight", -1)
 
     # Session
     # session = await get_session(request)
@@ -275,16 +317,16 @@ async def query(request):
         search_text = "article_search where ts_search @@ to_tsquery($1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
         search_params.append(" & ".join((word for word in search_input)))
 
-        if words_left > 0 or words_right > 0:
+        if words_left >= 0 or words_right >= 0:
             subsearch_text = "where ts_search @@ to_tsquery($2) "
 
             subsearch_params = []
             for word in search_input:
-                for dist in range(1, words_left + 1):
+                for dist in range(0, words_left + 1):
 
                     subsearch_params.append(f"{word} <{dist}> ЉЉ")
 
-                for dist in range(1, words_right + 1):
+                for dist in range(0, words_right + 1):
                     subsearch_params.append(f"ЉЉ <{dist}> {word}")
 
             search_params.append(" | ".join(subsearch_params))
