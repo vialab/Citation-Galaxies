@@ -112,6 +112,17 @@ function loadTable(
                 aliases
               );
             });
+          } else {
+            populateTable(
+              results,
+              name,
+              $("#ruleTable"),
+              links,
+              actions,
+              schema,
+              external_data,
+              aliases
+            );
           }
         } else {
           populateTable(
@@ -162,6 +173,7 @@ function populateTable(
 ) {
   // Create the header row
   let tableHeader = $("<thead></thead>").appendTo(table);
+  tableHeader.addClass('table-active')
   let tableBody = $("<tbody></tbody>").appendTo(table);
   let headerRow = $("<tr></tr>").appendTo(tableHeader);
 
@@ -175,9 +187,15 @@ function populateTable(
   for (let key in header_example) {
     // Used to prevent showing the id row
     if (headers.length != 0) {
-      let title = key;
+      let title = key.capitalize();
       if (Object.keys(aliases).includes(key)) {
-        title = aliases[key].name;
+        title = aliases[key].name.capitalize();
+
+        // Hack to use "name only" aliases just for the header before deleting them so it doesn't break anything else
+        if (aliases[key].nameonly) {
+          title = aliases[key].name
+          delete aliases[key];
+        }
       }
 
 
@@ -188,16 +206,9 @@ function populateTable(
       } else {
         additional += "w-auto"
       }
-      additional += '"'
+      additional += ' text-center f-tbl-head"'
       let element = $(
-        "<th id='" +
-          key + "' " +
-          additional +
-          " data-type='" +
-          schema[key] +
-          "' onclick='sortRows(this);'>" +
-          title +
-          "</th>"
+        `<th id='${key}' ${additional} data-type='${schema[key]}' onclick='sortRows(this);'>${title}</th>`
       );
       if (Object.keys(aliases).includes(key)) {
         element.addClass("aliased");
@@ -206,7 +217,7 @@ function populateTable(
     }
     headers.push(key);
   }
-  $("<th class='w-15'>actions</th>").appendTo(headerRow);
+  $("<th class='w-15 text-center f-tbl-head'>Actions</th>").appendTo(headerRow);
 
   Object.keys(aliases).forEach(key => {
     let $sel = getAliasSelect(
@@ -374,7 +385,7 @@ function drawActionOptions(row, headers, signal, links, actions) {
     });
   }
   // create action buttons that perform some sort of "action"
-  if (typeof actions != "undefined") {
+  if (actions.length>0) {
     Object.keys(actions).forEach(key => {
       let action = actions[key];
       let params = {};
@@ -569,10 +580,15 @@ function insertRow(elem) {
   // iterate through each cell
   $(".edit-cell", $row).each(function(index) {
     let field_name = $(this).attr("id");
-    let val = $(this).html();
+    let val = ""
+    if ($(this).hasClass('aliased')) {
+      val = global_aliases[field_name].sel.val()
+    } else {
+      val = $(this).html();
+    }
     // validate that the data type is correct for this cell
     let type = $("th#" + field_name).data("type");
-    valid_update = validateDataType(val, type);
+    [valid_update, val] = validateDataType(val, type);
     // if it's not valid, throw an error and stop trying to update
     if (!valid_update) {
       toast(
@@ -618,7 +634,7 @@ function updateRow(elem) {
     } else {
       // validate that the data type is correct for this cell
       let type = $("th#" + field_name).data("type");
-      valid_update = validateDataType(val, type);
+      [valid_update, val] = validateDataType(val, type);
       // if it's not valid, throw an error and stop trying to update
       if (!valid_update) {
         toast(
@@ -676,14 +692,15 @@ function postInsert(table_name, values, callback) {
 }
 
 function validateDataType(data, type) {
-  if (data == "") return true;
+  if (data == "") return [true, data];
   switch (type) {
     case "integer":
-      return !isNaN(parseInt(data));
+      return [!isNaN(parseInt(data)), parseInt(data)];
       break;
     case "character varying":
+      // return [true, data] # calls default instead
     default:
-      return data === data.toString();
+      return [data === data.toString(),data];
   }
 }
 

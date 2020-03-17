@@ -17,6 +17,12 @@
   width: 25% !important;
 }
 
+.f-tbl-head {
+  font-size: 1.35rem;
+}
+
+
+
 .noclick {
   pointer-events: none;
 }
@@ -590,7 +596,7 @@ g text {
 
 .modal-dialog {
   width: auto;
-  max-width: 960px; // Optional, maximum width
+  max-width: 960px; /* Optional, maximum width */
 }
 
 .modal-dialog.full-screen {

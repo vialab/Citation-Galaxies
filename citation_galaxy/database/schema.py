@@ -7,7 +7,8 @@ api = {
         "aliases": {
             "signalcategoryid": {"query": "signalcategory", "value": "id", "col": "catname", "name": "category"},
             "signaltypeid": {"query": "signaltype", "value": "id", "col": "name", "name": "type"},
-            "parentid": {"query": "signal", "value": "id", "col": "signal", "name": "parent"},
+            "parentid": {"query": "signal", "value": "id", "col": "signal", "name": "Parent Signal"},
+            # "signal": {"name": "Signal", "nameonly": True}
         },
         "links": {
             # to be used to connect to other queries
@@ -26,6 +27,8 @@ api = {
     "signalbycategory": {
         "query": "-- name: signal_by_category\nselect id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal \
       where enabled and signaltypeid=1 and signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
+    #     "query": "-- name: signal_by_category\nselect id, signal, parentid from signal \
+    #   where enabled and signaltypeid=1 and signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
         "require_cookie": True,
         "aliases": {
             "signalcategoryid": {"query": "signalcategory", "value": "id", "col": "catname", "name": "category"},
@@ -120,10 +123,15 @@ api = {
         "parent": "parentid",
     },
     "signalcategory": {
-        "query": "-- name: signal_category\nselect id, catname, score, color from signalcategory where enabled\
+        "query": "-- name: signal_category\nselect id, catname, color from signalcategory where enabled\
       and cookieid=:cookieid;",
         "require_cookie": True,
-        "aliases": {},
+        "aliases": {
+            "catname":{"name": "Category Name", "nameonly": True},
+            "color":{"name": "Color", "nameonly": True},
+            # "catname":{"name": "Category Name", "nameonly": True}
+            # "catname": {"query": "signalcategory", "value": "catname", "col": "catname", "name": "Category Name"},
+        },
         "links": {"signals": {"params": {"id": "signalcategoryid"}, "query": "signalbycategory"}},
         "origin": "signalcategory",
     },
@@ -134,36 +142,36 @@ api = {
         "origin": "signaltype",
     },
     "insert_signal": {
-        "query": "-- name: insert_signal\ninsert into signal(signal, score, signalcategoryid, enabled, cookieid, signaltypeid, parentid) \
-      values(:signal, :score, :signalcategoryid, True, :cookieid, :signaltypeid, :parentid)",
+        "query": "-- name: insert_signal<!\ninsert into signal(signal, score, signalcategoryid, enabled, cookieid, signaltypeid, distance, parentid) \
+      values(:signal, :score, :signalcategoryid, True, :cookieid, :signaltypeid, :distance, :parentid)",
         "require_cookie": True,
     },
     "update_signal": {
-        "query": "-- name: update_signal\nupdate signal set signal=:signal, score=:score, \
+        "query": "-- name: update_signal!\nupdate signal set signal=:signal, score=:score, \
       signalcategoryid=:signalcategoryid, cookieid=:cookieid, \
       signaltypeid=:signaltypeid where id=:id and cookieid=:cookieid",
         "require_cookie": True,
         "aliases": {},
     },
     "delete_signal": {
-        "query": "-- name: delete_signal\ndelete from signal where id=:id and cookieid=:cookieid",
+        "query": "-- name: delete_signal!\ndelete from signal where id=:id and cookieid=:cookieid",
         "require_cookie": True,
         "aliases": {},
     },
     "insert_signalcategory": {
-        "query": "-- name: insert_signal_category\ninsert into signalcategory(catname, score, color, enabled, cookieid) \
+        "query": "-- name: insert_signal_category<!\ninsert into signalcategory(catname, score, color, enabled, cookieid) \
       values(:catname, :score, :color, True, :cookieid)",
         "require_cookie": True,
         "aliases": {},
     },
     "update_signalcategory": {
-        "query": "-- name: update_signal_category\nupdate signalcategory set catname=:catname, score=:score, \
+        "query": "-- name: update_signal_category!\nupdate signalcategory set catname=:catname, score=:score, \
       color=:color where id=:id and cookieid=:cookieid",
         "require_cookie": True,
         "aliases": {},
     },
     "delete_signalcategory": {
-        "query": "-- name: delete_signal_category\ndelete from signalcategory where id=:id and cookieid=:cookieid",
+        "query": "-- name: delete_signal_category!\ndelete from signalcategory where id=:id and cookieid=:cookieid",
         "require_cookie": True,
         "aliases": {},
     },

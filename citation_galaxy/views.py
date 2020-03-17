@@ -134,23 +134,34 @@ async def insert_signal_type(db, sess, post_data, qp):
 
 @routes.post("/api/insert")
 async def insert_handler(request):
-    db, session = await get_db_sess(request)
+    db, sess = await get_db_sess(request)
 
     post_data = await request.json()
-    query_params = session.get('query_params',{}).copy()
-    query_params.update( post_data.get('values') )
+    # query_params = session.get('query_params',{}).copy()
+    # query_params.update( post_data.get('values') )
     # query_params = post_data.get('values')
 
-    name = post_data.get('table_name','')
-    
-    if name == 'signalcategory':
-        results = await insert_signal_category(db, session, post_data, query_params)
-    elif name == 'signal':
-        results = await insert_signal(db, session, post_data, query_params)
-    elif name =='signaltype':
-        results = await insert_signal_type(db, session, post_data, query_params)
- 
-    data = []
+    table_name = post_data.get('table_name','')
+    if table_name == 'signalbycategory':
+        table_name = 'signal'
+    # get api schema
+    api_schema = api.get('insert_' + table_name, None)
+
+    if api_schema:
+        # await request.read()
+        # post_data = {}
+        # if request.has_body:
+        # post_data = await request.json()
+        # query_params = sess.get('query_params',{}).copy()
+        # query_params.update( post_data.get('values') )
+        query_params = post_data.get('values',{}).copy()
+        if api_schema.get('require_cookie', False):
+            query_params['cookieid'] = sess['id']
+
+        queries = aiosql.from_str( api_schema['query'], 'asyncpg' )
+        query = getattr( queries, queries.available_queries[0] ) # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
+
+        await query(db, **query_params )
 
     return web.json_response( {} )
     # return web.json_response( {
@@ -236,17 +247,20 @@ async def api_handler(request):
         results = await query(db, **query_params )
         rows = [ dict(record) for record in results ]
 
-        parent_col = api_schema.get('parent','')
-        parent_id = query_params.get(parent_col,0)
+        parent_col = api_schema.get('parent',None)
+        parent_id = query_params.get(parent_col,None)
+        parent = {}
+        if parent_col and parent_id:
+            parent = {'id': parent_id, 'col': parent_col}
 
         return web.json_response({
             'data':     rows,
-            'aliases':  api_schema.get('aliases', None),
-            'links':    api_schema.get('links', None),
-            'actions':  api_schema.get('actions', None),
+            'aliases':  api_schema.get('aliases', {}),
+            'links':    api_schema.get('links', {}),
+            'actions':  api_schema.get('actions', {}),
             'name':     table_name,
             'schema':   schema[api[table_name]['origin']],
-            'parent':   {'id': parent_id, 'col': parent_col}
+            'parent':   parent
         })
     else:
         return web.json_response( {} )

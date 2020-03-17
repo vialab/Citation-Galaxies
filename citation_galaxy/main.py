@@ -53,5 +53,11 @@ def main(argv):
         access_log_format='%t %s "%r"')
 
 
+async def main_app_factory():
+    print(sys.argv[1:])
+    app = await init_app(sys.argv[1:])
+
+    return app
+
 if __name__ == "__main__":
     main(sys.argv[1:])

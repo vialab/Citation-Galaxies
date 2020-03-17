@@ -4,8 +4,8 @@ postgres:
   password: citationdb
   host: localhost
   port: 5432
-  min_size: 32
-  max_size: 64
+  min_size: 4
+  max_size: 16
 
 # minsize: 1
 # maxsize: 5
