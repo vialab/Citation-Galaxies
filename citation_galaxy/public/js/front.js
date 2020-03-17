@@ -486,7 +486,11 @@ function drawColumn(
   verticalContainerHitbox.attr("height", locationY); //Change the height to be the max allowed
   totalText.attr("y", locationY + 20); //Change the location of the total label
   totalText.text(shortenVal(total)); //Change the total label data
-  svgContainer.attr("height", locationY + 25); //Change the height of the container for the svg objects so no clipping occurs
+  svgContainer.attr("height", locationY + 25 + 15); //Change the height of the container for the svg objects so no clipping occurs
+  // $('#homeRow').height( locationY - 26 )
+
+  let home = $('#homeRow')
+  home.height( vh - home.position().top )
 
   //On click select the year
   verticalContainerHitbox.on("click", function() {
@@ -780,11 +784,11 @@ function prepContainers(increment) {
   let distChart = homeRow
     .append("div")
     .attr("id", "distChart")
-    .attr("class", "nopadding ");
+    .attr("class", "nopadding");
   let yearCols = homeRow
     .append("div")
     .attr("id", "years")
-    .attr("class", "nopadding ");
+    .attr("class", "nopadding");
   for (var i = 0; i < years.length; i++) {
     if (i == 0) {
       var maxFirstContainerSize = 100 / increment;
@@ -838,10 +842,13 @@ function prepContainers(increment) {
       .attr("id", "container-" + years[i].articleyear)
       .append("svg")
       .attr("width", 87)
+      .attr('class','year-dist-cols')
       .attr("id", "svg-" + years[i].articleyear);
     svgContainers.push(svg);
     drawColumn(years[i]["articleyear"], 80, 64, currBoxHeight, svg);
   }
+
+  d3.select('div.year-container:last-child > svg.year-dist-cols').attr('width',110)
 }
 
 //Get the list of years from the database

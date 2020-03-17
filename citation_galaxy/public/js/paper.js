@@ -471,57 +471,99 @@ function drawPapersByIndex(results, local_norm = false) {
   paperRow = d3
     .select("#pills-papers")
     .append("div")
-    .attr("class", "row transition")
+    .attr("class", "container-fluid transition")
     .attr("id", "papers-container");
+  
+  let nav = paperRow.append('nav')
+    .append('div')
+      .attr('class','nav nav-tabs nav-justified')
+      .attr('id','papers-container-nav-tabs')
+      .attr('role','tablist');
+
+  active = false
+  for (let year of results.years.sort()) {
+    let tab = nav.append('a')
+      .attr('class', 'nav-item nav-link')
+      .attr('id', `papers-nav-tab-${year}`)
+      .attr('data-toggle', 'tab')
+      .attr('href', `#papers-nav-${year}`)
+      .attr('role', 'tab')
+      .attr('aria-controls', `papers-nav-${year}`)
+
+      if (!active) {
+        tab.attr('class', 'nav-item nav-link active')
+        active = true
+      }
+      tab.append('h2')
+        .text(year)
+  }
+
+
+  let navContent = paperRow.append('div')
+    .attr('class', 'tab-content')
+    .attr('id', 'papers-container-nav-content')
+  
   // minimizeDivider();
   let papers = results["papers"];
   let all_max = results["max"];
   // categorize by journal then year
   if (indexToSortPapersOn == "journaltitle") {
-    for (let jid in results.journals) {
-      let journalRow = paperRow
-        .append("div") // add a row for journal
-        .attr("class", "row journal-row")
-        .attr("id", "journal-row-" + jid);
-      journalRow
-        .append("div")
-        .attr("class", "row col-sm-12")
-        .append("h2")
-        .text(results.journals[jid]["title"]);
-      // iterate all the available years for this journal
-      for (let y of results.journals[jid]["years"]) {
-        let yearRow = journalRow
-          .append("div")
-          .attr("class", "row papers-row")
-          .attr("id", "papers-row-" + y);
-        yearRow
-          .append("div")
-          .attr("class", "row col-sm-12")
-          .append("h2")
-          .text(y);
-        let papers = yearRow
-          .append("div")
-          .attr("class", "row col-sm-12 papers")
-          .attr("data-journal-id", jid)
-          .attr("data-year", y);
-        papers.append("div").attr("class", "col-xs-* partialpadding load-more");
-      }
-    }
+    // for (let jid in results.journals) {
+    //   let journalRow = paperRow
+    //     .append("div") // add a row for journal
+    //     .attr("class", "row journal-row")
+    //     .attr("id", "journal-row-" + jid);
+    //   journalRow
+    //     .append("div")
+    //     .attr("class", "row col-sm-12")
+    //     .append("h2")
+    //     .text(results.journals[jid]["title"]);
+    //   // iterate all the available years for this journal
+    //   for (let y of results.journals[jid]["years"]) {
+    //     let yearRow = journalRow
+    //       .append("div")
+    //       .attr("class", "row papers-row")
+    //       .attr("id", "papers-row-" + y);
+    //     yearRow
+    //       .append("div")
+    //       .attr("class", "row col-sm-12")
+    //       .append("h2")
+    //       .text(y);
+    //     let papers = yearRow
+    //       .append("div")
+    //       .attr("class", "row col-sm-12 papers")
+    //       .attr("data-journal-id", jid)
+    //       .attr("data-year", y);
+    //     papers.append("div").attr("class", "col partialpadding load-more");
+    //   }
+    // }
   } else {
     // only categorize by years
-    for (let y of results.years) {
-      let yearRow = paperRow
+    active = false
+    for (let y of results.years.sort()) {
+      let content = navContent.append('div')
+        .attr('class', 'tab-pane fade')
+        .attr('id', `papers-nav-${y}`)
+        .attr('role', 'tabpanel')
+        .attr('aria-labelledby', `papers-nav-tab-${y}`)
+
+      if (!active) {
+        content.attr('class', 'tab-pane fade active show')
+        active = true
+      }
+
+      let yearRow = content
         .append("div")
-        .attr("class", "row papers-row")
+        .attr("class", "row papers-row border border-top-0")
         .attr("id", "papers-row-" + y);
-      yearRow
-        .append("div")
-        .attr("class", "row col-sm-12")
-        .append("h2")
-        .text(y);
+      // yearRow
+      //   .append("div")
+      //   .attr("class", "row col-sm-12")
+      //   .append("h2")
+      //   .text(y);
       let papers = yearRow
         .append("div")
-        .attr("class", "row col-sm-12 papers")
+        .attr("class", "row col-sm-12 papers overflow-auto")
         .attr("data-year", y);
     }
   }
@@ -793,7 +835,7 @@ function drawPaper(
   var filter = svgContainer
     .append("defs")
     .append("filter")
-    .attr("id", "dropshadowPaper")
+    .attr("id", `dropshadowPaper-${articleid}`)
     .attr("height", "130%");
   filter
     .append("feOffset")
@@ -828,7 +870,7 @@ function drawPaper(
     .attr("width", sizex)
     .attr("height", sizey)
     .attr("id", "paperRect")
-    .attr("filter", "url(#dropshadowPaper)")
+    .attr("filter", `url(#dropshadowPaper-${articleid})`)
     .style("fill", d3.rgb(248, 249, 250));
 
   //Calculation to figure out the max lines possible and padding needed (messy - rewrite if can)

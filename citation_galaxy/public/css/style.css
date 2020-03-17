@@ -55,7 +55,8 @@
   width: 100% !important;
   box-shadow: 1px 1px 7px grey;
   background: rgb(248, 249, 250);
-  overflow-y: scroll;
+  /* overflow-y: scroll; */
+  overflow-y: auto;
 }
 
 .popoverGalaxy {
@@ -154,18 +155,20 @@
 }
 
 #pills-papers #papers-container {
-  position: fixed;
-  right: 0px;
-  margin: 0 0;
+  /* position: fixed; */
+  /* right: 0px; */
+  /* margin: 0 0;
   width: 100%;
-  padding: 0 0;
-  padding-top: 40px;
-  height: 100%;
-  overflow: scroll;
+  padding: 0 0; */
+  padding-top: 15px;
+  padding-bottom: 30px;
+  /* height: 95%; */
+  /* overflow: auto; */
 }
 
 #papers-container .row {
-  margin: 5px;
+  /* margin: 5px; */
+  margin: auto;
   width: 100%;
 }
 
@@ -175,11 +178,15 @@
 }
 
 #papers-container .papers-row {
-  margin-bottom: 25px;
+  /* margin-bottom: 25px; */
+  padding: 20px 0;
+  /* margin: 20px 0; */
+  /* max-height: calc(80vh - 42px); */
 }
 
 #papers-container .papers {
   justify-content: center;
+  max-height: calc(80vh - 42px);
 }
 
 #papers-container h2 {
@@ -202,7 +209,8 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   min-width: 562px;
-  overflow-x: scroll;
+  overflow: hidden;
+  /* overflow-x: scroll; */
 }
 
 .dropdown-toggle {
@@ -281,6 +289,11 @@ div.tooltip {
 #homeRow {
   display: flex;
   flex-wrap: nowrap;
+
+  overflow: auto;
+  /* overflow-x: auto;
+  overflow-y: auto; */
+  /* max-height: calc(80vh - 24px); */
 }
 
 #distChart {
@@ -290,7 +303,8 @@ div.tooltip {
 #years {
   flex: 4 4 auto;
   display: flex;
-  overflow-x: scroll;
+  /* overflow-x: scroll; */
+  /* overflow-x: auto; */
   justify-content: left;
 }
 
@@ -359,15 +373,13 @@ a.disabled {
   justify-content: flex-end;
 }
 
-#sortOptions {
-  position: fixed;
-  right: 0px;
-  margin-bottom: 10px;
-  z-index: 5;
-}
+/* #sortOptions { */
+  /* position: fixed; */
+  /* right: 0px; */
+  /* margin-bottom: 10px; */
+  /* z-index: 5; */
+/* } */
 
-#sortOptions {
-}
 
 #alert {
   z-index: 10;

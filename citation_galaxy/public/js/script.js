@@ -722,6 +722,7 @@ function drawPapers(titles) {
 
 //Draws a specific paper and adds popover content (references)
 function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer, articleid, display) {
+    console.log("wrong draw paper")
     //Filter for dropshadows
     var filter = svgContainer.append("defs").append("filter")
         .attr("id", "dropshadowPaper")
