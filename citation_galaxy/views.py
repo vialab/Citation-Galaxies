@@ -6,13 +6,12 @@ from json import dumps, loads
 
 import aiohttp_jinja2
 from aiohttp import web
-from aiohttp_session import setup, get_session
-
+from aiohttp_session import get_session, setup
+from cryptography import fernet
 
 import citation_galaxy.database as dblib
-from citation_galaxy.database import NUMBER_COLS, QueryManager
+from citation_galaxy.database import NUMBER_COLS, QueryManager, api, schema
 from citation_galaxy.settings import config as conf
-
 from citation_galaxy.utils import list_in_string
 
 routes = web.RouteTableDef()
@@ -30,86 +29,90 @@ async def get_db_sess(request):
 
 # select id, name, type from signaltype
 
-@routes.post("/api/signalcategory")
-async def signalCategory(request):
-    db = get_db(request)
+# @routes.post("/api/signalcategory")
+# async def signalCategory(request):
+#     db, sess = await get_db_sess(request)
 
-    # signcalcategoryid = 
-
-
-    cookieid = "196d2081988549fb86f38cf1944e79a9"
-    # # TODO Generate cookie ID
-    #   if (cookie === undefined) {
-    # // no: set a new cookie
-    # let nonce = Math.random().toString(),
-    #   cookie_id =
-    #     nonce.substring(2, nonce.length) + "_" + req.connection.remoteAddress;
-    # cookie_id = crypto
-    #   .createHash("md5")
-    #   .update(cookie_id)
-    #   .digest("hex");
-    # res.cookie("cookieName", cookie_id, {expires: new Date(253402300000000)});
-
-    results = await db.fetch("select id, catname, score, color from signalcategory where enabled and cookieid=$1", cookieid)
-
-    data = []
-    for result in results:
-        data.append({
-            'id':       result['id'],
-            'catname':  result['catname'],
-            'score':    result['score'],
-            'color':    result['color']
-        })
-
-    return web.json_response( {
-        'data': data,
-        'aliases': {},
-        'links': {},
-        'name': 'signalcategory',
-        'schema': {},
-        'parent': {}
-    })
+#     # signcalcategoryid = 
 
 
-@routes.post("/api/signalbytype")
-async def signalByType(request):
-    db = get_db(request)
+#     cookieid = "196d2081988549fb86f38cf1944e79a9"
+#     # # TODO Generate cookie ID
+#     #   if (cookie === undefined) {
+#     # // no: set a new cookie
+#     # let nonce = Math.random().toString(),
+#     #   cookie_id =
+#     #     nonce.substring(2, nonce.length) + "_" + req.connection.remoteAddress;
+#     # cookie_id = crypto
+#     #   .createHash("md5")
+#     #   .update(cookie_id)
+#     #   .digest("hex");
+#     # res.cookie("cookieName", cookie_id, {expires: new Date(253402300000000)});
 
-    post_data = await request.json()
-    query_params = post_data.get('values')
-    signaltypeid = int(query_params.get("signaltypeid", 10))
+#     results = await db.fetch("select id, catname, score, color from signalcategory where enabled and cookieid=$1", sess['id'])
 
-    cookieid = "196d2081988549fb86f38cf1944e79a9"
+#     data = []
+#     if len(results) > 0:
+#         for result in results:
+#             data.append({
+#                 'id':       result['id'],
+#                 'catname':  result['catname'],
+#                 # 'score':    result['score'],
+#                 'color':    result['color']
+#             })
+#     else:
+#         data = [{
+#             'id':           -1,
+#             'catname':      'example category (deleted when others added)',
+#             'color':        '#ffffff'
+#         }]
 
-    results = await db.fetch("select id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal where enabled and signaltypeid=$1 and cookieid=$2;", signaltypeid, cookieid)
+#     return web.json_response( {
+#         'data': data,
+#         'aliases': {},
+#         'links': {
+#             'signals': {
+#                 'params': {'id': "signalcategoryid"},
+#                 'query': "signalbycategory"
+#             }},
+#         'name': 'signalcategory',
+#         'schema': {},
+#         'parent': {}
+#     })
 
-    data = [{
-            'catname': result['catname'],
-            'score': result['score'],
-            'color': result['color']
-        } for result in results ]
 
-    return web.json_response( {
-        'data': data,
-        'aliases': {},
-        'links': {},
-        'name': 'signalcategory',
-        'schema': {},
-        'parent': {}
-    })
+# @routes.post("/api/signalbytype")
+# async def signalByType(request):
+#     db = get_db(request)
 
-@routes.post("/api/insert")
-async def insert_signal(request):
-    db, session = await get_db_sess(request)
+#     post_data = await request.json()
+#     query_params = post_data.get('values')
+#     signaltypeid = int(query_params.get("signaltypeid", 10))
 
-    post_data = await request.json()
-    query_params = session.get('query_params',{}).copy()
-    query_params.update( post_data.get('values') )
-    # query_params = post_data.get('values')
+#     cookieid = "196d2081988549fb86f38cf1944e79a9"
 
-    signal_category = query_params.get('signalcategoryid', None)
-    signal_text = query_params.get('signal', None)
-    signal_base = query_params.get('query',[])
+#     results = await db.fetch("select id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal where enabled and signaltypeid=$1 and cookieid=$2;", signaltypeid, cookieid)
+
+#     data = [{
+#             'catname': result['catname'],
+#             'score': result['score'],
+#             'color': result['color']
+#         } for result in results ]
+
+#     return web.json_response( {
+#         'data': data,
+#         'aliases': {},
+#         'links': {},
+#         'name': 'signalcategory',
+#         'schema': {},
+#         'parent': {}
+#     })
+
+
+async def insert_signal(db, sess, post_data, qp ):
+    signal_category = qp.get('signalcategoryid', None)
+    signal_text = qp.get('signal', None)
+    signal_base = qp.get('query',[])
 
     if signal_text and signal_category:
         if len(signal_base)>0:
@@ -118,17 +121,36 @@ async def insert_signal(request):
 
         else:
             pass # TODO What to do here?
-    # signaltypeid = int(query_params.get("signaltypeid", 10))
 
-    # cookieid = "196d2081988549fb86f38cf1944e79a9"
+async def insert_signal_category(db, sess, post_data, qp ): #qp is query_params
+    category_name = qp.get('catname',None)
+    category_color= qp.get('color',None)
 
-    # results = await db.fetch("select id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal where enabled and signaltypeid=$1 and cookieid=$2;", signaltypeid, cookieid)
+    if category_name and category_color:
+        await db.execute( "INSERT INTO signalcategory(catname, cookieid, color) VALUES($1, $2, $3)", category_name, sess['id'], category_color)
+
+async def insert_signal_type(db, sess, post_data, qp):
+    pass
+
+@routes.post("/api/insert")
+async def insert_handler(request):
+    db, session = await get_db_sess(request)
+
+    post_data = await request.json()
+    query_params = session.get('query_params',{}).copy()
+    query_params.update( post_data.get('values') )
+    # query_params = post_data.get('values')
+
+    name = post_data.get('table_name','')
+    
+    if name == 'signalcategory':
+        results = await insert_signal_category(db, session, post_data, query_params)
+    elif name == 'signal':
+        results = await insert_signal(db, session, post_data, query_params)
+    elif name =='signaltype':
+        results = await insert_signal_type(db, session, post_data, query_params)
+ 
     data = []
-    # data = [{
-    #         'catname': result['catname'],
-    #         'score': result['score'],
-    #         'color': result['color']
-    #     } for result in results ]
 
     return web.json_response( {} )
     # return web.json_response( {
@@ -139,6 +161,95 @@ async def insert_signal(request):
     #     'schema': {},
     #     'parent': {}
     # })
+
+
+async def update_signal(db, sess, post_data, qp ):
+    signal_category = qp.get('signalcategoryid', None)
+    signal_text = qp.get('signal', None)
+    signal_base = qp.get('query',[])
+
+    if signal_text and signal_category:
+        if len(signal_base)>0:
+            
+            pass
+
+        else:
+            pass # TODO What to do here?
+
+async def update_signal_category(db, sess, post_data, qp ): #qp is query_params
+    category_id = int(qp.get('id',None))
+    category_name = qp.get('catname',None)
+    category_color= qp.get('color',None)
+
+    if category_name and category_color:
+        await db.execute( "update signalcategory SET catname=$2, color=$3 where id=$1", category_id, category_name, category_color)
+
+async def update_signal_type(db, sess, post_data, qp):
+    pass
+
+@routes.post("/api/update")
+async def update_handler(request):
+    db, session = await get_db_sess(request)
+
+    post_data = await request.json()
+    query_params = session.get('query_params',{}).copy()
+    query_params.update( post_data.get('values') )
+    # query_params = post_data.get('values')
+
+    name = post_data.get('table_name','')
+    
+    if name == 'signalcategory':
+        results = await update_signal_category(db, session, post_data, query_params)
+    elif name == 'signal':
+        results = await update_signal(db, session, post_data, query_params)
+    elif name =='signaltype':
+        results = await update_signal_type(db, session, post_data, query_params)
+ 
+    data = []
+
+    return web.json_response( {} )
+
+
+import aiosql
+@routes.post('/api/{table_name}')
+async def api_handler(request):
+    db, sess = await get_db_sess(request)
+
+    table_name = request.match_info['table_name']
+    # get api schema
+    api_schema = api.get(table_name, None)
+
+    if api_schema:
+        # await request.read()
+        post_data = {}
+        # if request.has_body:
+        post_data = await request.json()
+        # query_params = sess.get('query_params',{}).copy()
+        # query_params.update( post_data.get('values') )
+        query_params = post_data.get('values',{}).copy()
+        if api_schema.get('require_cookie', False):
+            query_params['cookieid'] = sess['id']
+
+        queries = aiosql.from_str( api_schema['query'], 'asyncpg' )
+        query = getattr( queries, queries.available_queries[0] ) # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
+
+        results = await query(db, **query_params )
+        rows = [ dict(record) for record in results ]
+
+        parent_col = api_schema.get('parent','')
+        parent_id = query_params.get(parent_col,0)
+
+        return web.json_response({
+            'data':     rows,
+            'aliases':  api_schema.get('aliases', None),
+            'links':    api_schema.get('links', None),
+            'actions':  api_schema.get('actions', None),
+            'name':     table_name,
+            'schema':   schema[api[table_name]['origin']],
+            'parent':   {'id': parent_id, 'col': parent_col}
+        })
+    else:
+        return web.json_response( {} )
 
 
 @routes.post('/gateway/process/signals')
@@ -397,18 +508,19 @@ async def query(request):
 async def years(request):
     """ Returns a list of dictionaries where the dicts have an entry named "articleyear" and an integer associated with it
     """
+    sess = await get_session(request)
+    if not sess.get('id',False):
+        key = fernet.Fernet.generate_key()
+        sess.setdefault('id',key.decode('utf-8'))
+
     return web.json_response(
         [{"articleyear": year} for year in range(conf["year_range"]["min"], conf["year_range"]["max"] + 1)]
     )
 
 
 # @aiohttp_jinja2.template('index.html')
+@routes.get('/')
 async def index(request):
-    # async with request.app['db'].acquire() as conn:
-    #     cursor = await conn.execute(db.question.select())
-    #     records = await cursor.fetchall()
-    #     questions = [dict(q) for q in records]
-    #     return {'questions': questions}
     return web.FileResponse("./citation_galaxy/public/index.html")
 
 

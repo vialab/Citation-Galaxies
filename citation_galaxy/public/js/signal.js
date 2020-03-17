@@ -93,14 +93,14 @@ function processSignals(query, year, recache = 1) {
   process_queue[year] = $.ajax({
     type: "POST",
     url: currentURL + "process/signals",
-    data: {
-      query: JSON.stringify(query),
+    data: JSON.stringify({
+      query: query,
       year: year,
-      ruleSet: JSON.stringify(sentiment_signals), // for backprocessing
+      ruleSet: sentiment_signals, // for backprocessing
       rangeLeft: sentenceRangeAbove,
       rangeRight: sentenceRangeBelow,
       recache: recache
-    },
+    }),
     success: function(data) {
       // done so let's remove this from the queue
       process_queue[year] = undefined;

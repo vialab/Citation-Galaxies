@@ -16,6 +16,7 @@
             "name": "Python: Backend",
             "type": "python",
             "request": "launch",
+            "justMyCode": false,
             "cwd": "${workspaceFolder}",
             "module": "citation_galaxy",
             "console": "internalConsole"

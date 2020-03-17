@@ -18,7 +18,7 @@ def setup_routes(app):
 
     app.router.add_get("/years", years)
 
-    app.router.add_get("/", index)
+    # app.router.add_get("/", index)
 
     # app.router.add_get('/poll/{question_id}', poll, name='poll')
     # app.router.add_get('/poll/{question_id}/results',

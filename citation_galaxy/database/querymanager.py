@@ -115,23 +115,23 @@ class QueryManager:
     async def do_query(self, query_text, use_cache=True):
         sha = hashlib.shake_256(query_text.lower().encode("utf-8"))
         if len(self.search_params) > 0:
-            sha.update(" , ".join(sorted(self.search_params)).lower().encode("utf-8"))
+            sha.update(" , ".join(self.search_params).lower().encode("utf-8"))
         hashid = int.from_bytes(sha.digest(7), "big")
 
         results = None
         if use_cache:
             results = await self.db.fetchval("select data from query_cache where id = $1", hashid)
 
-        # print("\n\n",query_text,"\n\n",self.search_params,"\n\n")
         if results is None:
             if len(self.search_params) > 0:
                 results = await self.db.fetch(query_text, *self.search_params)
             else:
                 results = await self.db.fetch(query_text)
 
-            _insert = await self.db.execute(
-                "insert into query_cache(id, data) values ($1, $2)", hashid, pickle.dumps(results)
-            )
+            if use_cache:
+                _insert = await self.db.execute(
+                    "insert into query_cache(id, data) values ($1, $2)", hashid, pickle.dumps(results)
+                )
         else:
             results = pickle.loads(results)
 

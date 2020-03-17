@@ -114,13 +114,13 @@ function changePaperTextBoundary(articleid, year) {
     $.ajax({
       type: "POST",
       url: currentURL + "queryCountsPaper",
-      data: {
-        query: JSON.stringify(currSearchQuery),
+      data: JSON.stringify({
+        query: currSearchQuery,
         year: year,
         rangeLeft: boundariesByPaper[articleid][0],
         rangeRight: boundariesByPaper[articleid][1],
         paperid: articleid
-      },
+      }),
       success: function(data) {
         //Filter data for ngram - similar to how the filtering is done on the main screen
         var tmpResults = [];
@@ -251,7 +251,7 @@ function prepPaperText(articleid, neededBoundaries, container, display) {
     $.ajax({
       type: "POST",
       url: currentURL + "paperText",
-      data: {articleid: articleid},
+      data: JSON.stringify({articleid: articleid}),
       success: function(data) {
         //console.log(paperText);
         paperText[articleid] = data;
@@ -269,10 +269,10 @@ function getPaperBoundary(articleid, neededBoundaries, container, display) {
     $.ajax({
       type: "POST",
       url: currentURL + "sectionBoundary",
-      data: {
+      data: JSON.stringify({
         articleid: articleid,
-        neededBoundaries: JSON.stringify(neededBoundaries)
-      },
+        neededBoundaries: neededBoundaries
+      }),
       success: function(data) {
         //Matches the sentencenum to the location
         for (var i = 0; i < paperData[articleid].length; i++) {

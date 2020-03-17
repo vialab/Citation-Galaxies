@@ -48,9 +48,9 @@ def main(argv):
     app = init_app(argv)
 
     config = get_config(argv)
-    web.run_app(app, host=config["host"], port=config["port"])
-    # web.run_app(app, host=config["host"], port=config["port"],
-        # access_log_format='%t %s "%r"')
+    # web.run_app(app, host=config["host"], port=config["port"])
+    web.run_app(app, host=config["host"], port=config["port"],
+        access_log_format='%t %s "%r"')
 
 
 if __name__ == "__main__":

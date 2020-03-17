@@ -1031,12 +1031,12 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
     $.ajax({
       type: "POST",
       url: currentURL + "queryCounts",
-      data: {
-        query: JSON.stringify(query),
+      data: JSON.stringify({
+        query: query,
         year: year,
         rangeLeft: rangeLeft,
         rangeRight: rangeRight
-      },
+      }),
       success: function(data) {
         //Clear the results for the year
         yearResults[year] = [];

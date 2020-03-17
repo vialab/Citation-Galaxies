@@ -362,7 +362,7 @@ function changePaperTextBoundary(articleid, year) {
     paperRequests.push($.ajax({
         type: 'POST',
         url: currentURL + "queryCountsPaper",
-        data: { 'query': JSON.stringify(currSearchQuery), 'year': year, 'rangeLeft': boundariesByPaper[articleid][0], 'rangeRight': boundariesByPaper[articleid][1], 'paperid': articleid },
+        data: JSON.stringify({ 'query': currSearchQuery, 'year': year, 'rangeLeft': boundariesByPaper[articleid][0], 'rangeRight': boundariesByPaper[articleid][1], 'paperid': articleid }),
         success: function (data) {
             //Filter data for ngram - similar to how the filtering is done on the main screen
             var tmpResults = [];
@@ -470,7 +470,7 @@ function prepPaperText(articleid, neededBoundaries, container, display) {
     paperRequests.push($.ajax({
         type: 'POST',
         url: currentURL + "paperText",
-        data: { 'articleid': articleid },
+        data: JSON.stringify({ 'articleid': articleid }),
         success: function (data) {
             //console.log(paperText);
             paperText[articleid] = data;
@@ -486,7 +486,7 @@ function getPaperBoundary(articleid, neededBoundaries, container, display) {
     paperRequests.push($.ajax({
         type: 'POST',
         url: currentURL + "sectionBoundary",
-        data: { 'articleid': articleid, 'neededBoundaries': JSON.stringify(neededBoundaries) },
+        data: JSON.stringify({ 'articleid': articleid, 'neededBoundaries': neededBoundaries }),
         success: function (data) {
             //Matches the sentencenum to the location
             for (var i = 0; i < paperData[articleid].length; i++) {
@@ -1752,7 +1752,7 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
     yearResultsRequests.push($.ajax({
         type: 'POST',
         url: currentURL + "queryCountsTEST",
-        data: { 'query': JSON.stringify(query), 'year': year, 'rangeLeft': rangeLeft, 'rangeRight': rangeRight },
+        data: JSON.stringify({ 'query': query, 'year': year, 'rangeLeft': rangeLeft, 'rangeRight': rangeRight }),
         success: function (data) {
             //Clear the results for the year
             yearResults[year] = [];

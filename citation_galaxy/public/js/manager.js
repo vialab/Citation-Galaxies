@@ -87,7 +87,7 @@ function loadTable(
                 $.ajax({
                   type: "POST",
                   url: currentURL + "api/" + table_name,
-                  data: {values: JSON.stringify({})},
+                  data: JSON.stringify({values: {}}),
                   success: results => {
                     external_data[table_name] = results;
                   }
@@ -179,10 +179,21 @@ function populateTable(
       if (Object.keys(aliases).includes(key)) {
         title = aliases[key].name;
       }
+
+
+
+      let additional = 'class="'
+      if (key ==='color') {
+        additional += "w-5"
+      } else {
+        additional += "w-auto"
+      }
+      additional += '"'
       let element = $(
         "<th id='" +
-          key +
-          "' data-type='" +
+          key + "' " +
+          additional +
+          " data-type='" +
           schema[key] +
           "' onclick='sortRows(this);'>" +
           title +
@@ -195,7 +206,7 @@ function populateTable(
     }
     headers.push(key);
   }
-  $("<th>actions</th>").appendTo(headerRow);
+  $("<th class='w-15'>actions</th>").appendTo(headerRow);
 
   Object.keys(aliases).forEach(key => {
     let $sel = getAliasSelect(
@@ -243,6 +254,7 @@ function populateTable(
   sortTableByColumn($("#ruleTable"), sortby, "asc");
 }
 
+
 function getAliasSelect(target, alias, data) {
   let $sel = $("<select class='" + target + "'></select>");
   for (let o of data) {
@@ -262,6 +274,7 @@ function bindRowFunctions() {
   $("input[type='color']").change(function(event) {
     $(this).attr("value", $(this).val());
     $(this).parent().css("background-color", $(this).val());
+    $(this).parent().find('label').html($(this).val())
   });
 
   $(".edit-cell").click(function(event) {
@@ -323,7 +336,7 @@ function drawTableRow(headers, signal, signalID, aliases) {
       let c = signal[headers[i]] ? signal[headers[i]] : "#FFFFFF";
       html += "' style='background-color:" + c
         + ";box-shadow: inset 0 0 0 5px " + c
-        + ";'><input type='color' value='" + c + "'/><label>" + c + "</label>";
+        + ";'><input type='color' value='" + c + "'/><label contenteditable='false' class='noclick noselect'>" + c + "</label>";
     } else if (signal[headers[i]]) {
       html += "'>" + signal[headers[i]];
     } else {
@@ -457,8 +470,27 @@ function editCrudRow(event) {
         );
         row_element.addClass("aliased");
       } else {
-        // Allow the cell to be edited
+
         row_element.attr("contenteditable", "true");
+        if (row_element_id !== 'color' ){
+          // Allow the cell to be edited
+          
+          // Disable enter presses in editable cells
+          row_element.keypress(function(event) {
+            if (event.keyCode == 13) {
+              event.preventDefault();
+            }
+          });
+        } else {
+          // row_element.attr('contenteditable', 'false');
+          row_element.focus( event =>{
+            // row_element.removeAttr('contenteditable')
+            console.log("focused",$(event.target.parent),event.target,event.target.parent);
+
+            $(event.target).find('input[type=color]').click()
+          })
+        }
+
       }
     }
     $("td.empty:not(.aliased)", selected_row).html("");
@@ -512,10 +544,10 @@ function deleteRow(id) {
   $.ajax({
     type: "POST",
     url: currentURL + "api/delete",
-    data: {
+    data: JSON.stringify({
       table_name: loaded_table,
       id: id
-    },
+    }),
     success: function(results) {
       reloadTable();
       toast("Success!", "Row was deleted from the database.");

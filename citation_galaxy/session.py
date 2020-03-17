@@ -13,7 +13,6 @@ from citation_galaxy.settings import CONF_DIR
 SESS_KEY_PATH = CONF_DIR / 'session.key'
 
 def setup_session(app):
-
     if SESS_KEY_PATH.exists():
         with SESS_KEY_PATH.open('rb') as fp:
             fernet_key = pickle.load(fp)
@@ -25,5 +24,5 @@ def setup_session(app):
     
     secret_key = base64.urlsafe_b64decode(fernet_key)
     # setup(app, EncryptedCookieStorage(secret_key))
-    setup(app, SimpleCookieStorage())
+    setup(app, SimpleCookieStorage(max_age=9223372036854775))
     # app.router.add_get('/', handler)
