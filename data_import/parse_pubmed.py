@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from pprint import pprint
+# from pprint import pprint
 import uvloop
 uvloop.install()
 
@@ -8,16 +8,16 @@ import multiprocessing
 from multiprocessing import Pool, TimeoutError
 import time
 import os
-
-import asyncio
-import asyncpg
-
-import utils
 import json
 import math
 
 from random import randint
 
+import asyncio
+import asyncpg
+
+import utils
+import generate_ddl
 
 import string
 import nltk
@@ -44,12 +44,10 @@ import pubmed_parser as pp
 dbconfig = {
     'user': 'citationdb',
     'password': 'citationdb',
-    'database': 'citationdb3'
+    'database': 'citationdb2',
 }
 
 # Ref replacement alias: љљ (lower) ЉЉ (upper)
-
-
 
 
 
@@ -224,10 +222,21 @@ async def run( data ):
     except Exception as ex:
         logger.error("Caught Insert EX: ",ex,'\n',str(ex))
     return done
-
-
+    
 def process_main( data ):
     return asyncio.run( run( data ) )
+
+
+
+
+async def create_db():
+    logger.warning("Initializing database (and dropping any existing tables")
+    pre_ddl = generate_ddl.create_pre_ddl()
+
+    async with asyncpg.create_pool(**dbconfig) as pool:
+        results = await pool.execute(pre_ddl)
+
+    return results
 
 index_tmpl = """create index article_search_ts_{} on article_search_{} using GIN(ts_search);"""
 async def create_idx( db, i ):
@@ -238,32 +247,33 @@ async def create_idx( db, i ):
 
 
 async def finish_db():
-    logger.warning("generating indexes now")
-
+    logger.warning("Generating indexes now")
+    post_ddl = generate_ddl.create_post_ddl()
     # con = await asyncpg.connect(**dbconfig)
     # cluster_tmpl = """cluster article_search_{} using article_search_ts_{};"""
 
     # for i in range(2003,2020):
     #     print(index_tmpl.format(i,i))
     async with asyncpg.create_pool(**dbconfig) as pool:
-        tasks = []
-        for i in range(2003,2020):
-            tasks.append( create_idx(pool, i) )
+        results = await pool.execute( post_ddl )
+    #     tasks = []
+    #     for i in range(2003,2020):
+    #         tasks.append( create_idx(pool, i) )
         
-        final = await asyncio.gather(*tasks)
+    #     final = await asyncio.gather(*tasks)
 
-        logger.success("finished index generation")
+    logger.success("finished index generation")
 
-if __name__ == '__main__':
+def main():
+
+    try:
+        asyncio.run(create_db())
+    except Exception as ex:
+        print("Creating db exception: ", ex)
+    
     # start 4 worker processes
-    # with Pool(processes=24) as pool:
     with Pool(processes=24) as pool:
         # print("Building path list")
-        # pubmed_dict = pp.parse_pubmed_xml(path_xml[0]) # dictionary output
-        # path_xml =  ['/archive/datasets/PubMed/Neurochem_Res/PMC3778764.nxml', '/archive/datasets/PubMed/Neurochem_Res/PMC5357490.nxml', '/archive/datasets/PubMed/Neurochem_Res/PMC4493940.nxml', '/archive/datasets/PubMed/Neurochem_Res/PMC5524878.nxml', '/archive/datasets/PubMed/Neurochem_Res/PMC5357501.nxml', '/archive/datasets/PubMed/Neurochem_Res/PMC3183265.nxml', '/archive/datasets/PubMed/Neurochem_Res/PMC3264868.nxml', '/archive/datasets/PubMed/Neurochem_Res/PMC3111726.nxml', '/archive/datasets/PubMed/Neurochem_Res/PMC5842265.nxml', '/archive/datasets/PubMed/Neurochem_Res/PMC3183298.nxml']
-        # path_xml = xml_path_list('/archive/datasets/PubMed/J_Cell_Sci')
-        # path_xml = xml_path_list('/home/nbeals/pubmed_data/full_corp')
-
         # path_xml = xml_path_iterator('/archive/datasets/PubMed/Adipocyte')
         path_xml = xml_path_iterator('/home/nbeals/pubmed_data/full_corp')
 
@@ -287,3 +297,5 @@ if __name__ == '__main__':
 
     asyncio.run(finish_db())
 
+if __name__ == '__main__':
+    main()

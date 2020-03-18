@@ -1,6 +1,8 @@
 import hashlib
 import pickle
 
+from uuid import UUID
+
 import asyncpg
 
 NUMBER_COLS = 100
@@ -113,10 +115,13 @@ class QueryManager:
         return await self.do_query(query_text, False)  # always a fast query, dont cache it
 
     async def do_query(self, query_text, use_cache=True):
-        sha = hashlib.shake_256(query_text.lower().encode("utf-8"))
+        # sha = hashlib.shake_256(query_text.lower().encode("utf-8"))
+        sha = hashlib.md5(query_text.lower().encode("utf-8"))
         if len(self.search_params) > 0:
             sha.update(" , ".join(self.search_params).lower().encode("utf-8"))
-        hashid = int.from_bytes(sha.digest(7), "big")
+        # hashid = int.from_bytes(sha.digest(7), "big")
+        # hashid = int.from_bytes(sha.digest(), "big")
+        hashid = UUID( bytes=sha.digest() )
 
         results = None
         if use_cache:

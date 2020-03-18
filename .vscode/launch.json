@@ -5,15 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Py: Cur File - data_import",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/data_import",
+            "program": "${file}",
+            "console": "internalConsole",
+            // "justMyCode": false
+        },
+        {
+            "name": "Py: Current File",
             "type": "python",
             "request": "launch",
             "cwd": "${workspaceFolder}",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "internalConsole"
         },
         {
-            "name": "Python: Backend",
+            "name": "Py: Backend",
             "type": "python",
             "request": "launch",
             "justMyCode": false,
