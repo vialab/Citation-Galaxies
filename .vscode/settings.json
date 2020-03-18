@@ -11,7 +11,7 @@
     "python.linting.pylintArgs": ["--disable=all","--enable=F,E,R,unreachable,duplicate-key,unnecessary-semicolon,global-variable-not-assigned,unused-variable,binary-op-exception,bad-format-string,anomalous-backslash-in-string,bad-open-mode","--disable=too-many-function-args"],
     "python.linting.enabled": true,
     "python.linting.pylintEnabled": true,
-    "python.analysis.cachingLevel": "Library",
+    // "python.analysis.cachingLevel": "Library",
     
     // "[python]": {
     //     // "editor.formatOnSave": true
@@ -32,4 +32,12 @@
     "python.linting.banditEnabled": false,
     "python.linting.flake8Enabled": false,
     "python.linting.prospectorEnabled": false,
+    "sqltools.connections": [
+        {
+            "database": "/home/nbeals/work/maintenance/Citation-Galaxies/data_import/myapp.db",
+            "dialect": "SQLite",
+            "name": "aiosql-testing"
+        }
+    ],
+    "sqltools.useNodeRuntime": true,
 }
