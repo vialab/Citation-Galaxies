@@ -1103,69 +1103,69 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
 }
 
 //Call the search and draw the homescreen for a particular query
-function drawHome(increment) {
-  //Remove the old home row
-  d3.select("#homeRow").remove();
-  d3.select("#clearAllButton").classed("disabled", false);
-  d3.select("#incrementButton").classed("disabled", false);
-  d3.select("#viewByButton").classed("disabled", false);
-  d3.select("#normByButton").classed("disabled", false);
+// function drawHome(increment) {
+//   //Remove the old home row
+//   d3.select("#homeRow").remove();
+//   d3.select("#clearAllButton").classed("disabled", false);
+//   d3.select("#incrementButton").classed("disabled", false);
+//   d3.select("#viewByButton").classed("disabled", false);
+//   d3.select("#normByButton").classed("disabled", false);
 
-  if ((100 / increment) * (64 + 10) > 740) {
-    currBoxPadding = 100 / (100 / increment);
-    currBoxHeight = 640 / (100 / increment);
-  } else {
-    currBoxHeight = 64;
-    currBoxPadding = 10;
-  }
+//   if ((100 / increment) * (64 + 10) > 740) {
+//     currBoxPadding = 100 / (100 / increment);
+//     currBoxHeight = 640 / (100 / increment);
+//   } else {
+//     currBoxHeight = 64;
+//     currBoxPadding = 10;
+//   }
 
-  //If the search went through
-  if (years.length != 0 && years != 0) {
-    //Clear all selections, prep the containers
-    clearAll();
-    seperationChange(increment);
-    prepContainers(increment);
+//   //If the search went through
+//   if (years.length != 0 && years != 0) {
+//     //Clear all selections, prep the containers
+//     clearAll();
+//     seperationChange(increment);
+//     prepContainers(increment);
 
-    //Draw the paper on the left on the main screen
-    var numOfLines = 100 / increment;
-    if (numOfLines > 10) {
-      //numOfLines = 10;
-    }
-    drawFirstColumn(
-      110,
-      (100 / increment) * 16,
-      80,
-      svgContainers[0],
-      numOfLines
-    );
+//     //Draw the paper on the left on the main screen
+//     var numOfLines = 100 / increment;
+//     if (numOfLines > 10) {
+//       //numOfLines = 10;
+//     }
+//     drawFirstColumn(
+//       110,
+//       (100 / increment) * 16,
+//       80,
+//       svgContainers[0],
+//       numOfLines
+//     );
 
-    //Search for the query in each year
-    for (var i = 0; i < years.length; i++) {
-      getYearResults(
-        currSearchQuery,
-        years[i]["articleyear"],
-        sentenceRangeAbove,
-        sentenceRangeBelow,
-        increment,
-        i + 1
-      );
-    }
-  } else {
-    var homeRow = d3
-      .select("#pills-home")
-      .append("div")
-      .attr("class", "row justify-content-center")
-      .attr("id", "homeRow");
-    homeRow
-      .append("div")
-      .attr("class", "alert alert-warning alert-dismissible fade show")
-      .attr("role", "alert")
-      .attr("id", "alert")
-      .html(
-        "<strong>Waiting for a response from the server</strong> - please wait for a few seconds and then try searching again. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>"
-      );
-  }
-}
+//     //Search for the query in each year
+//     for (var i = 0; i < years.length; i++) {
+//       getYearResults(
+//         currSearchQuery,
+//         years[i]["articleyear"],
+//         sentenceRangeAbove,
+//         sentenceRangeBelow,
+//         increment,
+//         i + 1
+//       );
+//     }
+//   } else {
+//     var homeRow = d3
+//       .select("#pills-home")
+//       .append("div")
+//       .attr("class", "row justify-content-center")
+//       .attr("id", "homeRow");
+//     homeRow
+//       .append("div")
+//       .attr("class", "alert alert-warning alert-dismissible fade show")
+//       .attr("role", "alert")
+//       .attr("id", "alert")
+//       .html(
+//         "<strong>Waiting for a response from the server</strong> - please wait for a few seconds and then try searching again. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>"
+//       );
+//   }
+// }
 
 // Remake of previous filterYearResults
 // This now uses a mini server which retains the data in RAM for processing
@@ -1301,9 +1301,13 @@ function drawAllYears(data = front_data) {
 }
 
 //Show toast notification
-function toast(title, text) {
+function toast(title, text, duration=2000) {
+  $(".toast").toast("dispose");
+  $('.toast').toast({delay: duration})
+
   $(".toast-header .mr-auto").html(title);
   $(".toast-body").html(text);
+  
   $(".toast").toast("show");
 }
 
@@ -1476,3 +1480,8 @@ $(document).ready(function() {
     }
   });
 });
+
+
+
+var vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+var vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);

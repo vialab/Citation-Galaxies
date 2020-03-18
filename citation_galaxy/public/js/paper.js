@@ -12,7 +12,7 @@ var referencesSelected = []; //The current boundary selections for the current p
 var paperText = {}; //Holds the raw paper text
 var paperData = {}; //Holds the paper data - mainly where words, references and sentences are and their locations
 var paper_data = {};
-var nPaperLoad = 10;
+var nPaperLoad = 25;
 var currentURL = "http://localhost:5434/"; //The url to access the backend
 
 //Used to highlight the references selected
@@ -474,24 +474,27 @@ function drawPapersByIndex(results, local_norm = false) {
     .attr("class", "container-fluid transition")
     .attr("id", "papers-container");
   
-  let nav = paperRow.append('nav')
-    .append('div')
-      .attr('class','nav nav-tabs nav-justified')
+  let nav = paperRow.append('ul')
+    .attr('class', 'nav nav-fill nav-pills mb-3')
+    // .append('div')
+      // .attr('class','nav nav-tabs nav-justified')
       .attr('id','papers-container-nav-tabs')
       .attr('role','tablist');
 
   active = false
   for (let year of results.years.sort()) {
-    let tab = nav.append('a')
-      .attr('class', 'nav-item nav-link')
+    let tab = nav.append('li')
+      .attr('class','nav-item')
+      .append('a')
+      .attr('class', 'nav-link')
       .attr('id', `papers-nav-tab-${year}`)
-      .attr('data-toggle', 'tab')
+      .attr('data-toggle', 'pill')
       .attr('href', `#papers-nav-${year}`)
       .attr('role', 'tab')
       .attr('aria-controls', `papers-nav-${year}`)
 
       if (!active) {
-        tab.attr('class', 'nav-item nav-link active')
+        tab.attr('class', 'nav-link active')
         active = true
       }
       tab.append('h2')
@@ -500,7 +503,7 @@ function drawPapersByIndex(results, local_norm = false) {
 
 
   let navContent = paperRow.append('div')
-    .attr('class', 'tab-content')
+    .attr('class', 'tab-content border')
     .attr('id', 'papers-container-nav-content')
   
   // minimizeDivider();
@@ -554,7 +557,7 @@ function drawPapersByIndex(results, local_norm = false) {
 
       let yearRow = content
         .append("div")
-        .attr("class", "row papers-row border border-top-0")
+        .attr("class", "row papers-row")
         .attr("id", "papers-row-" + y);
       // yearRow
       //   .append("div")
@@ -565,6 +568,20 @@ function drawPapersByIndex(results, local_norm = false) {
         .append("div")
         .attr("class", "row col-sm-12 papers overflow-auto")
         .attr("data-year", y);
+
+
+      $(`#papers-row-${y} > div.papers`).on('scroll', function() { 
+        console.log($(this),$(this).scrollTop())
+        let el = $(this)
+        // if ($(this).scrollTop() >= $(this).offset().top + $('.div'). 
+            // outerHeight() - vh) {
+        if (el.scrollTop() >= (el.get(0).scrollHeight - el.outerHeight())) {
+            
+            console.log('You reached the end of the DIV'); 
+
+            el.find('div.load-more').click()
+        }
+      });
     }
   }
   drawPaperList(papers, all_max, local_norm);

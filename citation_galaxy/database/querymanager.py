@@ -73,7 +73,7 @@ class QueryManager:
 
         return await self.do_query(query_text)
 
-    def build_papers_query(self, year_range_tup, rowLimit=10, rowOffset=0):
+    def build_papers_query(self, year_range_tup, rowLimit=25, rowOffset=0):
         columns_in_bins = reshape_count_columns(self.percent_range)
         year = year_range_tup[0]
         _left_col = year_range_tup[1]  # left ignored because these overlap, I.E 2010:0-10, 2010:10-20, 2010:20-30, etc.

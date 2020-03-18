@@ -24,7 +24,9 @@
   <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
 
   <!--Local files, mainly script and stylesheet-->
-  <script src="js/newfront.js"></script>
+  <script type='module' src="js/newfront.js"></script>
+  <!-- <script src="js/modal.js"></script> -->
+
   <script src="js/front.js"></script>
   <script src="js/paper.js"></script>
   <script src="js/manager.js"></script>
@@ -55,7 +57,8 @@
                         aria-controls="pills-rules" aria-selected="false" onclick="">Rules</a>
                 </li> -->
         <li class="nav-item">
-          <a class="nav-link" id="pills-admin-tab" data-toggle="pill" href="#pills-admin" role="tab" aria-controls="pills-rules" aria-selected="false" onclick="loadTable('signalcategory', undefined, true, transformCategoryData);">Rules</a>
+          <!-- <a class="nav-link" id="pills-admin-tab" data-toggle="pill" href="#pills-admin" role="tab" aria-controls="pills-rules" aria-selected="false" onclick="loadTable('signalcategory', undefined, true, transformCategoryData);">Rules</a> -->
+          <a class="nav-link" id="pills-admin-tab" data-toggle="pill" href="#pills-admin" role="tab" aria-controls="pills-rules" aria-selected="false">Rules</a>
         </li>
       </ul>
       <div id="navOptions">
@@ -160,7 +163,8 @@
               <div class="row filter-query-options">
                 <button class="btn btn-outline-secondary filter-option" id="viewPapersButton" type="button" onclick="selectAllYears();">Select All</button>
 
-                <button class="btn btn-outline-secondary filter-option disabled" id="clearAllButton" data-toggle="modal" data-target="#clearAllModal" type="button">Clear All
+                <button class="btn btn-outline-secondary filter-option disabled" id="clearAllButton" data-toggle="modal" data-target="#clearAllModal" type="button">
+                  Clear All
                 </button>
 
                 <button class="btn btn-primary filter-option" id="viewPapersButton" type="button" onclick="switchToPapers();">View Papers</button>
@@ -236,6 +240,8 @@
       </div>
     </div>
   </div>
+
+  <!-- TODO: fix width of paper modal because jay messed with the bootstrap classes and I needed them as default -->
   <div class="modal fade" id="generic-modal" tabindex="-1" role="dialog" aria-labelledby="generic-modal" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
       <div class="modal-content">
@@ -252,8 +258,29 @@
       </div>
     </div>
   </div>
+
+  <div class="modal" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModal" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header alert-danger">
+          <h5 class="modal-title text-danger">Unable to Perform Action</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          
+        </div>
+        <!-- <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="removeAllSelections();">Yes</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+        </div> -->
+      </div>
+    </div>
+  </div>
+
   <div class="modal fade" id="clearAllModal" tabindex="-1" role="dialog" aria-labelledby="clearAllModal" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="exampleModalLongTitle">Clear All?</h5>
@@ -271,7 +298,8 @@
       </div>
     </div>
   </div>
-  <div class="toast" style="position: fixed; bottom: 10px; right: 15px;">
+
+  <div class="toast" role="status" aria-live="polite" aria-atomic="true" style="position: fixed; bottom: 10px; right: 15px;">
     <div class="toast-header">
       <strong class="mr-auto"></strong>
       <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
@@ -280,6 +308,7 @@
     </div>
     <div class="toast-body"></div>
   </div>
+
   <div id="popover_content_wrapper" style="display: none;">
     <nav class="navbar fixed-top navbar-expand bg-light" style="overflow:hidden; height: 60px; margin-top: 20px;" id="popoverNav">
       <ul class="navbar-nav ml-auto">

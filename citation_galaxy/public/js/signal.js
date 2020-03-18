@@ -407,7 +407,7 @@ function processAllSignals() {
       });
       toast(
         "Processing Complete!",
-        "Distribution can now be viewed by sentiment."
+        "Begin your searching."
       );
       $("#changeLabelItem2").removeClass("disabled");
       $("#downloadDataButton").removeAttr("disabled");

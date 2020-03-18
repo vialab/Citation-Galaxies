@@ -724,270 +724,270 @@ function drawPapers(titles) {
 function drawPaper(sizex, sizey, activeLines, activeLinesPercents, svgContainer, articleid, display) {
     console.log("wrong draw paper")
     //Filter for dropshadows
-    var filter = svgContainer.append("defs").append("filter")
-        .attr("id", "dropshadowPaper")
-        .attr("height", "130%");
-    filter.append("feOffset")
-        .attr("result", "offOut")
-        .attr("in", "SourceGraphic")
-        .attr("dx", 0)
-        .attr("dy", 2);
-    filter.append("feColorMatrix")
-        .attr("result", "matrixOut")
-        .attr("in", "offOut")
-        .attr("type", "matrix")
-        .attr("values", "0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0");
-    filter.append("feGaussianBlur")
-        .attr("result", "blurOut")
-        .attr("in", "matrixOut")
-        .attr("stdDeviation", 2);
-    filter.append("feBlend")
-        .attr("in", "SourceGraphic")
-        .attr("in2", "blurOut")
-        .attr("mode", "normal");
+    // var filter = svgContainer.append("defs").append("filter")
+    //     .attr("id", "dropshadowPaper")
+    //     .attr("height", "130%");
+    // filter.append("feOffset")
+    //     .attr("result", "offOut")
+    //     .attr("in", "SourceGraphic")
+    //     .attr("dx", 0)
+    //     .attr("dy", 2);
+    // filter.append("feColorMatrix")
+    //     .attr("result", "matrixOut")
+    //     .attr("in", "offOut")
+    //     .attr("type", "matrix")
+    //     .attr("values", "0.2 0 0 0 0 0 0.2 0 0 0 0 0 0.2 0 0 0 0 0 1 0");
+    // filter.append("feGaussianBlur")
+    //     .attr("result", "blurOut")
+    //     .attr("in", "matrixOut")
+    //     .attr("stdDeviation", 2);
+    // filter.append("feBlend")
+    //     .attr("in", "SourceGraphic")
+    //     .attr("in2", "blurOut")
+    //     .attr("mode", "normal");
 
-    //Rectangle for the paper
-    var paperRect = svgContainer.append("rect")
-        .attr("x", 3)
-        .attr("y", 3)
-        .attr("rx", 3)
-        .attr("xy", 3)
-        .attr("width", sizex)
-        .attr("height", sizey)
-        .attr("id", "paperRect")
-        .attr("filter", "url(#dropshadowPaper)")
-        .style("fill", d3.rgb(248, 249, 250));
+    // //Rectangle for the paper
+    // var paperRect = svgContainer.append("rect")
+    //     .attr("x", 3)
+    //     .attr("y", 3)
+    //     .attr("rx", 3)
+    //     .attr("xy", 3)
+    //     .attr("width", sizex)
+    //     .attr("height", sizey)
+    //     .attr("id", "paperRect")
+    //     .attr("filter", "url(#dropshadowPaper)")
+    //     .style("fill", d3.rgb(248, 249, 250));
 
-    //Calculation to figure out the max lines possible and padding needed (messy - rewrite if can)
-    var lineSizeY = 3;
-    var numOfLines = activeLines.length;
-    var minLinePadding = (sizey - (numOfLines * lineSizeY)) / (numOfLines + 1);
+    // //Calculation to figure out the max lines possible and padding needed (messy - rewrite if can)
+    // var lineSizeY = 3;
+    // var numOfLines = activeLines.length;
+    // var minLinePadding = (sizey - (numOfLines * lineSizeY)) / (numOfLines + 1);
 
-    //Draw the lines with padding needed
-    var locationXStart = 3 + sizex * 0.1;
-    var locationXEnd = (sizex * 0.9) + 3;
-    var locationY = 4 + minLinePadding;
+    // //Draw the lines with padding needed
+    // var locationXStart = 3 + sizex * 0.1;
+    // var locationXEnd = (sizex * 0.9) + 3;
+    // var locationY = 4 + minLinePadding;
 
-    for (var i = 0; i < activeLines.length; i++) {
-        //Change color if they should be selected
-        var color = d3.rgb(248, 249, 250);
-        if (activeLines[i] == true) {
-            color = colors(activeLinesPercents[i]);
-        }
+    // for (var i = 0; i < activeLines.length; i++) {
+    //     //Change color if they should be selected
+    //     var color = d3.rgb(248, 249, 250);
+    //     if (activeLines[i] == true) {
+    //         color = colors(activeLinesPercents[i]);
+    //     }
 
-        var line = svgContainer.append("line") // attach a line
-            .style("stroke", color) // colour the line
-            .attr("x1", locationXStart) // x position of the first end of the line
-            .attr("y1", locationY) // y position of the first end of the line
-            .attr("x2", locationXEnd) // x position of the second end of the line
-            .attr("y2", locationY)
-            .attr('stroke-width', lineSizeY);
-        locationY += minLinePadding + lineSizeY;
-    }
+    //     var line = svgContainer.append("line") // attach a line
+    //         .style("stroke", color) // colour the line
+    //         .attr("x1", locationXStart) // x position of the first end of the line
+    //         .attr("y1", locationY) // y position of the first end of the line
+    //         .attr("x2", locationXEnd) // x position of the second end of the line
+    //         .attr("y2", locationY)
+    //         .attr('stroke-width', lineSizeY);
+    //     locationY += minLinePadding + lineSizeY;
+    // }
 
-    //Creates a filter for the little notification circle applied to the papers
-    filter = svgContainer.append("defs").append("filter")
-        .attr("id", "dropshadowCircle")
-        .attr("height", "130%");
-    filter.append("feOffset")
-        .attr("result", "offOut")
-        .attr("in", "SourceGraphic")
-        .attr("dx", 0)
-        .attr("dy", 1);
-    filter.append("feColorMatrix")
-        .attr("result", "matrixOut")
-        .attr("in", "offOut")
-        .attr("type", "matrix")
-        .attr("values", "0.1 0 0 0 0 0 0.1 0 0 0 0 0 0.1 0 0 0 0 0 1 0");
-    filter.append("feGaussianBlur")
-        .attr("result", "blurOut")
-        .attr("in", "matrixOut")
-        .attr("stdDeviation", 0.5);
-    filter.append("feBlend")
-        .attr("in", "SourceGraphic")
-        .attr("in2", "blurOut")
-        .attr("mode", "normal");
+    // //Creates a filter for the little notification circle applied to the papers
+    // filter = svgContainer.append("defs").append("filter")
+    //     .attr("id", "dropshadowCircle")
+    //     .attr("height", "130%");
+    // filter.append("feOffset")
+    //     .attr("result", "offOut")
+    //     .attr("in", "SourceGraphic")
+    //     .attr("dx", 0)
+    //     .attr("dy", 1);
+    // filter.append("feColorMatrix")
+    //     .attr("result", "matrixOut")
+    //     .attr("in", "offOut")
+    //     .attr("type", "matrix")
+    //     .attr("values", "0.1 0 0 0 0 0 0.1 0 0 0 0 0 0.1 0 0 0 0 0 1 0");
+    // filter.append("feGaussianBlur")
+    //     .attr("result", "blurOut")
+    //     .attr("in", "matrixOut")
+    //     .attr("stdDeviation", 0.5);
+    // filter.append("feBlend")
+    //     .attr("in", "SourceGraphic")
+    //     .attr("in2", "blurOut")
+    //     .attr("mode", "normal");
 
-    //Draw the notification circle but don't show it
-    svgContainer.append("rect")
-        .attr("x", sizex * 0.86)
-        .attr("y", sizey * 0.90)
-        .attr("rx", 15)
-        .attr("xy", 15)
-        .attr("width", 10)
-        .attr("height", 10)
-        .attr("filter", "url(#dropshadowCircle)")
-        .attr("id", "unfinishedCircle")
-        .attr("display", "none");
-
-
-    //Append the relevant paper data in the popover
-    var popover = d3.select("#popover_text");
-    popover.html("");
-    popover.append("h2").text(paperText[articleid][0]['articletitle'] + " (" + paperText[articleid][0]['articleyear'] + ") (" + articleid + ") (" + paperText[articleid][0]['journaltitle'] + ")");
-    popover.append("h6").text("Boundaries are: " + boundariesByPaper[articleid][0] + " above and " + boundariesByPaper[articleid][1] + " below");
-
-    //Append each reference context
-    for (var i = 0; i < paperData[articleid].length; i++) {
-        var tempText = "";
-
-        //Append a container
-        var listEntry = popover.append("ul").attr("class", "list-group");
-        listEntry = listEntry.append("li").attr("class", "list-group-item").attr("id", articleid); //Not standard, but works
-        //Onclick code to keep track of selected references incase they are added
-        listEntry.attr("onclick", "selectPaperViewBoundary(this); updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
-
-        var lastSplitIndex = paperData[articleid][i][0][8][0]; //Index used to figure out where the paper text was last split on
-        //If the context has a space at the beginning, skip it
-        if (paperText[articleid][0]['papertext'].charAt(lastSplitIndex) == ' ') {
-            lastSplitIndex += 1;
-        }
-        var endTextIndex = paperData[articleid][i][0][9][1]; //Index for the end of the context
+    // //Draw the notification circle but don't show it
+    // svgContainer.append("rect")
+    //     .attr("x", sizex * 0.86)
+    //     .attr("y", sizey * 0.90)
+    //     .attr("rx", 15)
+    //     .attr("xy", 15)
+    //     .attr("width", 10)
+    //     .attr("height", 10)
+    //     .attr("filter", "url(#dropshadowCircle)")
+    //     .attr("id", "unfinishedCircle")
+    //     .attr("display", "none");
 
 
-        var tempLocations = []; //Holds the citation and word(s) locations
-        //Pushes the citation
-        tempLocations.push([paperData[articleid][i][0][3] - 1,
-        paperData[articleid][i][0][4],
-            true]);
-        //and the word(s) location(s)
-        for (var j = 0; j < paperData[articleid][i].length; j++) { //Loops length of query times
-            tempLocations.push([paperData[articleid][i][j][1],
-            paperData[articleid][i][j][2],
-                false]);
-        }
+    // //Append the relevant paper data in the popover
+    // var popover = d3.select("#popover_text");
+    // popover.html("");
+    // popover.append("h2").text(paperText[articleid][0]['articletitle'] + " (" + paperText[articleid][0]['articleyear'] + ") (" + articleid + ") (" + paperText[articleid][0]['journaltitle'] + ")");
+    // popover.append("h6").text("Boundaries are: " + boundariesByPaper[articleid][0] + " above and " + boundariesByPaper[articleid][1] + " below");
 
-        //Sorts the locations so that the item occuring first in the text is highlighted first, as not to go backward in the text
-        for (var j = 0; j < tempLocations.length; j++) {
-            for (var k = j + 1; k < tempLocations.length; k++) {
-                if (tempLocations[j][0] > tempLocations[k][0]) {
-                    var temp = tempLocations[j];
-                    tempLocations[j] = tempLocations[k];
-                    tempLocations[k] = temp;
-                }
-            }
-        }
+    // //Append each reference context
+    // for (var i = 0; i < paperData[articleid].length; i++) {
+    //     var tempText = "";
 
-        tempText += '"';
-        //Loop through the locations
-        //Works by getting text before word/citation, then adding the word/citation
-        //Loops until all data is in
-        for (var j = 0; j < tempLocations.length; j++) {
-            if (tempLocations[j][0] != lastSplitIndex) {
-                //End location of the item
-                var tempEndIndex = tempLocations[j][0];
-                //A fix if the word starts at a space
-                if (paperText[articleid][0]['papertext'][tempEndIndex] == ' ') {
-                    tempEndIndex += 1;
-                }
+    //     //Append a container
+    //     var listEntry = popover.append("ul").attr("class", "list-group");
+    //     listEntry = listEntry.append("li").attr("class", "list-group-item").attr("id", articleid); //Not standard, but works
+    //     //Onclick code to keep track of selected references incase they are added
+    //     listEntry.attr("onclick", "selectPaperViewBoundary(this); updateReferencesSelected([this.id, this.innerHTML, paperText[this.id][0]['articletitle'], paperText[this.id][0]['articleyear'], paperText[this.id][0]['journaltitle'], paperText[this.id][0]['papertext'].length]);");
 
-                //Get all the text before the item
-                tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, tempEndIndex);
-            }
-
-            //If the value is true, it is a citation, and span it a different color
-            //else, just use mark for yellow
-            if (tempLocations[j][2] == true) {
-                tempText += "<span style='background-color: #9DC4DF'>";
-            } else {
-                tempText += "<mark>";
-            }
-            //Get the word/citation
-            tempText += paperText[articleid][0]['papertext'].substring(tempLocations[j][0], tempLocations[j][1] + 1);
-            if (tempLocations[j][2] == true) {
-                tempText += "</span>";
-            } else {
-                tempText += "</mark>";
-            }
-            lastSplitIndex = tempLocations[j][1] + 1;
-        }
-        //Add the rest of the context's data
-        tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, endTextIndex + 1);
-        //End the text and pad it a little
-        tempText += '"';
-        tempText += "<br><br><i>";
-
-        //Add the citation information at the end in italics
-        if (paperData[articleid][i][0][6] != "") {
-            tempText += paperData[articleid][i][0][6] + ". "; //Author
-        }
-        if (paperData[articleid][i][0][5] != "") {
-            tempText += paperData[articleid][i][0][5] + ". "; //Referenced Paper Name
-        }
-        if (paperData[articleid][i][0][7] != "") {
-            tempText += paperData[articleid][i][0][7] + ". "; // Year
-        }
-        tempText += "</i>";
-        //Set the popover's text to the data just made
-        listEntry.html(tempText);
-        //Append "br" for padding
-        popover.append("br");
-    }
-
-    //The hitbox used to detect clicks on the entire glyph
-    var squareHitBox = svgContainer.append("rect")
-        .attr("x", 3)
-        .attr("y", 3)
-        .attr("rx", 3)
-        .attr("xy", 3)
-        .attr("width", sizex)
-        .attr("height", sizey)
-        .attr("data-toggle", "popover")
-        .attr("id", articleid + "_" + paperText[articleid][0]['articleyear'])
-        .attr("data-content", $('#popover_content_wrapper').html()) //Set the popover content to display custom html
-        .style("fill", "rgba(0,0,0,0)");
-
-    $(squareHitBox.node()).popover({ html: true, container: 'body' }); //This is the cause of the slowdown - enables popups on all papers
-    $(squareHitBox.node()).on('click', function (e) { //Allows only one popup at a time - if a popup other than the one clicked is active, it is hidden
-        //If the paper is clicked, hide all other papers open at the moment
-        $('[data-toggle=popover]').not(this).popover('hide');
-
-        //Reset selection data that was not added
-        inTextSelection = [];
-        referencesSelected = [];
-
-        //Still a work in progress - was used to change the notification circle's color from green to red but its not done yet
-        /*var id = d3.select(this).attr('id');
-        id = id.substring(0, id.indexOf('_'));
-        if(buttonsSelected[id] == null){
-            buttonsSelected[id] = [0,0,0];
-        }*/
+    //     var lastSplitIndex = paperData[articleid][i][0][8][0]; //Index used to figure out where the paper text was last split on
+    //     //If the context has a space at the beginning, skip it
+    //     if (paperText[articleid][0]['papertext'].charAt(lastSplitIndex) == ' ') {
+    //         lastSplitIndex += 1;
+    //     }
+    //     var endTextIndex = paperData[articleid][i][0][9][1]; //Index for the end of the context
 
 
-        var temp = $('[data-toggle=popover]').not(this);
-        //Remove a border on all the unselected objects
-        for (var i = 0; i < temp.length; i++) {
-            drawBorder(d3.select(temp[i].parentNode).select("#paperRect"), true);
-        }
+    //     var tempLocations = []; //Holds the citation and word(s) locations
+    //     //Pushes the citation
+    //     tempLocations.push([paperData[articleid][i][0][3] - 1,
+    //     paperData[articleid][i][0][4],
+    //         true]);
+    //     //and the word(s) location(s)
+    //     for (var j = 0; j < paperData[articleid][i].length; j++) { //Loops length of query times
+    //         tempLocations.push([paperData[articleid][i][j][1],
+    //         paperData[articleid][i][j][2],
+    //             false]);
+    //     }
 
-        //If the paper was recently selected (checked by looking at the stroke on the paper), then add a stroke
-        if (d3.select(this.parentNode).select("#paperRect").style("stroke") == "none") {
-            drawBorder(d3.select(this.parentNode).select("#paperRect"), false);
-            currentPaperIndicator = d3.select(this.parentNode).select("#unfinishedCircle");
-            currentPaperSelected = d3.select(this.parentNode);
-        } else { //Else remove the stroke - the paper is being unselected
-            drawBorder(d3.select(this.parentNode).select("#paperRect"), true);
-            currentPaperIndicator = null;
-            $(this).popover('hide');
-        }
+    //     //Sorts the locations so that the item occuring first in the text is highlighted first, as not to go backward in the text
+    //     for (var j = 0; j < tempLocations.length; j++) {
+    //         for (var k = j + 1; k < tempLocations.length; k++) {
+    //             if (tempLocations[j][0] > tempLocations[k][0]) {
+    //                 var temp = tempLocations[j];
+    //                 tempLocations[j] = tempLocations[k];
+    //                 tempLocations[k] = temp;
+    //             }
+    //         }
+    //     }
+
+    //     tempText += '"';
+    //     //Loop through the locations
+    //     //Works by getting text before word/citation, then adding the word/citation
+    //     //Loops until all data is in
+    //     for (var j = 0; j < tempLocations.length; j++) {
+    //         if (tempLocations[j][0] != lastSplitIndex) {
+    //             //End location of the item
+    //             var tempEndIndex = tempLocations[j][0];
+    //             //A fix if the word starts at a space
+    //             if (paperText[articleid][0]['papertext'][tempEndIndex] == ' ') {
+    //                 tempEndIndex += 1;
+    //             }
+
+    //             //Get all the text before the item
+    //             tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, tempEndIndex);
+    //         }
+
+    //         //If the value is true, it is a citation, and span it a different color
+    //         //else, just use mark for yellow
+    //         if (tempLocations[j][2] == true) {
+    //             tempText += "<span style='background-color: #9DC4DF'>";
+    //         } else {
+    //             tempText += "<mark>";
+    //         }
+    //         //Get the word/citation
+    //         tempText += paperText[articleid][0]['papertext'].substring(tempLocations[j][0], tempLocations[j][1] + 1);
+    //         if (tempLocations[j][2] == true) {
+    //             tempText += "</span>";
+    //         } else {
+    //             tempText += "</mark>";
+    //         }
+    //         lastSplitIndex = tempLocations[j][1] + 1;
+    //     }
+    //     //Add the rest of the context's data
+    //     tempText += paperText[articleid][0]['papertext'].substring(lastSplitIndex, endTextIndex + 1);
+    //     //End the text and pad it a little
+    //     tempText += '"';
+    //     tempText += "<br><br><i>";
+
+    //     //Add the citation information at the end in italics
+    //     if (paperData[articleid][i][0][6] != "") {
+    //         tempText += paperData[articleid][i][0][6] + ". "; //Author
+    //     }
+    //     if (paperData[articleid][i][0][5] != "") {
+    //         tempText += paperData[articleid][i][0][5] + ". "; //Referenced Paper Name
+    //     }
+    //     if (paperData[articleid][i][0][7] != "") {
+    //         tempText += paperData[articleid][i][0][7] + ". "; // Year
+    //     }
+    //     tempText += "</i>";
+    //     //Set the popover's text to the data just made
+    //     listEntry.html(tempText);
+    //     //Append "br" for padding
+    //     popover.append("br");
+    // }
+
+    // //The hitbox used to detect clicks on the entire glyph
+    // var squareHitBox = svgContainer.append("rect")
+    //     .attr("x", 3)
+    //     .attr("y", 3)
+    //     .attr("rx", 3)
+    //     .attr("xy", 3)
+    //     .attr("width", sizex)
+    //     .attr("height", sizey)
+    //     .attr("data-toggle", "popover")
+    //     .attr("id", articleid + "_" + paperText[articleid][0]['articleyear'])
+    //     .attr("data-content", $('#popover_content_wrapper').html()) //Set the popover content to display custom html
+    //     .style("fill", "rgba(0,0,0,0)");
+
+    // $(squareHitBox.node()).popover({ html: true, container: 'body' }); //This is the cause of the slowdown - enables popups on all papers
+    // $(squareHitBox.node()).on('click', function (e) { //Allows only one popup at a time - if a popup other than the one clicked is active, it is hidden
+    //     //If the paper is clicked, hide all other papers open at the moment
+    //     $('[data-toggle=popover]').not(this).popover('hide');
+
+    //     //Reset selection data that was not added
+    //     inTextSelection = [];
+    //     referencesSelected = [];
+
+    //     //Still a work in progress - was used to change the notification circle's color from green to red but its not done yet
+    //     /*var id = d3.select(this).attr('id');
+    //     id = id.substring(0, id.indexOf('_'));
+    //     if(buttonsSelected[id] == null){
+    //         buttonsSelected[id] = [0,0,0];
+    //     }*/
 
 
-    });
+    //     var temp = $('[data-toggle=popover]').not(this);
+    //     //Remove a border on all the unselected objects
+    //     for (var i = 0; i < temp.length; i++) {
+    //         drawBorder(d3.select(temp[i].parentNode).select("#paperRect"), true);
+    //     }
 
-    //Used to tell if the specific paper's popover should be shown immediately after creation - used when changing boundaries
-    if (display == true) {
-        //Simulates mouse click on the paper
-        jQuery.fn.d3Click = function () { //Used to click the d3 object (svg)
-            this.each(function (i, e) {
-                var evt = new MouseEvent("click");
-                e.dispatchEvent(evt);
-            });
-        };
+    //     //If the paper was recently selected (checked by looking at the stroke on the paper), then add a stroke
+    //     if (d3.select(this.parentNode).select("#paperRect").style("stroke") == "none") {
+    //         drawBorder(d3.select(this.parentNode).select("#paperRect"), false);
+    //         currentPaperIndicator = d3.select(this.parentNode).select("#unfinishedCircle");
+    //         currentPaperSelected = d3.select(this.parentNode);
+    //     } else { //Else remove the stroke - the paper is being unselected
+    //         drawBorder(d3.select(this.parentNode).select("#paperRect"), true);
+    //         currentPaperIndicator = null;
+    //         $(this).popover('hide');
+    //     }
 
-        if (d3.select("#pills-papers-tab").classed('active')) {
-            $(squareHitBox.node()).d3Click();
-        }
-    }
+
+    // });
+
+    // //Used to tell if the specific paper's popover should be shown immediately after creation - used when changing boundaries
+    // if (display == true) {
+    //     //Simulates mouse click on the paper
+    //     jQuery.fn.d3Click = function () { //Used to click the d3 object (svg)
+    //         this.each(function (i, e) {
+    //             var evt = new MouseEvent("click");
+    //             e.dispatchEvent(evt);
+    //         });
+    //     };
+
+    //     if (d3.select("#pills-papers-tab").classed('active')) {
+    //         $(squareHitBox.node()).d3Click();
+    //     }
+    // }
 
 }
 
@@ -1806,68 +1806,70 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
 }
 
 //Call the search and draw the homescreen for a particular query
-function drawHome(increment) {
-    //Remove the old home row
-    d3.select("#homeRow").remove();
-    d3.select("#clearAllButton").classed('disabled', false);
-    d3.select("#incrementButton").classed('disabled', false);
-    d3.select("#viewByButton").classed('disabled', false);
-    d3.select("#normByButton").classed('disabled', false);
+// function drawHome(increment) {
+//     //Remove the old home row
+//     d3.select("#homeRow").remove();
+//     d3.select("#clearAllButton").classed('disabled', false);
+//     d3.select("#incrementButton").classed('disabled', false);
+//     d3.select("#viewByButton").classed('disabled', false);
+//     d3.select("#normByButton").classed('disabled', false);
 
-    if ((100 / increment) * (64 + 10) > 740) {
-        currBoxPadding = 100 / (100 / increment);
-        currBoxHeight = 640 / (100 / increment);
-    } else {
-        currBoxHeight = 64;
-        currBoxPadding = 10;
-    }
+//     if ((100 / increment) * (64 + 10) > 740) {
+//         currBoxPadding = 100 / (100 / increment);
+//         currBoxHeight = 640 / (100 / increment);
+//     } else {
+//         currBoxHeight = 64;
+//         currBoxPadding = 10;
+//     }
 
-    //If the search went through
-    if (years.length != 0 && years != 0) {
-        //Clear all selections, prep the containers
-        clearAll();
-        seperationChange(increment);
-        prepContainers(increment);
+//     //If the search went through
+//     if (years.length != 0 && years != 0) {
+//         //Clear all selections, prep the containers
+//         clearAll();
+//         seperationChange(increment);
+//         prepContainers(increment);
 
-        //Draw the paper on the left on the main screen
-        var numOfLines = 100 / increment;
-        if (numOfLines > 10) {
-            //numOfLines = 10;
-        }
-        drawFirstColumn(110, (100 / increment) * 16, 80, svgContainers[0], numOfLines);
+//         //Draw the paper on the left on the main screen
+//         var numOfLines = 100 / increment;
+//         if (numOfLines > 10) {
+//             //numOfLines = 10;
+//         }
+//         drawFirstColumn(110, (100 / increment) * 16, 80, svgContainers[0], numOfLines);
 
-        //Search for the query in each year
-        for (var i = 0; i < years.length; i++) {
-            getYearResults(currSearchQuery, years[i]['articleyear'], sentenceRangeAbove, sentenceRangeBelow, increment, i + 1);
-        }
-    } else {
-        var homeRow = d3.select("#pills-home").append("div").attr("class", "row justify-content-center").attr("id", "homeRow");
-        homeRow.append("div").attr("class", "alert alert-warning alert-dismissible fade show")
-            .attr("role", "alert").attr("id", "alert")
-            .html("<strong>Waiting for a response from the server</strong> - please wait for a few seconds and then try searching again. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>");
+//         //Search for the query in each year
+//         for (var i = 0; i < years.length; i++) {
+//             getYearResults(currSearchQuery, years[i]['articleyear'], sentenceRangeAbove, sentenceRangeBelow, increment, i + 1);
+//         }
+//     } else {
+//         var homeRow = d3.select("#pills-home").append("div").attr("class", "row justify-content-center").attr("id", "homeRow");
+//         homeRow.append("div").attr("class", "alert alert-warning alert-dismissible fade show")
+//             .attr("role", "alert").attr("id", "alert")
+//             .html("<strong>Waiting for a response from the server</strong> - please wait for a few seconds and then try searching again. <button type='button' class='close' data-dismiss='alert' aria-label='Close'><span aria-hidden='true'>&times;</span></button>");
 
-    }
-}
+//     }
+// }
 
 //Run the search for the desired query
 //TODO - prevent SQL injections
 function searchForQuery(query) {
-    query = query.split(" ");
-    for (var i = 0; i < query.length; i++) {
-        query[i] = query[i].toLowerCase();
-    }
-    if (query.toString() != currSearchQuery.toString()) {
-        removeAllSelections();
-        currSearchQuery = query; //Remeber to filter input to prevent sql injects
-        d3.select("#searchQueryLabel").html(currSearchQuery.toString());
-    }
 
-    for (var key in boundariesByPaper) {
-        delete boundariesByPaper[key];
-    }
-    var boundariesByPaper = {};
-    indexToSortPapersOn = -1;
-    drawHome(currIncrement);
+    console.log("wrong searchforquery")
+    // query = query.split(" ");
+    // for (var i = 0; i < query.length; i++) {
+    //     query[i] = query[i].toLowerCase();
+    // }
+    // if (query.toString() != currSearchQuery.toString()) {
+    //     removeAllSelections();
+    //     currSearchQuery = query; //Remeber to filter input to prevent sql injects
+    //     d3.select("#searchQueryLabel").html(currSearchQuery.toString());
+    // }
+
+    // for (var key in boundariesByPaper) {
+    //     delete boundariesByPaper[key];
+    // }
+    // var boundariesByPaper = {};
+    // indexToSortPapersOn = -1;
+    // drawHome(currIncrement);
 
 }
 

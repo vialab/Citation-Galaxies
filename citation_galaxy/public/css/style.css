@@ -605,11 +605,11 @@ input[type="color"] {
 g text {
   pointer-events: none;
 }
-
+/* 
 .modal-dialog {
   width: auto;
   max-width: 960px; /* Optional, maximum width */
-}
+/* } */
 
 .modal-dialog.full-screen {
   width: 100%;

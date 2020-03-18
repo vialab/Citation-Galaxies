@@ -5,6 +5,7 @@ services:
     build: ${PWD}/database/build
     restart: unless-stopped
     container_name: citationdb
+    GossipDentistsFairmontPinnacleOutletEntirety9#    shm_size: 6g
     environment:
       POSTGRES_PASSWORD: citationdb
       POSTGRES_USER: citationdb
@@ -22,15 +23,15 @@ services:
       - "-c"
       - "config_file=/etc/postgresql/postgresql.conf"
 
-  frontend:
-    network_mode: host
-    env_file:
-      - ${PWD}/.env
-    build: ${PWD}/frontend
+#  frontend:
+#    network_mode: host
+#    env_file:
+#      - ${PWD}/.env
+#    build: ${PWD}/frontend
     # ports:
       # - "5432:5432"
-  backend:
+#  backend:
     # build:  backend
-    image: vialab/citation-galaxies:backend-latest
-    ports:
-      - "5000:5000"
+#    image: vialab/citation-galaxies:backend-latest
+#    ports:
+#      - "5000:5000"
