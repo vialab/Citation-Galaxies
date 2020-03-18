@@ -5,7 +5,6 @@ services:
     build: ${PWD}/database/build
     restart: unless-stopped
     container_name: citationdb
-    GossipDentistsFairmontPinnacleOutletEntirety9#    shm_size: 6g
     environment:
       POSTGRES_PASSWORD: citationdb
       POSTGRES_USER: citationdb
