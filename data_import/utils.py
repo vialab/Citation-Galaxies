@@ -52,6 +52,7 @@
 
 import io
 import struct
+from loguru import logger
 
 import string
 import nltk
@@ -68,7 +69,7 @@ translate = str.maketrans('', '', string.punctuation)
 # def 
 
 
-def to_tsvector( text ):
+def to_tsvector( text , min_token=3):
     # features = nltk.tokenize.sent_tokenize( text )
     # features = [ token.lower() for sentence in features for token in tbwt.tokenize(sentence) ]
     features = ( token.lower() for token in tbwt.tokenize( text.translate(translate) ) )
@@ -76,21 +77,45 @@ def to_tsvector( text ):
 
     word_pos = 0
     for token in features:
+        if token.isnumeric() or len(token) < min_token:
+            continue
+        
+        if len(token) >= (1<<11):
+            logger.warning("skipped giant string: '{}'",token)
+            continue
+        else:
         # token = wnl.lemmatize( token )
 
-        if token not in punctuation and (len(token)>0) and (word_pos<=65535):
-
+        # if token not in punctuation: # Word pos can't be larger than a 14bit integer. postgres constraint
             if (token not in stopwords):
                 word_pos += 1
                 # token = sbs.stem( token )
                 datum = word_dict.setdefault( sbs.stem( token ), [] )
 
                 datum.append( word_pos )
-                # datum.sort()
-            
-    tsvector = sorted( ( (word,sorted(pos)) for word,pos in word_dict.items() ), key=lambda tup: tup[0])
 
-    return tsvector
+                if word_pos>= (1<<14): # 14 bits is the max size of the postgre tsvector WordEntry position data
+                    datum.pop()
+                    # so we'll up the limit of what consititutes a minimum size token and try again.
+                    # logger.warning(f'caught too big of a word position, retrying with higher min_token={min_token+1}.')
+                    logger.warning(f'caught too big of a word position, returning clipped tsvector.')
+                    return word_dict
+            # datum.sort()
+            
+        #     print("\n\n\n\nFatal error word_pos too long.")
+        #     break
+    
+    for word, positions in word_dict.items():
+        if len(positions) >= (1<<20):
+            logger.warning("caught too many word positions, retrying with higher min_token")
+            return to_tsvector( text, min_token+1 )
+
+            
+    # tsvector = sorted( ( (word,sorted(pos)) for word,pos in word_dict.items() ), key=lambda tup: tup[0])
+    # tsvector = {}
+    
+
+    return word_dict
 
 
 def encode_tsvector_text( tsvector ):
@@ -108,11 +133,18 @@ def encode_tsvector2( tsvector ):
     for word in sorted(tsvector.keys()):
         positions = tsvector[word]
         # write the word in the 'client' encoding (does that mean the database encoding? tbd...)
-        # bufret.write( struct.pack( '>s', bytes(word, 'utf-8') ) )
-        bufret.write( bytes(word, 'utf-8') )
+        # bufret.write( struct.pack( 's', word.encode('utf-8') ) )
+        # bufret.write( bytes(word, 'utf-8') )
+        bufret.write( word.encode('utf-8') )
+        bufret.write( struct.pack('!x') ) #Null terminate string
 
-        # Null terminate string, and write uint16 # of positions
-        bufret.write( struct.pack( '!xH', len(positions) ) )
+        # Write uint16 # of positions
+        bufret.write( struct.pack( '!H', len(positions) ) )
+        # if len(positions) > 500 :
+            # print("LOTS A POS: ",len(positions))
+        # if len(positions) > 25:
+        #     print(" fuckin positions batman! ",len(positions),'')
+            # print("\n\n\n\nholy fuckin positions batman! ",len(positions),'\n\n\n')
 
         #for each lexeme, uint16 position in document
         # print("pos: ",positions)

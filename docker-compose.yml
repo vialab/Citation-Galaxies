@@ -5,6 +5,7 @@ services:
     build: ${PWD}/database/build
     restart: unless-stopped
     container_name: citationdb
+    stop_grace_period: "30s"
     environment:
       POSTGRES_PASSWORD: citationdb
       POSTGRES_USER: citationdb
@@ -12,16 +13,21 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ${PWD}/database/data:/var/lib/postgresql/data
+      # - citationdb-data:/var/lib/postgresql/data
+      # - ${PWD}/database/data:/var/lib/postgresql/data
+      - ../citationdb-data:/var/lib/postgresql/data
       # - ${PWD}/database/conf/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
       - ${PWD}/database/conf/postgresql.conf:/etc/postgresql/postgresql.conf
-      - ${PWD}/database/conf/DDL.sql:/docker-entrypoint-initdb.d/DDL.sql # Table structure will auto-create the first time the database starts up with an empty data directory
+      # - ${PWD}/database/conf/DDL.sql:/docker-entrypoint-initdb.d/DDL.sql # Table structure will auto-create the first time the database starts up with an empty data directory
       - ${PWD}/misc:/mnt
+      - /etc/localtime:/etc/localtime:ro
     command:
       - "postgres"
       - "-c"
       - "config_file=/etc/postgresql/postgresql.conf"
 
+volumes:
+  citationdb-data:
 #  frontend:
 #    network_mode: host
 #    env_file:
