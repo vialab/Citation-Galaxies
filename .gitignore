@@ -7,7 +7,8 @@ database/data
 misc/
 
 
-
+data_import/errors
+data_import/errors_initial_import
 
 start_server.sh
 **/.DS_Store

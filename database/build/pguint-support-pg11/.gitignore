@@ -1,0 +1,7 @@
+*.o
+*.so
+/results/
+/*--*.sql
+/operators.c
+/operators.sql
+/test/sql/operators.sql

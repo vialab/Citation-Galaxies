@@ -1,0 +1,116 @@
+2020-03-19 13:31:08.970 | WARNING  | __main__:finish_db:272 - Generating indexes now
+2020-03-19 13:31:08.970 | WARNING  | __main__:finish_db:272 - Generating indexes now
+2020-03-19 14:10:25.485 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 14:10:25.485 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 14:10:25.588 | ERROR    | __main__:main:329 - Index creation exception: 'Pool' object has no attribute '_timeout'
+2020-03-19 14:10:25.588 | ERROR    | __main__:main:329 - Index creation exception: 'Pool' object has no attribute '_timeout'
+2020-03-19 14:11:22.270 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 14:11:22.270 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 14:12:16.569 | ERROR    | __main__:main:329 - Index creation exception: relation "article_search_text_2003" already exists
+2020-03-19 14:12:16.569 | ERROR    | __main__:main:329 - Index creation exception: relation "article_search_text_2003" already exists
+2020-03-19 15:40:19.040 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:40:19.040 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:40:19.061 | ERROR    | __main__:main:329 - Index creation exception: expect a list of futures, not _GatheringFuture
+2020-03-19 15:40:19.061 | ERROR    | __main__:main:329 - Index creation exception: expect a list of futures, not _GatheringFuture
+2020-03-19 15:40:42.519 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:40:42.519 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:40:42.552 | ERROR    | __main__:main:329 - Index creation exception: wait() takes 1 positional argument but 207 positional arguments (and 1 keyword-only argument) were given
+2020-03-19 15:40:42.552 | ERROR    | __main__:main:329 - Index creation exception: wait() takes 1 positional argument but 207 positional arguments (and 1 keyword-only argument) were given
+2020-03-19 15:41:15.954 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:41:15.954 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:41:15.969 | ERROR    | __main__:main:329 - Index creation exception: expect a list of futures, not generator
+2020-03-19 15:41:15.969 | ERROR    | __main__:main:329 - Index creation exception: expect a list of futures, not generator
+2020-03-19 15:41:25.317 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:41:25.317 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:43:03.021 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:43:03.021 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:43:03.041 | ERROR    | __main__:main:329 - Index creation exception: await wasn't used with future
+2020-03-19 15:43:03.041 | ERROR    | __main__:main:329 - Index creation exception: await wasn't used with future
+2020-03-19 15:43:17.494 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:43:17.494 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:43:17.512 | ERROR    | __main__:main:329 - Index creation exception: expect a list of futures, not _GatheringFuture
+2020-03-19 15:43:17.512 | ERROR    | __main__:main:329 - Index creation exception: expect a list of futures, not _GatheringFuture
+2020-03-19 15:43:36.355 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:43:36.355 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:43:36.373 | ERROR    | __main__:main:329 - Index creation exception: asyncio.run() cannot be called from a running event loop
+2020-03-19 15:43:36.373 | ERROR    | __main__:main:329 - Index creation exception: asyncio.run() cannot be called from a running event loop
+2020-03-19 15:43:44.519 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:43:44.519 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:43:44.537 | ERROR    | __main__:main:329 - Index creation exception: expect a list of futures, not _GatheringFuture
+2020-03-19 15:43:44.537 | ERROR    | __main__:main:329 - Index creation exception: expect a list of futures, not _GatheringFuture
+2020-03-19 15:44:47.076 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:44:47.076 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:44:47.114 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:44:47.114 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:45:49.010 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:45:49.010 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:45:49.051 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:45:49.051 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:46:24.374 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:46:24.374 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:46:24.412 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:46:24.412 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:46:48.638 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:46:48.638 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:46:48.674 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:46:48.674 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:47:24.525 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:47:24.525 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:47:24.541 | ERROR    | __main__:main:329 - Index creation exception: name 'sql' is not defined
+2020-03-19 15:47:24.541 | ERROR    | __main__:main:329 - Index creation exception: name 'sql' is not defined
+2020-03-19 15:47:34.819 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:47:34.819 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:47:34.857 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:47:34.857 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:48:04.658 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:48:04.658 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:48:04.696 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:48:04.696 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:48:41.295 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:48:41.295 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:48:41.333 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:48:41.333 | ERROR    | __main__:main:329 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 15:48:54.829 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 15:48:54.829 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:08:33.453 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:08:33.453 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:08:33.535 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:08:33.535 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:08:56.294 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:08:56.294 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:08:56.312 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:08:56.312 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:09:22.264 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:09:22.264 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:09:22.282 | ERROR    | __main__:main:331 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:09:22.282 | ERROR    | __main__:main:331 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:09:42.826 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:09:42.826 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:09:42.843 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:09:42.843 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:09:52.980 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:09:52.980 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:09:52.995 | ERROR    | __main__:main:332 - Index creation exception: 'str' object has no attribute 'splot'
+2020-03-19 16:09:52.995 | ERROR    | __main__:main:332 - Index creation exception: 'str' object has no attribute 'splot'
+2020-03-19 16:10:00.944 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:10:00.944 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:10:00.962 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:10:00.962 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:10:57.045 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:10:57.045 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:10:57.062 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:10:57.062 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:11:30.793 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:11:30.793 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:11:30.810 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:11:30.810 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:11:59.357 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:11:59.357 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:11:59.375 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:11:59.375 | ERROR    | __main__:main:332 - Index creation exception: 'NoneType' object has no attribute 'decode'
+2020-03-19 16:12:22.312 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:12:22.312 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:13:07.587 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:13:07.587 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:13:19.635 | WARNING  | __main__:finish_db:274 - Generating indexes now
+2020-03-19 16:13:19.635 | WARNING  | __main__:finish_db:274 - Generating indexes now
