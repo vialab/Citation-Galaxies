@@ -1,55 +1,3 @@
-# import os
-# import re
-# import subprocess
-# from datetime import datetime
-# from lxml import html
-# from dateutil import parser
-
-# MEDLINE = 'ftp://ftp.nlm.nih.gov/nlmdata/.medleasebaseline/gz/'
-# PUBMED_OA = 'ftp://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_bulk/'
-
-# def get_update_date(option='medline'):
-#     """
-#     Download index page and grab lastest update from Medline
-#     or Pubmed Open-Access subset
-#     Parameters
-#     ----------
-#     option: str, 'medline' for MEDLINE or 'oa' for Pubmed Open-Access
-#     Example
-#     -------
-#     >> date = get_update_date('medline')
-#     >> print(date.strftime("%Y_%m_%d"))
-#     """
-#     if option == 'medline':
-#         link = MEDLINE
-#     elif option == 'oa':
-#         link = PUBMED_OA
-#     else:
-#         link = MEDLINE
-#         print('Specify either "medline" or "oa" for repository')
-
-#     if os.path.exists('index.html'):
-#         subprocess.call(['rm', 'index.html'])
-#     subprocess.call(['wget', link])
-
-#     with open('index.html', 'r') as f:
-#         page = f.read()
-
-#     date_all = list()
-#     tree = html.fromstring(page)
-#     for e in tree.xpath('body/pre/a'):
-#         if 'File' in e.tail:
-#             s = e.tail
-#             s_remove = re.sub(r'\([^)]*\)', '', s)
-#             s_remove = re.sub('File', '', s_remove).strip()
-#             d = parser.parse(s_remove)
-#             date_all.append(d)
-#     date = max(date_all) # get lastest update
-    
-#     if os.path.exists('index.html'):
-#         subprocess.call(['rm', 'index.html'])
-#     return date
-
 import io
 import struct
 from loguru import logger
@@ -132,7 +80,7 @@ def encode_tsvector2( tsvector ):
     # Iterate over the word/position tuples.
     for word in sorted(tsvector.keys()):
         positions = tsvector[word]
-        # write the word in the 'client' encoding (does that mean the database encoding? tbd...)
+        # write the word in the 'client' encoding (does that mean the database encoding?)
         # bufret.write( struct.pack( 's', word.encode('utf-8') ) )
         # bufret.write( bytes(word, 'utf-8') )
         bufret.write( word.encode('utf-8') )
@@ -140,14 +88,8 @@ def encode_tsvector2( tsvector ):
 
         # Write uint16 # of positions
         bufret.write( struct.pack( '!H', len(positions) ) )
-        # if len(positions) > 500 :
-            # print("LOTS A POS: ",len(positions))
-        # if len(positions) > 25:
-        #     print(" fuckin positions batman! ",len(positions),'')
-            # print("\n\n\n\nholy fuckin positions batman! ",len(positions),'\n\n\n')
 
         #for each lexeme, uint16 position in document
-        # print("pos: ",positions)
         for position in sorted(positions):
             bufret.write( struct.pack( '!H', position))
         # bufret.write( struct.pack( '>0H'))
@@ -172,7 +114,6 @@ def encode_tsvector( tsvector ):
 
     return bufret.getbuffer()
 
-# @profile
 def decode_tsvector(bin_vector):
     tsvector = []
 
@@ -203,3 +144,57 @@ def divide_chunks(l, n):
     for i in range(0, len(l), n):  
         yield l[i:i + n] 
 
+
+
+
+# import os
+# import re
+# import subprocess
+# from datetime import datetime
+# from lxml import html
+# from dateutil import parser
+
+# MEDLINE = 'ftp://ftp.nlm.nih.gov/nlmdata/.medleasebaseline/gz/'
+# PUBMED_OA = 'ftp://ftp.ncbi.nlm.nih.gov/pub/pmc/oa_bulk/'
+
+# def get_update_date(option='medline'):
+#     """
+#     Download index page and grab lastest update from Medline
+#     or Pubmed Open-Access subset
+#     Parameters
+#     ----------
+#     option: str, 'medline' for MEDLINE or 'oa' for Pubmed Open-Access
+#     Example
+#     -------
+#     >> date = get_update_date('medline')
+#     >> print(date.strftime("%Y_%m_%d"))
+#     """
+#     if option == 'medline':
+#         link = MEDLINE
+#     elif option == 'oa':
+#         link = PUBMED_OA
+#     else:
+#         link = MEDLINE
+#         print('Specify either "medline" or "oa" for repository')
+
+#     if os.path.exists('index.html'):
+#         subprocess.call(['rm', 'index.html'])
+#     subprocess.call(['wget', link])
+
+#     with open('index.html', 'r') as f:
+#         page = f.read()
+
+#     date_all = list()
+#     tree = html.fromstring(page)
+#     for e in tree.xpath('body/pre/a'):
+#         if 'File' in e.tail:
+#             s = e.tail
+#             s_remove = re.sub(r'\([^)]*\)', '', s)
+#             s_remove = re.sub('File', '', s_remove).strip()
+#             d = parser.parse(s_remove)
+#             date_all.append(d)
+#     date = max(date_all) # get lastest update
+    
+#     if os.path.exists('index.html'):
+#         subprocess.call(['rm', 'index.html'])
+#     return date

@@ -2,7 +2,7 @@ from citation_galaxy.settings import CODE_DIR
 api = {
     "signal": {
         "query": "-- name: signal\nselect id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal \
-      where enabled and cookieid=:cookieid;",
+      where cookieid=:cookieid;",
         "require_cookie": True,
         "aliases": {
             "signalcategoryid": {"query": "signalcategory", "value": "id", "col": "catname", "name": "category"},
@@ -26,7 +26,7 @@ api = {
     },
     "signalbycategory": {
         "query": "-- name: signal_by_category\nselect id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal \
-      where enabled and signaltypeid=1 and signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
+      where signaltypeid=1 and signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
     #     "query": "-- name: signal_by_category\nselect id, signal, parentid from signal \
     #   where enabled and signaltypeid=1 and signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
         "require_cookie": True,
@@ -52,7 +52,7 @@ api = {
     },
     "signalbytype": {
         "query": "-- name: signal_by_type\nselect id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal \
-      where enabled and signaltypeid=:signaltypeid and cookieid=:cookieid;",
+      where signaltypeid=:signaltypeid and cookieid=:cookieid;",
         "require_cookie": True,
         "aliases": {
             "signalcategoryid": {"query": "signalcategory", "value": "id", "col": "catname", "name": "category"},
@@ -123,8 +123,7 @@ api = {
         "parent": "parentid",
     },
     "signalcategory": {
-        "query": "-- name: signal_category\nselect id, catname, color from signalcategory where enabled\
-      and cookieid=:cookieid;",
+        "query": "-- name: signal_category\nselect id, catname, color from signalcategory where cookieid=:cookieid;",
         "require_cookie": True,
         "aliases": {
             "catname":{"name": "Category Name", "nameonly": True},

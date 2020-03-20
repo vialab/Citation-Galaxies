@@ -39,7 +39,7 @@ from loguru import logger
 logger.add("database-import.log", level="DEBUG")
 ## IMPORTS ABOVE
 
-CHUNK_SIZE = 1000
+CHUNK_SIZE = 10
 import pubmed_parser as pp
 dbconfig = {
     'user': 'citationdb',
@@ -169,7 +169,7 @@ async def insert_ts( data ):
     # await con.set_type_codec( 'tsvector', schema='pg_catalog', encoder=utils.encode_tsvector_text, decoder=utils.decode_tsvector_text, format='text')
     await con.set_type_codec( 'tsvector', schema='pg_catalog', encoder=utils.encode_tsvector2, decoder=utils.decode_tsvector, format='binary')
     # await con.set_type_codec( '_uint1', encoder=lambda x: struct.pack('!B',x), decoder=lambda x: struct.unpack('!B',x), format='binary')
-    # await con.set_type_codec( 'uint1',schema='public', encoder=enc_uint1, decoder=lambda x: struct.unpack('!B',x), format='binary')
+    await con.set_type_codec( 'uint1',schema='public', encoder=enc_uint1, decoder=lambda x: struct.unpack('!B',x), format='binary')
     # await con.set_builtin_type_codec( 'uint1', schema='public', codec_name='oid', format='binary')
     # await con.set_builtin_type_codec( 'uint1', schema='public', codec_name='uint1', format='binary')
     result = await con.copy_records_to_table( 'article_search', records=filt_results, columns=['id','pub_year','cite_in_01', 'cite_in_02', 'cite_in_03', 'cite_in_04', 'cite_in_05', 'cite_in_06', 'cite_in_07', 'cite_in_08', 'cite_in_09', 'cite_in_10', 'cite_in_11', 'cite_in_12', 'cite_in_13', 'cite_in_14', 'cite_in_15', 'cite_in_16', 'cite_in_17', 'cite_in_18', 'cite_in_19', 'cite_in_20', 'cite_in_21', 'cite_in_22', 'cite_in_23', 'cite_in_24', 'cite_in_25', 'cite_in_26', 'cite_in_27', 'cite_in_28', 'cite_in_29', 'cite_in_30', 'cite_in_31', 'cite_in_32', 'cite_in_33', 'cite_in_34', 'cite_in_35', 'cite_in_36', 'cite_in_37', 'cite_in_38', 'cite_in_39', 'cite_in_40', 'cite_in_41', 'cite_in_42', 'cite_in_43', 'cite_in_44', 'cite_in_45', 'cite_in_46', 'cite_in_47', 'cite_in_48', 'cite_in_49', 'cite_in_50', 'cite_in_51', 'cite_in_52', 'cite_in_53', 'cite_in_54', 'cite_in_55', 'cite_in_56', 'cite_in_57', 'cite_in_58', 'cite_in_59', 'cite_in_60', 'cite_in_61', 'cite_in_62', 'cite_in_63', 'cite_in_64', 'cite_in_65', 'cite_in_66', 'cite_in_67', 'cite_in_68', 'cite_in_69', 'cite_in_70', 'cite_in_71', 'cite_in_72', 'cite_in_73', 'cite_in_74', 'cite_in_75', 'cite_in_76', 'cite_in_77', 'cite_in_78', 'cite_in_79', 'cite_in_80', 'cite_in_81', 'cite_in_82', 'cite_in_83', 'cite_in_84', 'cite_in_85', 'cite_in_86', 'cite_in_87', 'cite_in_88', 'cite_in_89', 'cite_in_90', 'cite_in_91', 'cite_in_92', 'cite_in_93', 'cite_in_94', 'cite_in_95', 'cite_in_96', 'cite_in_97', 'cite_in_98', 'cite_in_99', 'cite_in_100',
@@ -262,9 +262,12 @@ def create_db():
     return results
 
 
-index_tmpl = """create index article_search_ts_{} on article_search_{} using GIN(ts_search);"""
+index_tmpl = """create index article_search_text_{} on article_search_{} using GIN(text_search);"""
+index2_tmpl = """create index article_search_citations_{} on article_search_{} using GIN(cite_search);"""
 async def create_idx( db, i ):
     query = index_tmpl.format(i,i)
+    res = await db.execute( query )
+    query = index2_tmpl.format(i,i)
     res = await db.execute( query )
     logger.success(f'Finished generating index for article_search_{i}')
     await asyncio.sleep(0.01)
@@ -272,18 +275,23 @@ async def create_idx( db, i ):
 
 async def finish_db():
     logger.warning("Generating indexes now")
-    post_ddl = generate_ddl.create_post_ddl()
+    # post_ddl = generate_ddl.create_post_ddl()
 
-    async with asyncpg.create_pool(**poolconfig) as pool:
-        # results = await pool.execute( post_ddl )
-        await asyncio.gather( *( pool.execute(sql) for sql in post_ddl.split('\n') ) ) # 4 hours
-        # print(type(post_ddl),post_ddl.split('\n'))
-        # for sql in post_ddl.split('\n'):
-        #     print("sql: ", sql)
-        #     await asyncio.wait_for( pool.execute(sql), 60*60*4)
+    # async with asyncpg.create_pool(**poolconfig) as pool:
+    #     # results = await pool.execute( post_ddl )
+    #     await asyncio.gather( *( pool.execute(sql) for sql in post_ddl.split('\n') ) ) # 4 hours
+    #     # print(type(post_ddl),post_ddl.split('\n'))
+    #     # for sql in post_ddl.split('\n'):
+    #     #     print("sql: ", sql)
+    #     #     await asyncio.wait_for( pool.execute(sql), 60*60*4)
+    async with asyncpg.create_pool(**dbconfig) as pool:
+        tasks = []
+        for i in range(2003,2020):
+            tasks.append( create_idx(pool, i) )
+        
+        final = await asyncio.gather(*tasks)
 
-    logger.success("finished index generation")
-
+        logger.success("finished index generation")
 
 
 
@@ -291,9 +299,9 @@ async def finish_db():
 
 def main():
 
-
+    # create_db()
     
-    # # start 4 worker processes
+    # start 4 worker processes
     # with Pool(processes=28,maxtasksperchild=5) as pool:
     #     # print("Building path list")
     #     # path_xml = xml_path_iterator('/archive/datasets/PubMed/Adipocyte')
@@ -327,7 +335,8 @@ def main():
     #     #     time.sleep(0.1)
 
     try:
-        asyncio.run( asyncio.wait_for( finish_db(), 60*60*4) )
+        # asyncio.run( asyncio.wait_for( finish_db(), 60*60*4) )
+        asyncio.run( finish_db() )
     except Exception as ex:
         logger.error("Index creation exception: {}",str(ex))
 

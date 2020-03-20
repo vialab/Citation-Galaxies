@@ -306,21 +306,21 @@ async def papers(request):
     if len(search_input) > 0:
         # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
         search_text += (
-            " where ts_search @@ to_tsquery($1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
+            " where ts_search @@ to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
         )
         search_params.append(" & ".join((word for word in search_input)))
 
         if words_left > 0 or words_right > 0:
-            subsearch_text = "where ts_search @@ to_tsquery($2) "
+            subsearch_text = "where ts_search @@ to_tsquery('english', $2) "
 
             subsearch_params = []
             for word in search_input:
                 for dist in range(1, words_left + 1):
 
-                    subsearch_params.append(f"{word} <{dist}> ЉЉ")
+                    subsearch_params.append(f"{word} <{dist}> љљ")
 
                 for dist in range(1, words_right + 1):
-                    subsearch_params.append(f"ЉЉ <{dist}> {word}")
+                    subsearch_params.append(f"љљ <{dist}> {word}")
 
             search_params.append(" | ".join(subsearch_params))
 
@@ -439,11 +439,11 @@ async def query(request):
 
     if len(search_input) > 0:
         # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
-        search_text = "article_search where ts_search @@ to_tsquery($1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
+        search_text = "article_search where ts_search @@ to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
         search_params.append(" & ".join((word for word in search_input)))
 
         if words_left >= 0 or words_right >= 0:
-            subsearch_text = "where ts_search @@ to_tsquery($2) "
+            subsearch_text = "where ts_search @@ to_tsquery('english', $2) "
 
             subsearch_params = []
             for word in search_input:
