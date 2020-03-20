@@ -6,7 +6,7 @@ import asyncio
 dbconfig = {
     'user': 'citationdb',
     'password': 'citationdb',
-    'database': 'citationdb2'
+    'database': 'citationdb'
 }
 
 
@@ -26,17 +26,18 @@ import hashlib
 async def main():
     conn = await asyncpg.connect(**dbconfig)
     # conn = sqlite3.connect("myapp.db")
-    queries = aiosql.from_path("test.sql", "asyncpg") # Only using this library to load named sql queries from file
+    # queries = aiosql.from_path("test.sql", "asyncpg") # Only using this library to load named sql queries from file
 
     st = '1'
 
     md5 = hashlib.md5(st.encode('utf-8'))
 
     uid = uuid.UUID(bytes=md5.digest())
-
+    await conn.set_type_codec( 'uint1',schema='public', encoder=lambda x: str(x), decoder=lambda x: int(x), format='text')
     # v = await queries.varsel(conn,namee=1)
     # v = await queries.varsel(conn, "signal")
-    v = await conn.execute( "insert into test2 values($1,$2::uuid)", uid,uid )
+    # v = await conn.execute( "insert into test2 values($1,$2::uuid)", uid,uid )
+    v = await conn.fetch( "select cite_in_01 from article_search_2003" )
 
     # aa = queries.create_users(conn)
     # c = queries.test(conn, num="1")

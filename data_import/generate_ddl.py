@@ -17,7 +17,7 @@ prepopulate_templates = [
         "name": "Article Search",
         "drop": "drop table if exists article_search cascade;",
         "sql": """
-CREATE EXTENSION uint;
+-- CREATE EXTENSION uint;
 create table article_search (
     id                  SERIAL PRIMARY KEY,
     pub_year		    smallint,
@@ -25,7 +25,7 @@ create table article_search (
     text_search	        tsvector,
     cite_search         tsvector
 );""",
-        "templater": lambda sql: sql.format( (', '.join( ( f'cite_in_{col:02d} smallint' for col in c_100) ) ) + ',' )
+        "templater": lambda sql: sql.format( (', '.join( ( f'cite_in_{col:02d} uint1' for col in c_100) ) ) + ',' )
     },
     {
         "name": "Article Search Children",
@@ -151,29 +151,31 @@ CREATE TABLE journals (
 
 # ddl of stuff to run after populating DB.
 postpopulate_template = [
-    # {
-    #     "name": "Article Search Text Search Index",
-    #     "drop": "DROP INDEX IF EXISTS article_search_text_{};",
-    #     "sql": """create index article_search_text_{} on article_search_{} using GIN(text_search);""",
-    #     "templater": lambda sql: '\n'.join( (sql.format(year,year) for year in year_range) ) +'\n'
-    # },
-    # {
-    #     "name": "Article Search Citation Search Index",
-    #     "drop": "DROP INDEX IF EXISTS article_search_citations_{};",
-    #     "sql": """create index article_search_citations_{} on article_search_{} using GIN(cite_search);""",
-    #     "templater": lambda sql: '\n'.join( (sql.format(year,year) for year in year_range) ) + '\n'
-    # },
     {
-        "name": "to uint1",
+        "name": "Article Search Text Search Index",
+        # "drop": "DROP INDEX IF EXISTS article_search_text_{}; ",
+        "drop": "", 
+        "sql": """create index article_search_text_{} on article_search_{} using GIN(text_search); """,
+        "templater": lambda sql: '\n'.join( (sql.format(year,year) for year in year_range) ) +'\n'
+    },
+    {
+        "name": "Article Search Citation Search Index",
+        # "drop": "DROP INDEX IF EXISTS article_search_citations_{}; ",
         "drop": "",
-        "sql": """ALTER COLUMN cite_in_{} TYPE uint1""",
-        "templater": lambda sql: ('ALTER TABLE article_search \n    '+',\n    '.join( ( sql.format(f'{col:02d}') for col in c_100 ) ) + ';\n' ) if len(sql) > 0 else ''
+        "sql": """create index article_search_citations_{} on article_search_{} using GIN(cite_search); """,
+        "templater": lambda sql: '\n'.join( (sql.format(year,year) for year in year_range) ) + '\n'
     },
-    {
-        "name": 'vacuum analyze',
-        "drop": '\n',
-        "sql": 'VACUUM ANALYZE;'
-    },
+    # {
+    #     "name": "to uint1",
+    #     "drop": "",
+    #     "sql": """ALTER COLUMN cite_in_{} TYPE smallint""",
+    #     "templater": lambda sql: ('ALTER TABLE article_search \n    '+',\n    '.join( ( sql.format(f'{col:02d}') for col in c_100 ) ) + ';\n' ) if len(sql) > 0 else ''
+    # },
+    # {
+    #     "name": 'vacuum analyze',
+    #     "drop": '\n',
+    #     "sql": 'VACUUM ANALYZE;'
+    # },
     # {
     #     "name": 
     #     "sql":
@@ -191,12 +193,12 @@ def create_ddl( templates ):
             
             sqllist.append( entry['templater']( entry['drop'] ) )
             sqllist.append( entry['templater']( entry['sql'] ) )
-            sqllist.append( '\n\n' )
+            # sqllist.append( '\n\n' )
 
         else:
             sqllist.append( entry['drop'] )
             sqllist.append( entry['sql'] )
-            sqllist.append( '\n\n' )
+            # sqllist.append( '\n\n' )
 
     return ''.join( sqllist )
 

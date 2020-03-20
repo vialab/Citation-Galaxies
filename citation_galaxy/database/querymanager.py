@@ -42,7 +42,7 @@ class QueryManager:
             "select pub_year, "
             + ", ".join(
                 (
-                    "+".join((f"sum(cite_in_{el:02d})" for el in chunk)) + f" as c{count}"
+                    "+".join((f'sum(cite_in_{el:02d})' for el in chunk)) + f' as c{count}'
                     for (chunk, count) in columns_in_bins
                 )
             )
