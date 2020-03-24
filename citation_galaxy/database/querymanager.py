@@ -56,7 +56,7 @@ class QueryManager:
 
     def build_counting_query(self):
         columns_in_bins = reshape_count_columns(self.percent_range)
-        body = " from (select ts_search, pub_year," + ", ".join(
+        body = " from (select cite_search, pub_year," + ", ".join(
             (
                 f"case when ("
                 + "+".join((f"coalesce(cite_in_{el:02d},0)" for el in chunk))
@@ -119,6 +119,7 @@ class QueryManager:
         sha = hashlib.md5(query_text.lower().encode("utf-8"))
         if len(self.search_params) > 0:
             sha.update(" , ".join(self.search_params).lower().encode("utf-8"))
+            # sha.update(self.search_params.lower().encode("utf-8"))
         # hashid = int.from_bytes(sha.digest(7), "big")
         # hashid = int.from_bytes(sha.digest(), "big")
         hashid = UUID( bytes=sha.digest() )

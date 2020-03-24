@@ -1,9 +1,9 @@
 postgres:
-  database: citationdb3
+  database: citationdb
   user: citationdb
   password: citationdb
   host: localhost
-  port: 5432
+  port: 5435
   min_size: 32
   max_size: 64
 

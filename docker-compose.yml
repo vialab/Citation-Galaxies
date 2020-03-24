@@ -16,14 +16,15 @@ services:
       # - citationdb-data:/var/lib/postgresql/data
       # - ${PWD}/database/data:/var/lib/postgresql/data
       # - ../citationdb-data-old:/var/lib/postgresql/data
-      - ../citationdb-data:/var/lib/postgresql/data
+      # - ../citationdb-data-004:/var/lib/postgresql/data
+      - ../citationdb-data-citeonly-fast:/var/lib/postgresql/data
       # - ${PWD}/database/conf/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
       # - ${PWD}/database/conf/postgresql.conf:/etc/postgresql/postgresql.conf
       - ${PWD}/config/postgresql.conf:/etc/postgresql/postgresql.conf
       # - ${PWD}/database/conf/DDL.sql:/docker-entrypoint-initdb.d/DDL.sql # Table structure will auto-create the first time the database starts up with an empty data directory
-      - ${PWD}/misc:/mnt
+      # - ${PWD}/misc:/mnt
       - /etc/localtime:/etc/localtime:ro
-      # - ./sockets:/sockets
+      # - ./sockets:/run/postgresql/
     command:
       - "postgres"
       - "-c"

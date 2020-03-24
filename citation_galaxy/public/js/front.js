@@ -1319,10 +1319,10 @@ function searchForQuery(query) {
     getFilteredYears("", true, undefined, false, true);
     return;
   }
-  query = query.replace(/[^a-zA-Z ]/g, "").split(" ");
-  for (var i = 0; i < query.length; i++) {
-    query[i] = query[i].toLowerCase();
-  }
+  // query = query.replace(/[^a-zA-Z ]/g, "").split(" ");
+  // for (var i = 0; i < query.length; i++) {
+  //   query[i] = query[i].toLowerCase();
+  // }
   if (query.toString() != currSearchQuery.toString()) {
     removeAllSelections();
     currSearchQuery = query; //Remeber to filter input to prevent sql injects

@@ -1,6 +1,6 @@
 # vim:set ft=dockerfile:
-# FROM debian:buster-slim
-FROM postgres:12
+FROM debian:buster-slim
+# FROM postgres:12
 
 RUN set -ex; \
 	if ! command -v gpg > /dev/null; then \
@@ -14,9 +14,9 @@ RUN set -ex; \
 
 # explicitly set user/group IDs
 RUN set -eux; \
-	# groupadd -r postgres --gid=999; \
+	groupadd -r postgres --gid=999; \
 # https://salsa.debian.org/postgresql/postgresql-common/blob/997d842ee744687d99a2b2d95c1083a2615c79e8/debian/postgresql-common.postinst#L32-35
-	# useradd -r -g postgres --uid=999 --home-dir=/var/lib/postgresql --shell=/bin/bash postgres; \
+	useradd -r -g postgres --uid=999 --home-dir=/var/lib/postgresql --shell=/bin/bash postgres; \
 # also create the postgres user's home directory with appropriate permissions
 # see https://github.com/docker-library/postgres/issues/274
 	mkdir -p /var/lib/postgresql; \
@@ -41,7 +41,7 @@ RUN set -x \
 RUN set -eux; \
 	if [ -f /etc/dpkg/dpkg.cfg.d/docker ]; then \
 # if this file exists, we're likely in "debian:xxx-slim", and locales are thus being excluded so we need to remove that exclusion (since we need locales)
-		# grep -q '/usr/share/locale' /etc/dpkg/dpkg.cfg.d/docker; \
+		grep -q '/usr/share/locale' /etc/dpkg/dpkg.cfg.d/docker; \
 		sed -ri '/\/usr\/share\/locale/d' /etc/dpkg/dpkg.cfg.d/docker; \
 		! grep -q '/usr/share/locale' /etc/dpkg/dpkg.cfg.d/docker; \
 	fi; \
@@ -49,15 +49,19 @@ RUN set -eux; \
 	localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 ENV LANG en_US.utf8
 
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
 # install "nss_wrapper" in case we need to fake "/etc/passwd" and "/etc/group" (especially for OpenShift)
 # https://github.com/docker-library/postgres/issues/359
 # https://cwrap.org/nss_wrapper.html
-RUN set -eux; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends libnss-wrapper; \
+		libnss-wrapper \
+# install "xz-utils" for .sql.xz docker-entrypoint-initdb.d files
+		xz-utils \
+	; \
 	rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /docker-entrypoint-initdb.d
+RUN mkdir /docker-entrypoint-initdb.d
 
 RUN set -ex; \
 # pub   4096R/ACCC4CF8 2011-10-13 [expires: 2019-07-02]
@@ -71,12 +75,12 @@ RUN set -ex; \
 	rm -rf "$GNUPGHOME"; \
 	apt-key list
 
-# ENV PG_MAJOR 12
-# ENV PG_VERSION 12.2-2.pgdg100+1
+ENV PG_MAJOR 12
+ENV PG_VERSION 12.2-2.pgdg100+1
 SHELL ["/bin/bash", "-c"]
 # RUN bash -c 'export PG_SHORTVER=${PG_VERSION::-12}'
-ENV CFLAGS "-Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Werror=vla -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -fexcess-precision=standard -Wno-format-truncation -Wno-stringop-truncation -g -O3 -march=native -flto -fdebug-prefix-map=/tmp/build=. -fstack-protector-strong -Wformat -Werror=format-security -fno-omit-frame-pointer"
-ENV CXXFLAGS "-Wall -Wpointer-arith -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -g -O3 -march=native -flto -fdebug-prefix-map=/tmp/build=. -fstack-protector-strong -Wformat -Werror=format-security"
+# ENV CFLAGS "-Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Werror=vla -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -fexcess-precision=standard -Wno-format-truncation -Wno-stringop-truncation -g -O3 -march=native -flto -fdebug-prefix-map=/tmp/build=. -fstack-protector-strong -Wformat -Werror=format-security -fno-omit-frame-pointer"
+# ENV CXXFLAGS "-Wall -Wpointer-arith -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -g -O3 -march=native -flto -fdebug-prefix-map=/tmp/build=. -fstack-protector-strong -Wformat -Werror=format-security"
 
 WORKDIR /tmp/build
 
@@ -85,8 +89,8 @@ COPY ./tsvector.patch /tmp/build
 ADD pguint-support-pg11 /tmp/build/pguint-support-pg11/
 RUN set -ex; \
 	\
-	export CFLAGS="${CFLAGS}" ; \
-	export CXXFLAGS="${CXXFLAGS}" ; \
+	# export CFLAGS="${CFLAGS}" ; \
+	# export CXXFLAGS="${CXXFLAGS}" ; \
 # see note below about "*.pyc" files
 	export PYTHONDONTWRITEBYTECODE=0; \
 	\
@@ -118,25 +122,6 @@ RUN set -ex; \
     apt-get source \
         "postgresql-$PG_MAJOR=$PG_VERSION" \
     ; \
-	# find /usr -type f | xargs sed -i 's/\s-g -O2/ -g -O3 -march=native -flto/g'; \
-	# find /usr -type f | xargs sed -i 's/\s-g -O2/ -g -O3 -flto/g'; \
-	# find /usr -type f | xargs sed -i 's/\s-fwrapv -O2/ -fwrapv -O3 -march=native -flto/g'; \
-	find /usr -type f | xargs sed -i 's/\s-O2/ -O3/g'; \
-	# find /var -type f | xargs sed -i 's/\s-g -O2/ -g -O3 -march=native -flto/g'; \
-	# find /var -type f | xargs sed -i 's/\s-fwrapv -O2/ -fwrapv -O3 -march=native -flto/g'; \
-	# find /var -type f | xargs sed -i 's/\s-O2/ -O3/g'; \
-	# find /lib -type f | xargs sed -i 's/\s-g -O2/ -g -O3 -march=native -flto/g'; \
-	# find /lib -type f | xargs sed -i 's/\s-fwrapv -O2/ -fwrapv -O3 -march=native -flto/g'; \
-	# find /lib -type f | xargs sed -i 's/\s-O2/ -O3/g'; \
-	# find /etc -type f | xargs sed -i 's/\s-g -O2/ -g -O3 -march=native -flto/g'; \
-	# find /etc -type f | xargs sed -i 's/\s-fwrapv -O2/ -fwrapv -O3 -march=native -flto/g'; \
-	# find /etc -type f | xargs sed -i 's/\s-O2/ -O3/g'; \
-	# find /tmp -type f | xargs sed -i 's/\s-g -O2/ -g -O3 -flto/g'; \
-	# find /tmp -type f | xargs sed -i 's/\s-fwrapv -O2/ -fwrapv -O3 -march=native -flto/g'; \
-	find /tmp -type f | xargs sed -i 's/\s-O2/ -O3/g'; \
-	# find /usr -type f | xargs sed -i 's/\s-g -O2/ -g -O3 -march=native -flto/g'; \
-	# find /usr -type f | xargs sed -i 's/\s-fwrapv -O2/ -fwrapv -O3 -march=native -flto/g'; \
-	# find /usr -type f | xargs sed -i 's/\s-O2/ -O3/g'; \
     cd "postgresql-$PG_MAJOR"-*; \
     patch -p1 < ../tsvector.patch; \
 	# cat src/include/tsearch/ts_type.h | grep MAXNUMPOS; \
@@ -145,7 +130,6 @@ RUN set -ex; \
     ; \
     cd ..;\
 # we don't remove APT lists here because they get re-downloaded and removed later
-	find /tmp -type f | xargs sed -i 's/\s-O2/ -O3 -march=native -flto /g'; \
     apt-get source --compile \
         postgresql-common pgdg-keyring \
     ; \
@@ -168,12 +152,12 @@ RUN set -ex; \
 		"postgresql-$PG_MAJOR=$PG_VERSION" \
 	; \
 	\
-	cd /tmp/build; dpkg -i libpq-dev_*.deb postgresql-server-dev-12*.deb; \
-	cd /tmp/build/pguint-support-pg11; \
-	make; \
-	make install; \
-	dpkg -r postgresql-server-dev-12 libpq-dev; \
-	cd ..; \
+	# cd /tmp/build; dpkg -i libpq-dev_*.deb postgresql-server-dev-12*.deb; \
+	# cd /tmp/build/pguint-support-pg11; \
+	# make; \
+	# make install; \
+	# dpkg -r postgresql-server-dev-12 libpq-dev; \
+	# cd ..; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
 	if [ -n "$tempDir" ]; then \
@@ -205,7 +189,7 @@ VOLUME /var/lib/postgresql/data
 
 COPY docker-entrypoint.sh /usr/local/bin/
 # COPY docker-entrypoint.sh /usr/bin/
-# RUN ln -s usr/local/bin/docker-entrypoint.sh / # backwards compat
+RUN ln -s usr/local/bin/docker-entrypoint.sh / # backwards compat
 WORKDIR /
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
