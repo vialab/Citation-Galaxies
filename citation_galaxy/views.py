@@ -4,6 +4,11 @@ import re
 import time
 from json import dumps, loads
 
+
+import string
+punctuation = string.punctuation + "''``\""
+removePunc = str.maketrans('', '', string.punctuation)
+
 import aiohttp_jinja2
 from aiohttp import web
 from aiohttp_session import get_session, setup
@@ -306,12 +311,12 @@ async def papers(request):
     if len(search_input) > 0:
         # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
         search_text += (
-            " where ts_search @@ to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
+            " where text_search @@ to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
         )
         search_params.append(" & ".join((word for word in search_input)))
 
         if words_left > 0 or words_right > 0:
-            subsearch_text = "where ts_search @@ to_tsquery('english', $2) "
+            subsearch_text = "where cite_search @@ to_tsquery('english', $2) "
 
             subsearch_params = []
             for word in search_input:
@@ -416,7 +421,7 @@ async def query(request):
     # print("query:",request,db.question.select())
     query_params = await request.json()
     num_bins = query_params.get("increment", 10)
-    search_input = query_params.get("query", [])
+    search_input = query_params.get("query", "").lower()
     words_left = query_params.get("rangeLeft", -1)
     words_right = query_params.get("rangeRight", -1)
 
@@ -439,14 +444,18 @@ async def query(request):
 
     if len(search_input) > 0:
         # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
-        search_text = "article_search where ts_search @@ to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
-        search_params.append(" & ".join((word for word in search_input)))
+        search_text = "article_search where text_search @@ websearch_to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
+        # search_params.append(" & ".join((word for word in search_input)))
+        search_params.append(search_input)
 
         if words_left >= 0 or words_right >= 0:
-            subsearch_text = "where ts_search @@ to_tsquery('english', $2) "
+            subsearch_text = "where cite_search @@ to_tsquery('english', $2) "
 
             subsearch_params = []
-            for word in search_input:
+            stripped_input = search_input.translate(removePunc)
+            stripped_input = stripped_input.replace(" or ", " ")
+            stripped_input = stripped_input.replace(" and ", " ")
+            for word in stripped_input.split(" "):
                 for dist in range(0, words_left + 1):
 
                     subsearch_params.append(f"{word} <{dist}> ЉЉ")

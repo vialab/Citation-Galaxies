@@ -40,3 +40,6 @@ database/postgres
 .env
 database/postgres
 config/session.key
+sockets/**
+data_import/errors**
+data_import/*.log

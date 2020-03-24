@@ -39,12 +39,13 @@ from loguru import logger
 logger.add("database-import.log", level="DEBUG")
 ## IMPORTS ABOVE
 
-CHUNK_SIZE = 10
+CHUNK_SIZE = 1000
 import pubmed_parser as pp
 dbconfig = {
     'user': 'citationdb',
     'password': 'citationdb',
     'database': 'citationdb',
+    'host': '/home/nbeals/work/maintenance/Citation-Galaxies/sockets/.s.PGSQL.5432'
 }
 poolconfig = dbconfig.copy()
 poolconfig.update({
@@ -74,6 +75,10 @@ its = 0
 def receive_xml_ts( path ):
     general_data = pp.parse_pubmed_xml( path )
     fulltext_data = pp.parse_pubmed_paragraph( path, ref_replace=' ЉЉ ' )
+    if len(fulltext_data) < 1:
+        return None
+    # general_data = path[0]
+    # fulltext_data = path[1]
     # pprint(fulltext_data)
     pub_year = int(general_data['publication_year'])
 
@@ -106,6 +111,8 @@ def receive_xml_ts( path ):
     last_left_cite = 1E9 # sentence number of the closest citation made that is to the left of the current search sentence
     for sent in sent_tokens:
         # sent = sent.translate(translate)
+
+
         pos = fulltext.find( 'ЉЉ', lastpos )
         if pos > 0:
             cite_sent = [ num+1 for (num,span) in enumerate(spans) if pos >= span[0] and pos <= span[1] ][0]
@@ -116,6 +123,9 @@ def receive_xml_ts( path ):
         ldistance = sent_num - last_left_cite
         words = tbwt.tokenize(sent.translate(translate).lower())
         for word in words:
+            if len(word) >= (1<<11):
+                logger.warning("skipped giant string: '{}'",word)
+                continue
             if word.isnumeric() or len(word) < 3:
                 continue
 
@@ -144,22 +154,18 @@ def receive_xml_ts( path ):
             del val[0]
 
 
-    fulltext = ' '.join( [general_data['full_title'], general_data['abstract'], fulltext] )
-    text_vector = utils.to_tsvector(fulltext)
+    fulltext = ' '.join( [general_data['full_title'], general_data['abstract'], fulltext] ).replace('ЉЉ','')
+    # text_vector = utils.to_tsvector(fulltext)
 
     if pub_year >= 2003 and pub_year <= 2019:
         return (    int(general_data['pmc'] ),
+                    fulltext,
+                    cite_vector,
                     pub_year,
-                    citation_distribution[0],citation_distribution[1],citation_distribution[2],citation_distribution[3],citation_distribution[4],citation_distribution[5],citation_distribution[6],citation_distribution[7],citation_distribution[8],citation_distribution[9],citation_distribution[10],citation_distribution[11],citation_distribution[12],citation_distribution[13],citation_distribution[14],citation_distribution[15],citation_distribution[16],citation_distribution[17],citation_distribution[18],citation_distribution[19],citation_distribution[20],citation_distribution[21],citation_distribution[22],citation_distribution[23],citation_distribution[24],citation_distribution[25],citation_distribution[26],citation_distribution[27],citation_distribution[28],citation_distribution[29],citation_distribution[30],citation_distribution[31],citation_distribution[32],citation_distribution[33],citation_distribution[34],citation_distribution[35],citation_distribution[36],citation_distribution[37],citation_distribution[38],citation_distribution[39],citation_distribution[40],citation_distribution[41],citation_distribution[42],citation_distribution[43],citation_distribution[44],citation_distribution[45],citation_distribution[46],citation_distribution[47],citation_distribution[48],citation_distribution[49],citation_distribution[50],citation_distribution[51],citation_distribution[52],citation_distribution[53],citation_distribution[54],citation_distribution[55],citation_distribution[56],citation_distribution[57],citation_distribution[58],citation_distribution[59],citation_distribution[60],citation_distribution[61],citation_distribution[62],citation_distribution[63],citation_distribution[64],citation_distribution[65],citation_distribution[66],citation_distribution[67],citation_distribution[68],citation_distribution[69],citation_distribution[70],citation_distribution[71],citation_distribution[72],citation_distribution[73],citation_distribution[74],citation_distribution[75],citation_distribution[76],citation_distribution[77],citation_distribution[78],citation_distribution[79],citation_distribution[80],citation_distribution[81],citation_distribution[82],citation_distribution[83],citation_distribution[84],citation_distribution[85],citation_distribution[86],citation_distribution[87],citation_distribution[88],citation_distribution[89],citation_distribution[90],citation_distribution[91],citation_distribution[92],citation_distribution[93],citation_distribution[94],citation_distribution[95],citation_distribution[96],citation_distribution[97],citation_distribution[98],citation_distribution[99],
-                    text_vector,
-                    cite_vector
+                    citation_distribution[0],citation_distribution[1],citation_distribution[2],citation_distribution[3],citation_distribution[4],citation_distribution[5],citation_distribution[6],citation_distribution[7],citation_distribution[8],citation_distribution[9],citation_distribution[10],citation_distribution[11],citation_distribution[12],citation_distribution[13],citation_distribution[14],citation_distribution[15],citation_distribution[16],citation_distribution[17],citation_distribution[18],citation_distribution[19],citation_distribution[20],citation_distribution[21],citation_distribution[22],citation_distribution[23],citation_distribution[24],citation_distribution[25],citation_distribution[26],citation_distribution[27],citation_distribution[28],citation_distribution[29],citation_distribution[30],citation_distribution[31],citation_distribution[32],citation_distribution[33],citation_distribution[34],citation_distribution[35],citation_distribution[36],citation_distribution[37],citation_distribution[38],citation_distribution[39],citation_distribution[40],citation_distribution[41],citation_distribution[42],citation_distribution[43],citation_distribution[44],citation_distribution[45],citation_distribution[46],citation_distribution[47],citation_distribution[48],citation_distribution[49],citation_distribution[50],citation_distribution[51],citation_distribution[52],citation_distribution[53],citation_distribution[54],citation_distribution[55],citation_distribution[56],citation_distribution[57],citation_distribution[58],citation_distribution[59],citation_distribution[60],citation_distribution[61],citation_distribution[62],citation_distribution[63],citation_distribution[64],citation_distribution[65],citation_distribution[66],citation_distribution[67],citation_distribution[68],citation_distribution[69],citation_distribution[70],citation_distribution[71],citation_distribution[72],citation_distribution[73],citation_distribution[74],citation_distribution[75],citation_distribution[76],citation_distribution[77],citation_distribution[78],citation_distribution[79],citation_distribution[80],citation_distribution[81],citation_distribution[82],citation_distribution[83],citation_distribution[84],citation_distribution[85],citation_distribution[86],citation_distribution[87],citation_distribution[88],citation_distribution[89],citation_distribution[90],citation_distribution[91],citation_distribution[92],citation_distribution[93],citation_distribution[94],citation_distribution[95],citation_distribution[96],citation_distribution[97],citation_distribution[98],citation_distribution[99]
                 )
     else:
         return None
-
-import struct
-def enc_uint1(x):
-    return memoryview(struct.pack('!B',x))
 
 async def insert_ts( data ):
     all_results = (receive_xml_ts(path) for path in data)
@@ -169,11 +175,14 @@ async def insert_ts( data ):
     # await con.set_type_codec( 'tsvector', schema='pg_catalog', encoder=utils.encode_tsvector_text, decoder=utils.decode_tsvector_text, format='text')
     await con.set_type_codec( 'tsvector', schema='pg_catalog', encoder=utils.encode_tsvector2, decoder=utils.decode_tsvector, format='binary')
     # await con.set_type_codec( '_uint1', encoder=lambda x: struct.pack('!B',x), decoder=lambda x: struct.unpack('!B',x), format='binary')
-    await con.set_type_codec( 'uint1',schema='public', encoder=enc_uint1, decoder=lambda x: struct.unpack('!B',x), format='binary')
+    # await con.set_type_codec( 'uint1',schema='public', encoder=enc_uint1, decoder=lambda x: struct.unpack('!B',x), format='binary')
     # await con.set_builtin_type_codec( 'uint1', schema='public', codec_name='oid', format='binary')
     # await con.set_builtin_type_codec( 'uint1', schema='public', codec_name='uint1', format='binary')
-    result = await con.copy_records_to_table( 'article_search', records=filt_results, columns=['id','pub_year','cite_in_01', 'cite_in_02', 'cite_in_03', 'cite_in_04', 'cite_in_05', 'cite_in_06', 'cite_in_07', 'cite_in_08', 'cite_in_09', 'cite_in_10', 'cite_in_11', 'cite_in_12', 'cite_in_13', 'cite_in_14', 'cite_in_15', 'cite_in_16', 'cite_in_17', 'cite_in_18', 'cite_in_19', 'cite_in_20', 'cite_in_21', 'cite_in_22', 'cite_in_23', 'cite_in_24', 'cite_in_25', 'cite_in_26', 'cite_in_27', 'cite_in_28', 'cite_in_29', 'cite_in_30', 'cite_in_31', 'cite_in_32', 'cite_in_33', 'cite_in_34', 'cite_in_35', 'cite_in_36', 'cite_in_37', 'cite_in_38', 'cite_in_39', 'cite_in_40', 'cite_in_41', 'cite_in_42', 'cite_in_43', 'cite_in_44', 'cite_in_45', 'cite_in_46', 'cite_in_47', 'cite_in_48', 'cite_in_49', 'cite_in_50', 'cite_in_51', 'cite_in_52', 'cite_in_53', 'cite_in_54', 'cite_in_55', 'cite_in_56', 'cite_in_57', 'cite_in_58', 'cite_in_59', 'cite_in_60', 'cite_in_61', 'cite_in_62', 'cite_in_63', 'cite_in_64', 'cite_in_65', 'cite_in_66', 'cite_in_67', 'cite_in_68', 'cite_in_69', 'cite_in_70', 'cite_in_71', 'cite_in_72', 'cite_in_73', 'cite_in_74', 'cite_in_75', 'cite_in_76', 'cite_in_77', 'cite_in_78', 'cite_in_79', 'cite_in_80', 'cite_in_81', 'cite_in_82', 'cite_in_83', 'cite_in_84', 'cite_in_85', 'cite_in_86', 'cite_in_87', 'cite_in_88', 'cite_in_89', 'cite_in_90', 'cite_in_91', 'cite_in_92', 'cite_in_93', 'cite_in_94', 'cite_in_95', 'cite_in_96', 'cite_in_97', 'cite_in_98', 'cite_in_99', 'cite_in_100',
-    'text_search','cite_search'] )
+    # result = await con.copy_records_to_table( 'article_search', records=filt_results, columns=['id','pub_year','cite_in_01', 'cite_in_02', 'cite_in_03', 'cite_in_04', 'cite_in_05', 'cite_in_06', 'cite_in_07', 'cite_in_08', 'cite_in_09', 'cite_in_10', 'cite_in_11', 'cite_in_12', 'cite_in_13', 'cite_in_14', 'cite_in_15', 'cite_in_16', 'cite_in_17', 'cite_in_18', 'cite_in_19', 'cite_in_20', 'cite_in_21', 'cite_in_22', 'cite_in_23', 'cite_in_24', 'cite_in_25', 'cite_in_26', 'cite_in_27', 'cite_in_28', 'cite_in_29', 'cite_in_30', 'cite_in_31', 'cite_in_32', 'cite_in_33', 'cite_in_34', 'cite_in_35', 'cite_in_36', 'cite_in_37', 'cite_in_38', 'cite_in_39', 'cite_in_40', 'cite_in_41', 'cite_in_42', 'cite_in_43', 'cite_in_44', 'cite_in_45', 'cite_in_46', 'cite_in_47', 'cite_in_48', 'cite_in_49', 'cite_in_50', 'cite_in_51', 'cite_in_52', 'cite_in_53', 'cite_in_54', 'cite_in_55', 'cite_in_56', 'cite_in_57', 'cite_in_58', 'cite_in_59', 'cite_in_60', 'cite_in_61', 'cite_in_62', 'cite_in_63', 'cite_in_64', 'cite_in_65', 'cite_in_66', 'cite_in_67', 'cite_in_68', 'cite_in_69', 'cite_in_70', 'cite_in_71', 'cite_in_72', 'cite_in_73', 'cite_in_74', 'cite_in_75', 'cite_in_76', 'cite_in_77', 'cite_in_78', 'cite_in_79', 'cite_in_80', 'cite_in_81', 'cite_in_82', 'cite_in_83', 'cite_in_84', 'cite_in_85', 'cite_in_86', 'cite_in_87', 'cite_in_88', 'cite_in_89', 'cite_in_90', 'cite_in_91', 'cite_in_92', 'cite_in_93', 'cite_in_94', 'cite_in_95', 'cite_in_96', 'cite_in_97', 'cite_in_98', 'cite_in_99', 'cite_in_100',
+    # ,'cite_search'] )
+    result = await con.copy_records_to_table( 'insert_dummy', records=filt_results, columns=['id','text_search','cite_search','pub_year','cite_in_01', 'cite_in_02', 'cite_in_03', 'cite_in_04', 'cite_in_05', 'cite_in_06', 'cite_in_07', 'cite_in_08', 'cite_in_09', 'cite_in_10', 'cite_in_11', 'cite_in_12', 'cite_in_13', 'cite_in_14', 'cite_in_15', 'cite_in_16', 'cite_in_17', 'cite_in_18', 'cite_in_19', 'cite_in_20', 'cite_in_21', 'cite_in_22', 'cite_in_23', 'cite_in_24', 'cite_in_25', 'cite_in_26', 'cite_in_27', 'cite_in_28', 'cite_in_29', 'cite_in_30', 'cite_in_31', 'cite_in_32', 'cite_in_33', 'cite_in_34', 'cite_in_35', 'cite_in_36', 'cite_in_37', 'cite_in_38', 'cite_in_39', 'cite_in_40', 'cite_in_41', 'cite_in_42', 'cite_in_43', 'cite_in_44', 'cite_in_45', 'cite_in_46', 'cite_in_47', 'cite_in_48', 'cite_in_49', 'cite_in_50', 'cite_in_51', 'cite_in_52', 'cite_in_53', 'cite_in_54', 'cite_in_55', 'cite_in_56', 'cite_in_57', 'cite_in_58', 'cite_in_59', 'cite_in_60', 'cite_in_61', 'cite_in_62', 'cite_in_63', 'cite_in_64', 'cite_in_65', 'cite_in_66', 'cite_in_67', 'cite_in_68', 'cite_in_69', 'cite_in_70', 'cite_in_71', 'cite_in_72', 'cite_in_73', 'cite_in_74', 'cite_in_75', 'cite_in_76', 'cite_in_77', 'cite_in_78', 'cite_in_79', 'cite_in_80', 'cite_in_81', 'cite_in_82', 'cite_in_83', 'cite_in_84', 'cite_in_85', 'cite_in_86', 'cite_in_87', 'cite_in_88', 'cite_in_89', 'cite_in_90', 'cite_in_91', 'cite_in_92', 'cite_in_93', 'cite_in_94', 'cite_in_95', 'cite_in_96', 'cite_in_97', 'cite_in_98', 'cite_in_99', 'cite_in_100'] )
+    # result = await con.copy_records_to_table( 'article_search', records=filt_results, columns=['id','pub_year','cite_search','cite_in_01', 'cite_in_02', 'cite_in_03', 'cite_in_04', 'cite_in_05', 'cite_in_06', 'cite_in_07', 'cite_in_08', 'cite_in_09', 'cite_in_10', 'cite_in_11', 'cite_in_12', 'cite_in_13', 'cite_in_14', 'cite_in_15', 'cite_in_16', 'cite_in_17', 'cite_in_18', 'cite_in_19', 'cite_in_20', 'cite_in_21', 'cite_in_22', 'cite_in_23', 'cite_in_24', 'cite_in_25', 'cite_in_26', 'cite_in_27', 'cite_in_28', 'cite_in_29', 'cite_in_30', 'cite_in_31', 'cite_in_32', 'cite_in_33', 'cite_in_34', 'cite_in_35', 'cite_in_36', 'cite_in_37', 'cite_in_38', 'cite_in_39', 'cite_in_40', 'cite_in_41', 'cite_in_42', 'cite_in_43', 'cite_in_44', 'cite_in_45', 'cite_in_46', 'cite_in_47', 'cite_in_48', 'cite_in_49', 'cite_in_50', 'cite_in_51', 'cite_in_52', 'cite_in_53', 'cite_in_54', 'cite_in_55', 'cite_in_56', 'cite_in_57', 'cite_in_58', 'cite_in_59', 'cite_in_60', 'cite_in_61', 'cite_in_62', 'cite_in_63', 'cite_in_64', 'cite_in_65', 'cite_in_66', 'cite_in_67', 'cite_in_68', 'cite_in_69', 'cite_in_70', 'cite_in_71', 'cite_in_72', 'cite_in_73', 'cite_in_74', 'cite_in_75', 'cite_in_76', 'cite_in_77', 'cite_in_78', 'cite_in_79', 'cite_in_80', 'cite_in_81', 'cite_in_82', 'cite_in_83', 'cite_in_84', 'cite_in_85', 'cite_in_86', 'cite_in_87', 'cite_in_88', 'cite_in_89', 'cite_in_90', 'cite_in_91', 'cite_in_92', 'cite_in_93', 'cite_in_94', 'cite_in_95', 'cite_in_96', 'cite_in_97', 'cite_in_98', 'cite_in_99', 'cite_in_100'
+    # ] )
     
     # logger.success('Inserted search records: {}', len(data))
     return len(data)
@@ -184,7 +193,12 @@ async def insert_ts( data ):
 def receive_xml_text( path ):
     general_data = pp.parse_pubmed_xml( path )
     fulltext_data = pp.parse_pubmed_paragraph( path, ref_replace=' ЉЉ ' )
+    if len(fulltext_data) < 1:
+        return None
     ref_data = pp.parse_pubmed_references( path )
+    # general_data = path[0]
+    # fulltext_data = path[1]
+    # ref_data = path[2]
 
     pub_year = int(general_data['publication_year'])
 
@@ -217,14 +231,28 @@ async def insert_text( data ):
 
 
 
+def parse_data( data ):
+    parsed_data = []
+    for path in data:
+        general_data = pp.parse_pubmed_xml( path )
+        fulltext_data = pp.parse_pubmed_paragraph( path, ref_replace=' ЉЉ ' )
+        ref_data = pp.parse_pubmed_references( path )
+
+        pub_year = int(general_data['publication_year'])
+        if len(fulltext_data)>0 and pub_year >= generate_ddl.year_range[0] and pub_year <= generate_ddl.year_range[1]:
+            parsed_data.append( (general_data, fulltext_data, ref_data) )
+
+    return parsed_data
 
 
 async def run( data ):
     done = 0
     try:
-        done = await insert_ts( data )
+        # parsed_data = parse_data( data ) 
+        # done = await insert_ts( parsed_data )
 
-        donee = await insert_text( data )
+        # donee = await insert_text( parsed_data )
+        await asyncio.gather( insert_ts( data ), insert_text( data ) )
 
         # logger.success('Inserted records: {}', done)
     except Exception as ex:
@@ -250,7 +278,7 @@ async def try_afunc( func, *args, **kwargs):
 async def db_conn_and_run( sql, *args, **kwargs ):
     async with asyncpg.create_pool(**dbconfig) as pool:
         results = await try_afunc( pool.execute, sql, *args, **kwargs )
-
+    return results
 
 def create_db():
     logger.warning("Initializing database (and dropping any existing tables).")
@@ -262,8 +290,9 @@ def create_db():
     return results
 
 
-index_tmpl = """create index article_search_text_{} on article_search_{} using GIN(text_search);"""
-index2_tmpl = """create index article_search_citations_{} on article_search_{} using GIN(cite_search);"""
+# index_tmpl = """create index article_search_text_{} on article_search_{} using GIN(text_search);"""
+index_tmpl = """create index article_search_citations_{} on article_search_{} using GIN(cite_search);"""
+index2_tmpl = """CLUSTER article_search_{} using article_search_citations_{} ;"""
 async def create_idx( db, i ):
     query = index_tmpl.format(i,i)
     res = await db.execute( query )
@@ -275,7 +304,7 @@ async def create_idx( db, i ):
 
 async def finish_db():
     logger.warning("Generating indexes now")
-    # post_ddl = generate_ddl.create_post_ddl()
+    post_ddl = generate_ddl.create_post_ddl()
 
     # async with asyncpg.create_pool(**poolconfig) as pool:
     #     # results = await pool.execute( post_ddl )
@@ -286,10 +315,17 @@ async def finish_db():
     #     #     await asyncio.wait_for( pool.execute(sql), 60*60*4)
     async with asyncpg.create_pool(**dbconfig) as pool:
         tasks = []
-        for i in range(2003,2020):
-            tasks.append( create_idx(pool, i) )
+        # for i in range(generate_ddl.year_range[0],generate_ddl.year_range[1]+1):
+            # tasks.append( create_idx(pool, i) )
+        for sql in post_ddl.split('\n'):
+            if len(sql)>0:
+                task = pool.execute(sql)
+                # print(sql,task)
+                tasks.append( task )
         
         final = await asyncio.gather(*tasks)
+
+        await pool.execute('vacuum (full, analyze);')
 
         logger.success("finished index generation")
 
@@ -301,8 +337,8 @@ def main():
 
     # create_db()
     
-    # start 4 worker processes
-    # with Pool(processes=28,maxtasksperchild=5) as pool:
+    # # start 4 worker processes
+    # with Pool(processes=28,maxtasksperchild=3) as pool:
     #     # print("Building path list")
     #     # path_xml = xml_path_iterator('/archive/datasets/PubMed/Adipocyte')
     #     path_xml = xml_path_iterator('/home/nbeals/pubmed_data/full_corp')
