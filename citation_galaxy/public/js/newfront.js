@@ -45,6 +45,9 @@ function setupEventHandlers() {
             event.preventDefault();
             return false;
         }
+        else {
+            loadTable('signalcategory', undefined, true, transformCategoryData);
+        }
     })
 
 }

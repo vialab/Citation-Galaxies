@@ -179,6 +179,42 @@ async def insert_handler(request):
     # })
 
 
+@routes.post("/api/delete")
+async def delete_handler(request):
+    db, session = await get_db_sess(request)
+
+    post_data = await request.json()
+    query_params = session.get('query_params',{}).copy()
+    # query_params.update( post_data.get('values') )
+    # query_params = post_data.get('values')
+
+
+    table_name = post_data.get('table_name','')
+    if table_name == 'signalbycategory':
+        table_name = 'signal'
+    # get api schema
+    api_schema = api.get('delete_' + table_name, None)
+
+    if api_schema:
+        rec_id = post_data.get('id',-1)
+        # await request.read()
+        # post_data = {}
+        # if request.has_body:
+        # post_data = await request.json()
+        # query_params = sess.get('query_params',{}).copy()
+        # query_params.update( post_data.get('values') )
+        query_params = post_data.get('values',{}).copy()
+        query_params['id'] = rec_id
+        if api_schema.get('require_cookie', False):
+            query_params['cookieid'] = session['id']
+
+        queries = aiosql.from_str( api_schema['query'], 'asyncpg' )
+        query = getattr( queries, queries.available_queries[0] ) # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
+
+        await query(db, **query_params )
+
+    return web.json_response( {} )
+
 async def update_signal(db, sess, post_data, qp ):
     signal_category = qp.get('signalcategoryid', None)
     signal_text = qp.get('signal', None)
@@ -212,14 +248,32 @@ async def update_handler(request):
     query_params.update( post_data.get('values') )
     # query_params = post_data.get('values')
 
-    name = post_data.get('table_name','')
+    table_name = post_data.get('table_name','')
+    if table_name == 'signalbycategory':
+        table_name = 'signal'
     
-    if name == 'signalcategory':
-        results = await update_signal_category(db, session, post_data, query_params)
-    elif name == 'signal':
-        results = await update_signal(db, session, post_data, query_params)
-    elif name =='signaltype':
-        results = await update_signal_type(db, session, post_data, query_params)
+    api_schema = api.get('update_' + table_name, None)
+
+    if api_schema:
+        query_params = post_data.get('values',{}).copy()
+        # query_params['signal'] = dumps(query_params['signal'])
+        rec_id = query_params.get('id',-1)
+
+        query_params['id'] = int(rec_id)
+        # query_params['signalcategoryid'] = int(query_params.get('signalcategoryid',-1))
+        if api_schema.get('require_cookie', False):
+            query_params['cookieid'] = session['id']
+
+        queries = aiosql.from_str( api_schema['query'], 'asyncpg' )
+        query = getattr( queries, queries.available_queries[0] ) # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
+
+        await query(db, **query_params )
+    # if name == 'signalcategory':
+    #     results = await update_signal_category(db, session, post_data, query_params)
+    # elif name == 'signal':
+    #     results = await update_signal(db, session, post_data, query_params)
+    # elif name =='signaltype':
+    #     results = await update_signal_type(db, session, post_data, query_params)
  
     data = []
 
@@ -288,7 +342,7 @@ async def process_signal(request):
 
 @routes.post("/gateway/papers")
 async def papers(request):
-    db = get_db(request)
+    db, session = await get_db_sess(request)
 
     # print("query:",request,db.question.select())
     query_params = await request.json()
@@ -296,35 +350,41 @@ async def papers(request):
     # range_list = query_params.get('selections', None)
     range_list = list(map(parseRangeString, query_params.get("selections", None)))
 
-    search_input = query_params.get("query", "")
-    words_left = query_params.get("rangeLeft", 0)
-    words_right = query_params.get("rangeRight", 0)
 
     last_rank = int(query_params.get("lastRank", 0))
     n_rank = query_params.get("nrank", 0)
     signals = query_params.get("signals", {})
     journal_id = query_params.get("journalid", "")
 
+    sess_params = session.get('query_params',{})
+    search_input = sess_params.get("query", "")
+    words_left = sess_params.get("rangeLeft", 0)
+    words_right = query_params.get("rangeRight", 0)
+    
     search_text = ""
     subsearch_text = ""
     search_params = []
     if len(search_input) > 0:
         # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
         search_text += (
-            " where text_search @@ to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
+            " where text_search @@ websearch_to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
         )
-        search_params.append(" & ".join((word for word in search_input)))
+        # search_params.append(" & ".join((word for word in search_input)))
+        search_params.append(search_input)
 
-        if words_left > 0 or words_right > 0:
+        if words_left >= 0 or words_right >= 0:
             subsearch_text = "where cite_search @@ to_tsquery('english', $2) "
 
             subsearch_params = []
-            for word in search_input:
-                for dist in range(1, words_left + 1):
+            stripped_input = search_input.translate(removePunc)
+            stripped_input = stripped_input.replace(" or ", " ")
+            stripped_input = stripped_input.replace(" and ", " ")
+            for word in stripped_input.split(" "):
+                for dist in range(0, words_left + 1):
 
                     subsearch_params.append(f"{word} <{dist}> љљ")
 
-                for dist in range(1, words_right + 1):
+                for dist in range(0, words_right + 1):
                     subsearch_params.append(f"љљ <{dist}> {word}")
 
             search_params.append(" | ".join(subsearch_params))
@@ -380,7 +440,7 @@ async def paper(request):
 
     # session = await get_session(request)
     query_params = session.get('query_params',{})
-    query_list = query_params.get('query',[])
+    query_text = query_params.get('query',"")
 
     querymanager = QueryManager(db)
     results = (await querymanager.do_paper_query(paper_id))[0]
@@ -398,15 +458,15 @@ async def paper(request):
 
     keep_sections = []
     for section in sections:
-        if len(query_list)==0 or list_in_string(query_list, section['text'].lower()) or list_in_string(query_list, section['section'].lower()):
-            for ref in section["reference_ids"]:
-                section["text"] = section["text"].replace("ЉЉ", ref, 1)
+        # if len(query_list)==0 or list_in_string(query_list, section['text'].lower()) or list_in_string(query_list, section['section'].lower()):
+        for ref in section["reference_ids"]:
+            section["text"] = section["text"].replace("ЉЉ", ref, 1)
 
-                section.setdefault("citations", []).append(
-                    {"citationtext": ref,}
-                )
+            section.setdefault("citations", []).append(
+                {"citationtext": ref,}
+            )
 
-            keep_sections.append( section )
+        keep_sections.append( section )
 
     data["paragraphs"] = keep_sections
 
@@ -472,34 +532,13 @@ async def query(request):
 
     subsearch_text += "group by pub_year order by pub_year"
 
-    # tasks = []
-    # for year in range(conf['year_range']['min'],conf['year_range']['max']+1):
-    #     print('year:',year)
-    #     # tasks.append( asyncio.create_task( request.app['db'].fetchrow( 'select count(id) as count, ' + quer + f' from article_search_{year}' ) ) )
-    #     tasks.append( asyncio.create_task( request.app['db'].fetchrow( query_text + f' from article_search_{year}' ) ) )
-    #     await asyncio.sleep(0.05)
-
-    # print("tasks: ",tasks)
-    # print("wait: ",await tasks[15])
-
-    # task = asyncio.create_task( req)
-    # tasks = await db.fetch( query_text )
-
-    # sums = [ [val for val in task.values()] for task in tasks ]
-    # agg = {}
-    # for year in range(2003,2019):
-    #     agg.setdefault(str(year), {'content': sums[year-2003],'max': max(sums[year-2003])} )
-
     querymanager = QueryManager(db, num_bins, search_text, subsearch_text, search_params)
 
     results = await asyncio.gather(
         querymanager.do_summing_query(),
         querymanager.do_counting_query()
-        # do_summing_query( db, num_bins, search_text, subsearch_text, search_params),
-        # do_counting_query( db, num_bins, search_text, subsearch_text, search_params)
     )
 
-    # results = await do_summing_query(db, num_bins, '' )
     agg = {}
     for row in results[0]:
         year = row.get("pub_year")
@@ -518,14 +557,6 @@ async def query(request):
 
     return web.json_response({"agg": agg})
 
-    # async with con.transaction():
-    #     # Postgres requires non-scrollable cursors to be created
-    #     # and used in a transaction.
-    #     # async for record in con.cursor('SELECT cite_counts from test5'):
-    #     async for record in con.cursor('''select pub_year, sum( cite_in_01) as "1", sum( cite_in_02), sum( cite_in_03), sum( cite_in_04), sum( cite_in_05), sum( cite_in_06), sum( cite_in_07), sum( cite_in_08), sum( cite_in_09), sum( cite_in_10), sum( cite_in_11), sum( cite_in_12), sum( cite_in_13), sum( cite_in_14), sum( cite_in_15), sum( cite_in_16), sum( cite_in_17), sum( cite_in_18), sum( cite_in_19), sum( cite_in_20), sum( cite_in_21), sum( cite_in_22), sum( cite_in_23), sum( cite_in_24), sum( cite_in_25), sum( cite_in_26), sum( cite_in_27), sum( cite_in_28), sum( cite_in_29), sum( cite_in_30), sum( cite_in_31), sum( cite_in_32), sum( cite_in_33), sum( cite_in_34), sum( cite_in_35), sum( cite_in_36), sum( cite_in_37), sum( cite_in_38), sum( cite_in_39), sum( cite_in_40), sum( cite_in_41), sum( cite_in_42), sum( cite_in_43), sum( cite_in_44), sum( cite_in_45), sum( cite_in_46), sum( cite_in_47), sum( cite_in_48), sum( cite_in_49), sum( cite_in_50), sum( cite_in_51), sum( cite_in_52), sum( cite_in_53), sum( cite_in_54), sum( cite_in_55), sum( cite_in_56), sum( cite_in_57), sum( cite_in_58), sum( cite_in_59), sum( cite_in_60), sum( cite_in_61), sum( cite_in_62), sum( cite_in_63), sum( cite_in_64), sum( cite_in_65), sum( cite_in_66), sum( cite_in_67), sum( cite_in_68), sum( cite_in_69), sum( cite_in_70), sum( cite_in_71), sum( cite_in_72), sum( cite_in_73), sum( cite_in_74), sum( cite_in_75), sum( cite_in_76), sum( cite_in_77), sum( cite_in_78), sum( cite_in_79), sum( cite_in_80), sum( cite_in_81), sum( cite_in_82), sum( cite_in_83), sum( cite_in_84), sum( cite_in_85), sum( cite_in_86), sum( cite_in_87), sum( cite_in_88), sum( cite_in_89), sum( cite_in_90), sum( cite_in_91), sum( cite_in_92), sum( cite_in_93), sum( cite_in_94), sum( cite_in_95), sum( cite_in_96), sum( cite_in_97), sum( cite_in_98), sum( cite_in_99), sum( cite_in_100)
-    #                                         from article_search group by pub_year
-    #                                     ''',prefetch=1):
-    #         print(time.time(),record)
 
 
 async def years(request):
@@ -537,7 +568,8 @@ async def years(request):
         sess.setdefault('id',key.decode('utf-8'))
 
     return web.json_response(
-        [{"articleyear": year} for year in range(conf["year_range"]["min"], conf["year_range"]["max"] + 1)]
+        [{"articleyear": year} for year in range(conf["year_range"]["max"]-15, conf["year_range"]["max"] + 1)]
+        # [{"articleyear": year} for year in range(conf["year_range"]["min"], conf["year_range"]["max"] + 1)]
     )
 
 

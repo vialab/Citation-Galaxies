@@ -113,7 +113,7 @@
       </div>
     </div>
   </nav>
-  <div id="container" class="d-flex flex-column">
+  <div id="container" class="d-flex flex-column overflow-auto">
     <div class="tab-content" id="pills-tabContent">
       <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
         <!-- Buttons on home pane -->
@@ -228,10 +228,15 @@
           <button type="button" class="btn btn-outline-secondary" onclick="loadTable('signalcategory', undefined, true, transformCategoryData)">Categories</button>
           <button type="button" class="btn btn-outline-secondary" onclick="loadTable('signal', undefined, true, transformSignalData)">Signals</button>
         </div> -->
-        <div style="clear:both;">
+        <div class="d-flex flex-row justify-content-between">
+          <h4 id="last-table-title" onclick="loadPreviousTable();" class="align-content-center jus" style="margin: auto 0 auto 0;">&lt; Categories</h4>
+          <h2 id="rule-table-title" >Categories</h2>
+          <button class="btn btn-primary filter-option" id="downloadDataButton" type="button" style="margin: 1.25rem 0 1.25rem 0;" onclick="requestSignalExport();">Download</button>
+        </div>
+        <!-- <div style="clear:both;">
           <h4 id="last-table-title" onclick="loadPreviousTable();"></h4>
           <h2 id="rule-table-title"></h2>
-        </div>
+        </div> -->
         <!-- Table for the results -->
         <div class="">
           <table class="table table-bordered" id="ruleTable">
@@ -243,7 +248,7 @@
 
   <!-- TODO: fix width of paper modal because jay messed with the bootstrap classes and I needed them as default -->
   <div class="modal fade" id="generic-modal" tabindex="-1" role="dialog" aria-labelledby="generic-modal" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title"></h5>

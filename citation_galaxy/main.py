@@ -30,7 +30,7 @@ async def init_app(argv=None):
     # app.on_cleanup.append(close_pg)
 
     # setup Jinja2 template renderer
-    aiohttp_jinja2.setup(app, loader=jinja2.PackageLoader("citation_galaxy", "templates"))
+    # aiohttp_jinja2.setup(app, loader=jinja2.PackageLoader("citation_galaxy", "templates"))
 
     setup_session(app)
 
@@ -54,7 +54,7 @@ def main(argv):
 
 
 async def main_app_factory():
-    print(sys.argv[1:])
+    print("App factory: ",sys.argv[1:])
     app = await init_app(sys.argv[1:])
 
     return app

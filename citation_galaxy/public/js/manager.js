@@ -202,7 +202,7 @@ function populateTable(
 
       let additional = 'class="'
       if (key ==='color') {
-        additional += "w-5"
+        additional += "w-7"
       } else {
         additional += "w-auto"
       }
@@ -322,6 +322,8 @@ function showAddRow() {
   setTimeout(function() {
     $row.removeClass("showing");
   }, 500);
+  $row.find('#catname').click()
+  $row.find('#catname').focus()
 }
 
 // create a single row marked up for our edit table
@@ -348,6 +350,54 @@ function drawTableRow(headers, signal, signalID, aliases) {
       html += "' style='background-color:" + c
         + ";box-shadow: inset 0 0 0 5px " + c
         + ";'><input type='color' value='" + c + "'/><label contenteditable='false' class='noclick noselect'>" + c + "</label>";
+    } else if (headers[i] == "signal") {
+      if (signal[headers[i]]) {
+        let data = JSON.parse(signal[headers[i]])
+        c = 0
+        html += ` aliased signal-cell'>`
+        for (datum of data)
+        {
+          c+=1;
+          if (c>1) {
+            html += `<div class="d-flex flex-row justify-content-center m-2">
+            <select id="signal_mod_${c}" >
+              <option ${(datum.modifier=="AND") ? 'selected' : ''} value="AND">AND</option>
+              <option ${(datum.modifier=="OR") ? 'selected' : ''} value="OR">OR</option>
+              <option ${(datum.modifier=="AND NOT") ? 'selected' : ''} value="AND NOT">AND NOT</option>
+              <option ${(datum.modifier=="OR NOT") ? 'selected' : ''} value="OR NOT">OR NOT</option>
+            </select>
+            </div>`
+            }
+          html += `
+          <div class="d-flex flex-row">
+            <div class="p-1" style="width:40%" >
+              <ul class="list-inline">
+                <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
+                  <input type="range" innertext="0" min="0" max="10" value="${datum.range[0]}" step="1" class="form-control-range slider" id="rangeBefore_sig_${c}"
+                    oninput="updateTextInput(document.getElementById('citationRange_sig_${c}'), document.getElementById('rangeBefore_sig_${c}').value , document.getElementById('rangeAfter_sig_${c}').value, '', 1);">
+                </li>
+                <li class="list-inline-item align-middle m-0 p-0">
+                  <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${c}">[
+                    ${datum.range[0]}
+                    <- Citation -> ${datum.range[1]} ]</label>
+                </li>
+                <li class="list-inline-item m-0 p-0" style="width:23%;">
+                  <input type="range" innertext="0" min="0" max="10" value="${datum.range[1]}" step="1" class="form-control-range slider" id="rangeAfter_sig_${c}"
+                    oninput="updateTextInput(document.getElementById('citationRange_sig_${c}'), document.getElementById('rangeBefore_sig_${c}').value , document.getElementById('rangeAfter_sig_${c}').value, '', 1);">
+                </li>
+              </ul>
+            </div>
+            <div class="p-1 flex-fill">
+              <div class=\"input-group\">
+              <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${c}\" placeholder=\"Query\" value="${datum.query.replace(/"/g, '&quot;')}">
+              </div>
+            </div>
+          </div>`
+        }
+        html += `<div id="add_signal_${signal.id}" class="d-flex flex-row justify-content-center" onclick="addToSignal('#add_signal_${signal.id}')">
+                  <h1 class="flex-fill signal-add-button">+</h1>
+                </div>`
+      }
     } else if (signal[headers[i]]) {
       html += "'>" + signal[headers[i]];
     } else {
@@ -357,6 +407,46 @@ function drawTableRow(headers, signal, signalID, aliases) {
     $(html).appendTo(row);
   }
   return row;
+}
+
+function addToSignal(id) {
+  let but = $(event.currentTarget);
+  let c = but.siblings().length;
+  html = `
+  <div class="d-flex flex-row justify-content-center m-2">
+    <select id="signal_mod_${c}" >
+      <option selected value="AND">AND</option>
+      <option value="OR">OR</option>
+      <option value="AND NOT">AND NOT</option>
+      <option value="OR NOT">OR NOT</option>
+    </select>
+    </div>
+  <div class="d-flex flex-row">
+    <div class="p-1" style="width:40%" >
+      <ul class="list-inline">
+        <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
+          <input type="range" innertext="0" min="0" max="10" value="0" step="1" class="form-control-range slider" id="rangeBefore_sig_${c}"
+            oninput="updateTextInput(document.getElementById('citationRange_sig_${c}'), document.getElementById('rangeBefore_sig_${c}').value , document.getElementById('rangeAfter_sig_${c}').value, '', 1);">
+        </li>
+        <li class="list-inline-item align-middle m-0 p-0">
+          <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${c}">[
+            0
+            <- Citation -> 0 ]</label>
+        </li>
+        <li class="list-inline-item m-0 p-0" style="width:23%;">
+          <input type="range" innertext="0" min="0" max="10" value="0" step="1" class="form-control-range slider" id="rangeAfter_sig_${c}"
+            oninput="updateTextInput(document.getElementById('citationRange_sig_${c}'), document.getElementById('rangeBefore_sig_${c}').value , document.getElementById('rangeAfter_sig_${c}').value, '', 1);">
+        </li>
+      </ul>
+    </div>
+    <div class="p-1 flex-fill">
+      <div class=\"input-group\">
+      <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${c}\" placeholder=\"Query\">
+      </div>
+    </div>
+  </div>`
+
+  $(html).insertBefore(but);
 }
 
 // append defined links or actions at the end of each row as a cell
@@ -422,6 +512,11 @@ function deselectCrudRows(update) {
       for (let i = 0; i < row_elements.length; i++) {
         let row_element = $(row_elements[i]);
 
+        if (row_element.hasClass('signal-cell')) {
+          row_element.removeAttr("contenteditable");
+          continue;
+        }
+
         // Revert all TD's back to their original values
         // or update them
         if (row_element.prop("tagName") == "TD") {
@@ -482,7 +577,9 @@ function editCrudRow(event) {
         row_element.addClass("aliased");
       } else {
 
-        row_element.attr("contenteditable", "true");
+        if (!row_element.hasClass('signal-cell')) {
+          row_element.attr("contenteditable", "true");
+        }
         if (row_element_id !== 'color' ){
           // Allow the cell to be edited
           
@@ -630,7 +727,7 @@ function updateRow(elem) {
     let val = $(this).html();
     // if we are aliased, we got to get the value from a select option
     if ($("th#" + field_name).hasClass("aliased")) {
-      val = $("select." + field_name, this).val();
+      [valid_update, val] = validateDataType( $("select." + field_name, this).val(), type);
     } else {
       // validate that the data type is correct for this cell
       let type = $("th#" + field_name).data("type");
@@ -647,9 +744,36 @@ function updateRow(elem) {
     if(field_name == "color") {
       val = $("input[type='color']", this).val();
     }
+
     // add to our values to update
     if (val == "") values[field_name] = null;
     else values[field_name] = val;
+
+    if (field_name =="signal") {
+      val = [];
+      let inps = $('select,input', this);
+
+      for (let i = 0; i < inps.length; i+=4) {
+        let range_Left = parseInt($(inps[i]).val());
+        let range_Right = parseInt($(inps[i+1]).val());
+        let query = $(inps[i+2]).val();
+        
+        let record = {
+          range: [range_Left, range_Right],
+          query: query
+        }
+        if ( i >= 4) {
+          let modifier = $(inps[i-1]).val();
+
+          record['modifier'] = modifier;
+        }
+        
+        val.push(record);
+      }
+      values[field_name] = JSON.stringify(val);
+    }
+
+
   });
 
   if (!valid_update) return;
