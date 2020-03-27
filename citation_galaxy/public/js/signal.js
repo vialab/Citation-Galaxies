@@ -209,7 +209,7 @@ function transformCategoryData(results, replace_all = false) {
   for (let cat of results) {
     sentiment_categories[cat.id] = {
       name: cat.catname,
-      value: cat.score,
+      // value: cat.score,
       color: cat.color
     };
   }
@@ -224,10 +224,10 @@ function transformSignalData(results, replace_all) {
       let s = new Signal(
         signal.id,
         signal.signalcategoryid,
-        signal.signal,
-        signal.signaltypeid,
-        signal.parentid,
-        signal.score
+        signal.signal
+        // signal.signaltypeid,
+        // signal.parentid,
+        // signal.score
       );
       sentiment_signals[signal.id] = s;
     } catch (e) {
@@ -248,83 +248,85 @@ function loadCategories(callback) {
 // load all filters at nonce
 function loadSignals(callback) {
   loadData(
-    "signalbytype",
+    "signalbycategory",
     function(signals) {
       transformSignalData(signals);
-      loadFilters(() => {
-        loadRestrictions(() => {
-          updateInterface();
-          if (typeof callback != "undefined") callback();
-        });
-      });
+      updateInterface();
+      if (typeof callback != "undefined") callback();
+      // loadFilters(() => {
+      //   loadRestrictions(() => {
+      //     updateInterface();
+      //     if (typeof callback != "undefined") callback();
+      //   });
+      // });
     },
-    {signaltypeid: 1}
+    {signalcategoryid: 1}
   );
 }
 
 // load all filters at nonce
-function loadFilters(callback) {
-  loadData(
-    "signalbytype",
-    function(filters) {
-      for (let signal of filters) {
-        try {
-          // use results to instantiate a signal object
-          let s = new Signal(
-            signal.id,
-            signal.signalcategoryid,
-            signal.signal,
-            signal.signaltypeid,
-            signal.parentid,
-            signal.score
-          );
-          sentiment_signals[signal.id] = s;
-          if (!sentiment_signals[signal.parentid].filters.includes(signal.id)) {
-            sentiment_signals[signal.parentid].filters.push(signal.id);
-          }
-        } catch (e) {
-          console.log("Error loading signal: " + e);
-          continue;
-        }
-      }
-      if (typeof callback != "undefined") callback();
-    },
-    {signaltypeid: 2}
-  );
-}
+// function loadFilters(callback) {
+//   loadData(
+//     "signalbytype",
+//     function(filters) {
+//       for (let signal of filters) {
+//         try {
+//           // use results to instantiate a signal object
+//           let s = new Signal(
+//             signal.id,
+//             signal.signalcategoryid,
+//             signal.signal,
+//             signal.signaltypeid,
+//             signal.parentid,
+//             signal.score
+//           );
+//           sentiment_signals[signal.id] = s;
+//           if (!sentiment_signals[signal.parentid].filters.includes(signal.id)) {
+//             sentiment_signals[signal.parentid].filters.push(signal.id);
+//           }
+//         } catch (e) {
+//           console.log("Error loading signal: " + e);
+//           continue;
+//         }
+//       }
+//       if (typeof callback != "undefined") callback();
+//     },
+//     {signaltypeid: 2}
+//   );
+// }
 
-// load all restrictions at once
-function loadRestrictions(callback) {
-  loadData(
-    "signalbytype",
-    function(restrictions) {
-      for (let signal of restrictions) {
-        try {
-          // use results to instantiate a signal object
-          let s = new Signal(
-            signal.id,
-            signal.signalcategoryid,
-            signal.signal,
-            signal.signaltypeid,
-            signal.parentid,
-            signal.score
-          );
-          sentiment_signals[signal.id] = s;
-          if (
-            !sentiment_signals[signal.parentid].restrictions.includes(signal.id)
-          ) {
-            sentiment_signals[signal.parentid].restrictions.push(signal.id);
-          }
-        } catch (e) {
-          console.log("Error loading signal: " + e);
-          continue;
-        }
-      }
-      if (typeof callback != "undefined") callback();
-    },
-    {signaltypeid: 3}
-  );
-}
+// // load all restrictions at once
+// function loadRestrictions(callback) {
+//   loadData(
+//     "signalbytype",
+//     function(restrictions) {
+//       for (let signal of restrictions) {
+//         try {
+//           // use results to instantiate a signal object
+//           let s = new Signal(
+//             signal.id,
+//             signal.signalcategoryid,
+//             signal.signal,
+//             signal.signaltypeid,
+//             signal.parentid,
+//             signal.score
+//           );
+//           sentiment_signals[signal.id] = s;
+//           if (
+//             !sentiment_signals[signal.parentid].restrictions.includes(signal.id)
+//           ) {
+//             sentiment_signals[signal.parentid].restrictions.push(signal.id);
+//           }
+//         } catch (e) {
+//           console.log("Error loading signal: " + e);
+//           continue;
+//         }
+//       }
+//       if (typeof callback != "undefined") callback();
+//     },
+//     {signaltypeid: 3}
+//   );
+// }
 
 // redraw all html elements
 function updateInterface() {
@@ -356,8 +358,19 @@ function updateCategoryInterface() {
       </div>";
     $("#categories").append($(html));
 
-    html =
-      "<li class='menu-btn' onclick='addSignal(" +
+//     html = `<div class="btn-group dropright">
+//   <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+//     ${cat.name}
+//   </button>
+//   <div class="dropdown-menu">
+//     <a class="dropdown-item" href="#">AND</a>
+//     <a class="dropdown-item" href="#">OR</a>
+//     <a class="dropdown-item" href="#">AND NOT</a>
+//     <a class="dropdown-item" href="#">ORNOT</a>
+//   </div>
+// </div>
+// `
+      html = "<li class='menu-btn' onclick='addSignal(" +
       id +
       ");'>" +
       cat.name +
@@ -462,11 +475,26 @@ function getAllChildrenKeys(signal) {
 }
 
 function addSignal(cat_id) {
+  let signals = [
+    {
+      range: [sentenceRangeBelow,sentenceRangeAbove],
+      query: currSearchQuery
+    },
+    {
+      range: [sentenceRangeBelow,sentenceRangeAbove],
+      query: `"${$("#text-selection").val()}"`,
+      modifier: 'AND'
+    }
+  ]
   let values = {
-    score: 1,
     signalcategoryid: cat_id,
-    signaltypeid: 1,
-    signal: $("#text-selection").val()
+    name: $("#text-selection").val(),
+    signal: JSON.stringify(signals)
   };
   postInsert("signal", values);
+}
+
+
+function requestSignalExport() {
+  
 }

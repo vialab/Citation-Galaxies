@@ -207,9 +207,9 @@ function shortenVal(value) {
 function updateTextInput(field, before, after, articleid, sendToDefault) {
   //Get the values to update
   before = parseInt(before);
-  if (before != 0) {
-    before = before * -1;
-  }
+  // if (before != 0) {
+  //   before = before * -1;
+  // }
   after = parseInt(after);
 
   //Either change the global boundary, or change it on a per paper basis
@@ -1326,6 +1326,7 @@ function searchForQuery(query) {
   if (query.toString() != currSearchQuery.toString()) {
     removeAllSelections();
     currSearchQuery = query; //Remeber to filter input to prevent sql injects
+    currSearchQuery = currSearchQuery.replace(" or "," ").replace(" and "," ").replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ");
     d3.select("#searchQueryLabel").html(currSearchQuery.toString());
   }
 
@@ -1335,7 +1336,7 @@ function searchForQuery(query) {
   var boundariesByPaper = {};
   indexToSortPapersOn = -1;
   // drawHome(currIncrement);
-  getFilteredYears(currSearchQuery, true);
+  getFilteredYears(query, true);
 }
 
 function maximizeDivider() {

@@ -1,76 +1,231 @@
-2020-03-23 23:10:32.557 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:10:32.557 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:11:03.351 | ERROR    | __main__:main:370 - Index creation exception: cannot cluster on index "article_search_citations_2003" because access method does not support clustering
-2020-03-23 23:11:03.351 | ERROR    | __main__:main:370 - Index creation exception: cannot cluster on index "article_search_citations_2003" because access method does not support clustering
-2020-03-23 23:13:24.863 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:13:24.863 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:13:24.988 | ERROR    | __main__:main:372 - Index creation exception: 'NoneType' object has no attribute 'decode'
-2020-03-23 23:13:24.988 | ERROR    | __main__:main:372 - Index creation exception: 'NoneType' object has no attribute 'decode'
-2020-03-23 23:13:44.402 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:13:44.402 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:13:44.561 | ERROR    | __main__:main:372 - Index creation exception: 'NoneType' object has no attribute 'decode'
-2020-03-23 23:13:44.561 | ERROR    | __main__:main:372 - Index creation exception: 'NoneType' object has no attribute 'decode'
-2020-03-23 23:13:57.031 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:13:57.031 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:13:57.220 | ERROR    | __main__:main:373 - Index creation exception: 'NoneType' object has no attribute 'decode'
-2020-03-23 23:13:57.220 | ERROR    | __main__:main:373 - Index creation exception: 'NoneType' object has no attribute 'decode'
-2020-03-23 23:14:09.193 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:14:09.193 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:14:09.318 | ERROR    | __main__:main:373 - Index creation exception: 'NoneType' object has no attribute 'decode'
-2020-03-23 23:14:09.318 | ERROR    | __main__:main:373 - Index creation exception: 'NoneType' object has no attribute 'decode'
-2020-03-23 23:14:51.056 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:14:51.056 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:14:51.091 | SUCCESS  | __main__:finish_db:327 - finished index generation
-2020-03-23 23:14:51.091 | SUCCESS  | __main__:finish_db:327 - finished index generation
-2020-03-23 23:15:09.213 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:15:09.213 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:15:09.235 | SUCCESS  | __main__:finish_db:327 - finished index generation
-2020-03-23 23:15:09.235 | SUCCESS  | __main__:finish_db:327 - finished index generation
-2020-03-23 23:15:21.950 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:15:21.950 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:15:21.962 | SUCCESS  | __main__:finish_db:328 - finished index generation
-2020-03-23 23:15:21.962 | SUCCESS  | __main__:finish_db:328 - finished index generation
-2020-03-23 23:15:32.374 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:15:32.374 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:16:43.114 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:16:43.114 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:16:49.482 | ERROR    | __main__:main:377 - Index creation exception: relation "article_search_text_2006" already exists
-2020-03-23 23:16:49.482 | ERROR    | __main__:main:377 - Index creation exception: relation "article_search_text_2006" already exists
-2020-03-23 23:17:17.382 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:17:17.382 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:17:40.948 | ERROR    | __main__:main:377 - Index creation exception: relation "article_search_text_2005" already exists
-2020-03-23 23:17:40.948 | ERROR    | __main__:main:377 - Index creation exception: relation "article_search_text_2005" already exists
-2020-03-23 23:19:03.869 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:19:03.869 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:19:45.092 | ERROR    | __main__:main:377 - Index creation exception: connection was closed in the middle of operation
-2020-03-23 23:19:45.092 | ERROR    | __main__:main:377 - Index creation exception: connection was closed in the middle of operation
-2020-03-23 23:20:35.236 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:20:35.236 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:20:35.241 | ERROR    | __main__:main:377 - Index creation exception: the database system is starting up
-2020-03-23 23:20:35.241 | ERROR    | __main__:main:377 - Index creation exception: the database system is starting up
-2020-03-23 23:20:39.736 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:20:39.736 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:20:39.743 | ERROR    | __main__:main:377 - Index creation exception: the database system is starting up
-2020-03-23 23:20:39.743 | ERROR    | __main__:main:377 - Index creation exception: the database system is starting up
-2020-03-23 23:21:36.502 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:21:36.502 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:21:36.508 | ERROR    | __main__:main:377 - Index creation exception: the database system is starting up
-2020-03-23 23:21:36.508 | ERROR    | __main__:main:377 - Index creation exception: the database system is starting up
-2020-03-23 23:22:28.397 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:22:28.397 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:22:53.739 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:22:53.739 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:22:53.740 | ERROR    | __main__:main:377 - Index creation exception: 'sql'
-2020-03-23 23:22:53.740 | ERROR    | __main__:main:377 - Index creation exception: 'sql'
-2020-03-23 23:23:07.094 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:23:07.094 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:23:07.094 | ERROR    | __main__:main:377 - Index creation exception: 'sql'
-2020-03-23 23:23:07.094 | ERROR    | __main__:main:377 - Index creation exception: 'sql'
-2020-03-23 23:23:18.871 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:23:18.871 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:23:19.086 | ERROR    | __main__:main:377 - Index creation exception: relation "article_search_text_2004" already exists
-2020-03-23 23:23:19.086 | ERROR    | __main__:main:377 - Index creation exception: relation "article_search_text_2004" already exists
-2020-03-23 23:24:04.822 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-23 23:24:04.822 | WARNING  | __main__:finish_db:306 - Generating indexes now
-2020-03-24 04:15:28.019 | SUCCESS  | __main__:finish_db:330 - finished index generation
-2020-03-24 04:15:28.019 | SUCCESS  | __main__:finish_db:330 - finished index generation
+2020-03-26 15:50:04.783 | WARNING  | __main__:create_db:296 - Initializing database (and dropping any existing tables).
+2020-03-26 15:50:05.778 | WARNING  | __main__:main:357 - Chunking path entries to different processes. Size=2000
+2020-03-26 15:50:06.617 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252206 EX: list index out of range
+2020-03-26 15:50:06.671 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252206 EX: list index out of range
+2020-03-26 15:50:06.747 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252206 EX: list index out of range
+2020-03-26 15:50:06.814 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252206 EX: list index out of range
+2020-03-26 15:50:06.900 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252206 EX: list index out of range
+2020-03-26 15:50:21.661 | SUCCESS  | __main__:main:371 - All work batches created.
+2020-03-26 15:51:57.712 | WARNING  | __main__:create_db:296 - Initializing database (and dropping any existing tables).
+2020-03-26 15:51:58.845 | WARNING  | __main__:main:357 - Chunking path entries to different processes. Size=2000
+2020-03-26 15:51:59.755 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252319 EX: list index out of range
+2020-03-26 15:51:59.867 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252319 EX: list index out of range
+2020-03-26 15:51:59.957 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252319 EX: list index out of range
+2020-03-26 15:52:00.103 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252320 EX: list index out of range
+2020-03-26 15:52:00.717 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252320 EX: list index out of range
+2020-03-26 15:52:01.493 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252321 EX: 'NoneType' object has no attribute 'find'
+2020-03-26 15:52:44.460 | WARNING  | __main__:create_db:292 - Initializing database (and dropping any existing tables).
+2020-03-26 15:52:45.411 | WARNING  | __main__:main:353 - Chunking path entries to different processes. Size=1000
+2020-03-26 15:53:04.576 | SUCCESS  | __main__:main:367 - All work batches created.
+2020-03-26 15:53:54.069 | ERROR    | __main__:run:268 - Caught Insert Error.  UID:1585252434 EX: 'NoneType' object has no attribute 'find'
+2020-03-26 15:53:57.550 | WARNING  | __main__:create_db:296 - Initializing database (and dropping any existing tables).
+2020-03-26 15:53:58.745 | WARNING  | __main__:main:357 - Chunking path entries to different processes. Size=2000
+2020-03-26 15:53:59.488 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252439 EX: list index out of range
+2020-03-26 15:53:59.530 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252439 EX: list index out of range
+2020-03-26 15:53:59.575 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252439 EX: list index out of range
+2020-03-26 15:53:59.734 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252439 EX: list index out of range
+2020-03-26 15:54:00.007 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585252440 EX: list index out of range
+2020-03-26 15:55:37.672 | WARNING  | __main__:create_db:289 - Initializing database (and dropping any existing tables).
+2020-03-26 15:55:38.811 | WARNING  | __main__:main:350 - Chunking path entries to different processes. Size=1000
+2020-03-26 15:55:46.028 | WARNING  | __main__:create_db:289 - Initializing database (and dropping any existing tables).
+2020-03-26 15:55:46.997 | WARNING  | __main__:main:350 - Chunking path entries to different processes. Size=100
+2020-03-26 15:56:16.619 | WARNING  | __main__:create_db:289 - Initializing database (and dropping any existing tables).
+2020-03-26 15:56:17.561 | WARNING  | __main__:main:350 - Chunking path entries to different processes. Size=100
+2020-03-26 15:56:18.130 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252578 EX: list index out of range
+2020-03-26 15:56:18.159 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252578 EX: list index out of range
+2020-03-26 15:56:18.570 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252578 EX: list index out of range
+2020-03-26 15:56:18.645 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252578 EX: list index out of range
+2020-03-26 15:56:18.686 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252578 EX: list index out of range
+2020-03-26 15:56:18.708 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252578 EX: list index out of range
+2020-03-26 15:56:18.727 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252578 EX: list index out of range
+2020-03-26 15:56:18.776 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252578 EX: list index out of range
+2020-03-26 15:56:19.121 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252579 EX: list index out of range
+2020-03-26 15:56:19.134 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252579 EX: list index out of range
+2020-03-26 15:56:19.203 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252579 EX: list index out of range
+2020-03-26 15:56:19.403 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252579 EX: list index out of range
+2020-03-26 15:56:19.686 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252579 EX: list index out of range
+2020-03-26 15:56:19.903 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252579 EX: list index out of range
+2020-03-26 15:56:20.009 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252580 EX: list index out of range
+2020-03-26 15:56:20.047 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252580 EX: list index out of range
+2020-03-26 15:56:20.091 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252580 EX: list index out of range
+2020-03-26 15:56:20.122 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252580 EX: list index out of range
+2020-03-26 15:56:20.730 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252580 EX: list index out of range
+2020-03-26 15:56:20.933 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252580 EX: list index out of range
+2020-03-26 15:56:20.956 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252580 EX: list index out of range
+2020-03-26 15:56:21.025 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252581 EX: 'NoneType' object has no attribute 'find'
+2020-03-26 15:56:21.028 | ERROR    | __main__:run:265 - Caught Insert Error.  UID:1585252581 EX: 'NoneType' object has no attribute 'find'
+2020-03-26 15:56:36.596 | WARNING  | __main__:create_db:290 - Initializing database (and dropping any existing tables).
+2020-03-26 15:56:37.483 | WARNING  | __main__:main:351 - Chunking path entries to different processes. Size=100
+2020-03-26 15:56:38.043 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.090 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.325 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.353 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.408 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.487 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.640 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.675 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.751 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.824 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:38.950 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252598 EX: list index out of range
+2020-03-26 15:56:39.133 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252599 EX: list index out of range
+2020-03-26 15:56:39.528 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252599 EX: list index out of range
+2020-03-26 15:56:39.648 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252599 EX: list index out of range
+2020-03-26 15:56:39.686 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252599 EX: list index out of range
+2020-03-26 15:56:39.708 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252599 EX: list index out of range
+2020-03-26 15:56:39.929 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252599 EX: list index out of range
+2020-03-26 15:56:40.010 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252600 EX: list index out of range
+2020-03-26 15:56:40.083 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252600 EX: list index out of range
+2020-03-26 15:56:40.237 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252600 EX: list index out of range
+2020-03-26 15:56:40.271 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252600 EX: list index out of range
+2020-03-26 15:56:40.271 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252600 EX: list index out of range
+2020-03-26 15:57:05.771 | WARNING  | __main__:create_db:290 - Initializing database (and dropping any existing tables).
+2020-03-26 15:57:06.860 | WARNING  | __main__:main:351 - Chunking path entries to different processes. Size=100
+2020-03-26 15:57:07.461 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252627 EX: list index out of range
+2020-03-26 15:57:07.467 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252627 EX: list index out of range
+2020-03-26 15:57:07.848 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252627 EX: list index out of range
+2020-03-26 15:57:07.978 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252627 EX: list index out of range
+2020-03-26 15:57:07.982 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252627 EX: list index out of range
+2020-03-26 15:57:07.989 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252627 EX: list index out of range
+2020-03-26 15:57:08.009 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252628 EX: list index out of range
+2020-03-26 15:57:08.114 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252628 EX: list index out of range
+2020-03-26 15:57:08.253 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252628 EX: list index out of range
+2020-03-26 15:57:08.321 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252628 EX: list index out of range
+2020-03-26 15:57:08.431 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252628 EX: list index out of range
+2020-03-26 15:57:08.678 | ERROR    | __main__:run:266 - Caught Insert Error.  UID:1585252628 EX: list index out of range
+2020-03-26 17:10:34.969 | WARNING  | __main__:create_db:291 - Initializing database (and dropping any existing tables).
+2020-03-26 17:10:59.804 | WARNING  | __main__:create_db:291 - Initializing database (and dropping any existing tables).
+2020-03-26 17:12:38.207 | WARNING  | __main__:create_db:291 - Initializing database (and dropping any existing tables).
+2020-03-26 17:12:38.821 | WARNING  | __main__:main:352 - Chunking path entries to different processes. Size=100
+2020-03-26 17:12:38.822 | SUCCESS  | __main__:main:366 - All work batches created.
+2020-03-26 17:12:38.823 | SUCCESS  | __main__:main:367 - Total Records inserted: 
+2020-03-26 17:12:38.825 | WARNING  | __main__:finish_db:313 - Generating indexes now
+2020-03-26 17:13:58.144 | WARNING  | __main__:create_db:291 - Initializing database (and dropping any existing tables).
+2020-03-26 17:13:59.039 | WARNING  | __main__:main:352 - Chunking path entries to different processes. Size=100
+2020-03-26 17:14:00.488 | ERROR    | __main__:run:267 - Caught Insert Error.  UID:1585257240 EX: list index out of range
+2020-03-26 17:14:01.584 | ERROR    | __main__:run:267 - Caught Insert Error.  UID:1585257241 EX: list index out of range
+2020-03-26 17:14:42.329 | WARNING  | __main__:create_db:291 - Initializing database (and dropping any existing tables).
+2020-03-26 17:14:43.398 | WARNING  | __main__:main:352 - Chunking path entries to different processes. Size=100
+2020-03-26 17:20:54.840 | WARNING  | __main__:create_db:296 - Initializing database (and dropping any existing tables).
+2020-03-26 17:20:55.874 | WARNING  | __main__:main:357 - Chunking path entries to different processes. Size=100
+2020-03-26 17:21:00.564 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585257660 EX: position information is misordered
+2020-03-26 17:21:03.994 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585257663 EX: position information is misordered
+2020-03-26 17:31:30.726 | WARNING  | __main__:create_db:296 - Initializing database (and dropping any existing tables).
+2020-03-26 17:31:31.975 | WARNING  | __main__:main:357 - Chunking path entries to different processes. Size=100
+2020-03-26 17:31:36.699 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585258296 EX: position information is misordered
+2020-03-26 17:31:40.185 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585258300 EX: position information is misordered
+2020-03-26 17:32:12.555 | WARNING  | __main__:create_db:296 - Initializing database (and dropping any existing tables).
+2020-03-26 17:32:13.744 | WARNING  | __main__:main:357 - Chunking path entries to different processes. Size=100
+2020-03-26 17:33:56.445 | SUCCESS  | __main__:main:371 - All work batches created.
+2020-03-26 17:34:29.249 | WARNING  | __main__:create_db:296 - Initializing database (and dropping any existing tables).
+2020-03-26 17:34:31.088 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585258471 EX: position information is misordered
+2020-03-26 17:34:32.421 | WARNING  | __main__:main:357 - Chunking path entries to different processes. Size=100
+2020-03-26 17:34:37.155 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585258477 EX: position information is misordered
+2020-03-26 17:34:40.573 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585258480 EX: position information is misordered
+2020-03-26 17:34:52.779 | WARNING  | __main__:create_db:296 - Initializing database (and dropping any existing tables).
+2020-03-26 17:34:53.698 | WARNING  | __main__:main:357 - Chunking path entries to different processes. Size=100
+2020-03-26 17:35:58.832 | SUCCESS  | __main__:main:371 - All work batches created.
+2020-03-26 17:38:27.553 | ERROR    | __main__:run:272 - Caught Insert Error.  UID:1585258707 EX: position information is misordered
+2020-03-26 17:38:57.483 | WARNING  | __main__:create_db:297 - Initializing database (and dropping any existing tables).
+2020-03-26 17:39:00.003 | WARNING  | __main__:main:358 - Chunking path entries to different processes. Size=100
+2020-03-26 17:39:04.800 | ERROR    | __main__:run:273 - Caught Insert Error.  UID:1585258744 EX: position information is misordered
+2020-03-26 17:39:08.321 | ERROR    | __main__:run:273 - Caught Insert Error.  UID:1585258748 EX: position information is misordered
+2020-03-26 17:39:12.224 | ERROR    | __main__:run:273 - Caught Insert Error.  UID:1585258752 EX: position information is misordered
+2020-03-26 17:39:19.693 | ERROR    | __main__:run:273 - Caught Insert Error.  UID:1585258759 EX: position information is misordered
+2020-03-26 17:39:24.523 | SUCCESS  | __main__:main:372 - All work batches created.
+2020-03-26 17:39:27.023 | ERROR    | __main__:run:273 - Caught Insert Error.  UID:1585258767 EX: position information is misordered
+2020-03-26 17:39:36.213 | WARNING  | __main__:create_db:297 - Initializing database (and dropping any existing tables).
+2020-03-26 17:39:37.086 | WARNING  | __main__:main:358 - Chunking path entries to different processes. Size=100
+2020-03-26 17:39:56.797 | SUCCESS  | __main__:main:372 - All work batches created.
+2020-03-26 17:40:26.122 | WARNING  | __main__:create_db:298 - Initializing database (and dropping any existing tables).
+2020-03-26 17:40:27.005 | WARNING  | __main__:main:359 - Chunking path entries to different processes. Size=20
+2020-03-26 17:40:27.417 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258827 EX: list index out of range
+2020-03-26 17:40:27.840 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258827 EX: list index out of range
+2020-03-26 17:40:27.959 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258827 EX: list index out of range
+2020-03-26 17:40:28.060 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258828 EX: list index out of range
+2020-03-26 17:40:28.201 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258828 EX: list index out of range
+2020-03-26 17:40:28.350 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258828 EX: list index out of range
+2020-03-26 17:40:28.527 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258828 EX: list index out of range
+2020-03-26 17:40:28.705 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258828 EX: list index out of range
+2020-03-26 17:40:28.866 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258828 EX: list index out of range
+2020-03-26 17:40:29.013 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258829 EX: list index out of range
+2020-03-26 17:40:29.179 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258829 EX: list index out of range
+2020-03-26 17:40:29.516 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258829 EX: list index out of range
+2020-03-26 17:40:29.749 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258829 EX: list index out of range
+2020-03-26 17:40:29.904 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258829 EX: list index out of range
+2020-03-26 17:40:29.931 | ERROR    | __main__:run:274 - Caught Insert Error.  UID:1585258829 EX: 'NoneType' object has no attribute 'find'
+2020-03-26 19:29:47.034 | WARNING  | __main__:create_db:316 - Initializing database (and dropping any existing tables).
+2020-03-26 19:29:48.271 | WARNING  | __main__:main:377 - Chunking path entries to different processes. Size=20
+2020-03-26 19:32:46.878 | ERROR    | __main__:run:292 - Caught Insert Error.  UID:1585265566 EX: list index out of range
+2020-03-26 19:32:53.710 | WARNING  | __main__:create_db:318 - Initializing database (and dropping any existing tables).
+2020-03-26 19:32:54.614 | WARNING  | __main__:main:379 - Chunking path entries to different processes. Size=20
+2020-03-26 19:32:55.975 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265575 EX: list index out of range
+2020-03-26 19:32:56.634 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265576 EX: list index out of range
+2020-03-26 19:32:56.938 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265576 EX: list index out of range
+2020-03-26 19:32:58.704 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265578 EX: list index out of range
+2020-03-26 19:33:40.633 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265620 EX: list index out of range
+2020-03-26 19:33:40.964 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265620 EX: list index out of range
+2020-03-26 19:33:45.045 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265625 EX: list index out of range
+2020-03-26 19:34:06.402 | WARNING  | __main__:create_db:318 - Initializing database (and dropping any existing tables).
+2020-03-26 19:34:07.502 | WARNING  | __main__:main:379 - Chunking path entries to different processes. Size=20
+2020-03-26 19:34:08.848 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265648 EX: list index out of range
+2020-03-26 19:34:09.469 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265649 EX: list index out of range
+2020-03-26 19:34:09.671 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265649 EX: list index out of range
+2020-03-26 19:34:10.734 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265650 EX: list index out of range
+2020-03-26 19:34:39.506 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265679 EX: list index out of range
+2020-03-26 19:34:39.738 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265679 EX: list index out of range
+2020-03-26 19:34:48.249 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265688 EX: list index out of range
+2020-03-26 19:35:02.115 | WARNING  | __main__:create_db:318 - Initializing database (and dropping any existing tables).
+2020-03-26 19:35:02.958 | WARNING  | __main__:main:379 - Chunking path entries to different processes. Size=20
+2020-03-26 19:35:03.331 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265703 EX: list index out of range
+2020-03-26 19:35:03.667 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265703 EX: list index out of range
+2020-03-26 19:35:03.782 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265703 EX: list index out of range
+2020-03-26 19:35:03.876 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265703 EX: list index out of range
+2020-03-26 19:35:03.995 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265703 EX: list index out of range
+2020-03-26 19:35:04.139 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265704 EX: list index out of range
+2020-03-26 19:35:04.320 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265704 EX: list index out of range
+2020-03-26 19:35:04.548 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265704 EX: list index out of range
+2020-03-26 19:35:11.787 | WARNING  | __main__:create_db:318 - Initializing database (and dropping any existing tables).
+2020-03-26 19:35:12.676 | WARNING  | __main__:main:379 - Chunking path entries to different processes. Size=20
+2020-03-26 19:35:42.132 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265742 EX: list index out of range
+2020-03-26 19:35:42.762 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265742 EX: list index out of range
+2020-03-26 19:35:42.953 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265742 EX: list index out of range
+2020-03-26 19:35:56.302 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265756 EX: list index out of range
+2020-03-26 19:36:25.420 | WARNING  | __main__:create_db:318 - Initializing database (and dropping any existing tables).
+2020-03-26 19:36:26.283 | WARNING  | __main__:main:379 - Chunking path entries to different processes. Size=20
+2020-03-26 19:37:06.404 | ERROR    | __main__:run:294 - Caught Insert Error.  UID:1585265826 EX: list index out of range
+2020-03-26 19:37:11.482 | WARNING  | __main__:create_db:318 - Initializing database (and dropping any existing tables).
+2020-03-26 19:37:12.391 | WARNING  | __main__:main:379 - Chunking path entries to different processes. Size=20
+2020-03-26 19:38:22.749 | SUCCESS  | __main__:main:393 - All work batches created.
+2020-03-26 19:39:45.079 | WARNING  | __main__:create_db:318 - Initializing database (and dropping any existing tables).
+2020-03-26 19:39:46.203 | WARNING  | __main__:main:379 - Chunking path entries to different processes. Size=20
+2020-03-26 19:40:56.365 | SUCCESS  | __main__:main:393 - All work batches created.
+2020-03-26 19:41:28.980 | WARNING  | __main__:create_db:318 - Initializing database (and dropping any existing tables).
+2020-03-26 19:41:30.021 | WARNING  | __main__:main:379 - Chunking path entries to different processes. Size=20
+2020-03-26 19:41:47.417 | SUCCESS  | __main__:main:393 - All work batches created.
+2020-03-26 20:56:13.885 | WARNING  | __main__:create_db:332 - Initializing database (and dropping any existing tables).
+2020-03-26 20:56:14.389 | ERROR    | __main__:try_afunc:323 - Creating db exception: function "setweight" already exists with same argument types
+2020-03-26 20:56:35.998 | WARNING  | __main__:create_db:332 - Initializing database (and dropping any existing tables).
+2020-03-26 20:56:36.860 | WARNING  | __main__:main:393 - Chunking path entries to different processes. Size=20
+2020-03-26 20:56:37.533 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270597 EX: list index out of range
+2020-03-26 20:56:38.044 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270598 EX: list index out of range
+2020-03-26 20:56:38.182 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270598 EX: list index out of range
+2020-03-26 20:56:38.347 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270598 EX: list index out of range
+2020-03-26 20:56:38.461 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270598 EX: list index out of range
+2020-03-26 20:56:38.636 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270598 EX: list index out of range
+2020-03-26 20:56:38.774 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270598 EX: list index out of range
+2020-03-26 20:56:39.012 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270599 EX: list index out of range
+2020-03-26 20:57:12.086 | WARNING  | __main__:create_db:332 - Initializing database (and dropping any existing tables).
+2020-03-26 20:57:12.937 | WARNING  | __main__:main:393 - Chunking path entries to different processes. Size=20
+2020-03-26 20:57:26.749 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270646 EX: list index out of range
+2020-03-26 20:57:36.307 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270656 EX: list index out of range
+2020-03-26 20:58:00.765 | WARNING  | __main__:create_db:332 - Initializing database (and dropping any existing tables).
+2020-03-26 20:58:01.631 | WARNING  | __main__:main:393 - Chunking path entries to different processes. Size=20
+2020-03-26 20:59:11.454 | SUCCESS  | __main__:main:407 - All work batches created.
+2020-03-26 20:59:33.057 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270773 EX: list index out of range
+2020-03-26 21:00:46.399 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270846 EX: list index out of range
+2020-03-26 21:00:52.780 | WARNING  | __main__:create_db:332 - Initializing database (and dropping any existing tables).
+2020-03-26 21:00:53.789 | WARNING  | __main__:main:393 - Chunking path entries to different processes. Size=20
+2020-03-26 21:02:04.171 | SUCCESS  | __main__:main:407 - All work batches created.
+2020-03-26 21:02:30.640 | ERROR    | __main__:run:308 - Caught Insert Error.  UID:1585270950 EX: list index out of range
+2020-03-26 21:03:46.417 | WARNING  | __main__:create_db:333 - Initializing database (and dropping any existing tables).
+2020-03-26 21:03:47.481 | WARNING  | __main__:main:394 - Chunking path entries to different processes. Size=20

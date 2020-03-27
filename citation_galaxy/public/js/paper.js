@@ -1180,10 +1180,10 @@ function getPopoverContent(articleid) {
         listEntry = list.append("li").attr("class", "list-group-item");
         // markup search query words in this paragraph
         if (currSearchQuery.length > 0) {
-          for (let query of currSearchQuery) {
+          for (let query of currSearchQuery.split(" ")) {
             full_text = full_text.replace(
-              query,
-              "<span class='query-text'>" + query + "</span>"
+              new RegExp(query,'gi'),
+              "<span class='query-text'> $& </span>"
             );
           }
         }
@@ -1269,10 +1269,10 @@ function setPopoverContent(articleid) {
     // do rule markup first
     full_text = tagCitationSentiment(articleid, full_text);
     // now markup search query words
-    for (let query of currSearchQuery) {
+    for (let query of currSearchQuery.split(" ")) {
       full_text = full_text.replace(
-        query,
-        "<span class='query-text'>" + query + "</span>"
+        new RegExp(query,'gi'),
+        "<span class='query-text'>$&</span>"
       );
     }
     //********************************************************* JAY250220191

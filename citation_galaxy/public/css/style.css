@@ -1,6 +1,9 @@
 .w-5 {
   width: 5% !important;
 }
+.w-7 {
+  width: 5% !important;
+}
 .w-10 {
   width: 25% !important;
 }
@@ -21,7 +24,21 @@
   font-size: 1.35rem;
 }
 
-
+.signal-add-button {
+  text-align: center;
+  font-size: 40px;
+  padding: 0;
+  /* padding-bottom: 7px; */
+  margin: 1.5rem 0 0 0;
+  background-color: rgba(240, 240, 240, 0.5);
+  cursor: pointer;
+  color: lightgray; 
+}
+.signal-add-button:hover {
+  background-color: rgba(230, 240, 255, 0.8);
+  border: 1px solid rgba(200, 220, 255, 1);
+  color: gray;
+}
 
 .noclick {
   pointer-events: none;
@@ -140,14 +157,16 @@
 
 #container {
   padding: 15px 0px;
+  max-height: 98vh;
   margin: 0 auto;
   justify-content: space-evenly;
 }
 
 #pills-admin {
+  max-height: 89vh;
   padding: 15px;
   max-width: 100%;
-  overflow: scroll;
+  /* overflow: scroll; */
 }
 
 #pills-home {
@@ -485,7 +504,8 @@ span.query-text {
 }
 
 #last-table-title {
-  position: absolute;
+  /* position: absolute; */
+  float: left;
   color: lightgray;
   text-transform: uppercase;
   font-size: 1.5em;

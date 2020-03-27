@@ -3,7 +3,7 @@ postgres:
   user: citationdb
   password: citationdb
   host: localhost
-  port: 5435
+  port: 5432
   min_size: 32
   max_size: 64
 
@@ -16,5 +16,9 @@ host: 0.0.0.0
 port: 5000
 
 year_range: # inclusive year range, I.E [min,max], not [min,max)
-  min: 2004
-  max: 2019
+  min: 2003
+  max: 2020
+  nested_data:
+    hi: t5
+    nest2:
+      byeee: 5215

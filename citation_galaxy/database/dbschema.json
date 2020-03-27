@@ -2,8 +2,6 @@
     "signalcategory": {
         "id": "integer",
         "catname": "character varying",
-        "score": "integer",
-        "enabled": "boolean",
         "color": "character varying"
     },
     "signaltype": {
@@ -15,10 +13,7 @@
     "signal": {
         "id": "integer",
         "signalcategoryid": "integer",
-        "signal": "character varying",
-        "score": "character varying",
-        "distance": "integer",
-        "parentid": "integer",
-        "signaltypeid": "integer"
+        "name":"character varying",
+        "signal": "character varying"
     }
 }
