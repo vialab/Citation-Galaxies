@@ -43,3 +43,4 @@ config/session.key
 sockets/**
 data_import/errors**
 data_import/*.log
+data_import/database-import.log

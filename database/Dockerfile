@@ -1,6 +1,6 @@
 # vim:set ft=dockerfile:
 FROM debian:buster-slim
-# FROM postgres:12
+# FROM postgres:12 as env
 
 RUN set -ex; \
 	if ! command -v gpg > /dev/null; then \
@@ -75,8 +75,10 @@ RUN set -ex; \
 	rm -rf "$GNUPGHOME"; \
 	apt-key list
 
+# ENV PG_MAJOR 12
+# ENV PG_VERSION 12.2-2.pgdg100+1
 ENV PG_MAJOR 12
-ENV PG_VERSION 12.2-2.pgdg100+1
+ENV PG_VERSION 12.2-3.pgdg100+1
 SHELL ["/bin/bash", "-c"]
 # RUN bash -c 'export PG_SHORTVER=${PG_VERSION::-12}'
 # ENV CFLAGS "-Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Werror=vla -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -fexcess-precision=standard -Wno-format-truncation -Wno-stringop-truncation -g -O3 -march=native -flto -fdebug-prefix-map=/tmp/build=. -fstack-protector-strong -Wformat -Werror=format-security -fno-omit-frame-pointer"
@@ -117,10 +119,10 @@ RUN set -ex; \
     apt-get update; \
     apt-get build-dep -y \
         postgresql-common pgdg-keyring \
-        "postgresql-$PG_MAJOR=$PG_VERSION" \
+        "postgresql-$PG_MAJOR" \
     ; \
     apt-get source \
-        "postgresql-$PG_MAJOR=$PG_VERSION" \
+        "postgresql-$PG_MAJOR" \
     ; \
     cd "postgresql-$PG_MAJOR"-*; \
     patch -p1 < ../tsvector.patch; \

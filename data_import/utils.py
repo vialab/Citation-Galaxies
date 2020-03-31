@@ -90,7 +90,8 @@ def encode_tsvector2( tsvector ):
         bufret.write( struct.pack( '!H', len(positions) ) )
 
         #for each lexeme, uint16 position in document
-        for position in sorted(positions, key=lambda x: x & 0x3fff ):
+        # for position in sorted(positions, key=lambda x: x & 0x3fff ):
+        for position in positions:
             bufret.write( struct.pack( '!H', position))
         # bufret.write( struct.pack( '>0H'))
 

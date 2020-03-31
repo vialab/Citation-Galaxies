@@ -4,8 +4,8 @@ import logging
 import sys
 
 import asyncpg
-import jinja2
-import aiohttp_jinja2
+# import jinja2
+# import aiohttp_jinja2
 from aiohttp import web
 
 # from citation_galaxy.db import close_pg, init_pg

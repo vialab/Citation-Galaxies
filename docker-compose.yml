@@ -11,10 +11,10 @@ services:
       POSTGRES_USER: citationdb
       POSTGRES_DB: citationdb
     ports:
-      - '5432:5432'
+      - '5435:5432'
     volumes:
       # - ../citationdb-data:/var/lib/postgresql/data
-      - ../citationdb-data2:/var/lib/postgresql/data
+      - /scratch/nbeals/work2/citationdb-data:/var/lib/postgresql/data
       # - ${PWD}/database/data:/var/lib/postgresql/data
       # - ../citationdb-data-old:/var/lib/postgresql/data
       # - ../citationdb-data-004:/var/lib/postgresql/data
