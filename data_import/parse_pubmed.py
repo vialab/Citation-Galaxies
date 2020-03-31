@@ -44,13 +44,16 @@ if __name__ == "__main__":
 
 tsvectorweight = 1<<14
 # tsvectorweight = 0
-CHUNK_SIZE = 20
+CHUNK_SIZE = 5000
+PROCS=21
 import pubmed_parser as pp
 dbconfig = {
     'user': 'citationdb',
     'password': 'citationdb',
     'database': 'citationdb',
-    'host': '/home/nbeals/work/maintenance/Citation-Galaxies/sockets/.s.PGSQL.5432'
+    # 'port': 5435
+    'host': '/home/nbeals/work/Citation-Galaxies/sockets/.s.PGSQL.5432'
+    # 'host': '/home/nbeals/work/maintenance/Citation-Galaxies/sockets/.s.PGSQL.5432'
 }
 poolconfig = dbconfig.copy()
 # poolconfig.update({
@@ -107,7 +110,9 @@ def receive_xml_ts( path ):
             find = False
     citation_distribution = [ c if c > 0 else None for c in citation_distribution ]
 
-    
+
+    # fulltext = ' '.join( [general_data['full_title'], general_data['abstract'], fulltext] ).replace('ЉЉ','')
+
     sent_tokens = punkt.tokenize( fulltext )
     spans = list(punkt.span_tokenize( fulltext ))
     rbound = len(sent_tokens)*2 # just to be extra safe the left searches and right searches dont overlap.
@@ -128,8 +133,8 @@ def receive_xml_ts( path ):
         
         rdistance = cite_sent - sent_num
         ldistance = sent_num - last_left_cite
-        # words = tbwt.tokenize(sent.translate(translate).lower())
-        words = tbwt.tokenize(sent.lower())
+        words = tbwt.tokenize(sent.translate(translate).lower())
+        # words = tbwt.tokenize(sent.lower())
         for word in words:
             if len(word) >= (1<<11):
                 logger.warning("skipped giant string: '{}'",word)
@@ -153,7 +158,7 @@ def receive_xml_ts( path ):
                 # if word_pos < (1<<14):
                 #     entry.append(word_pos)
                 # else:
-                #     logger.error("Word position too large.")
+                #     logger.error("Word position too large. Cutting off tsvector, pmc:{}",general_data['pmc'])
 
         if sent_num == cite_sent:
             lastpos = spans[cite_sent-1][1]+1 #beggining of sentence after the citation we found already
@@ -165,17 +170,17 @@ def receive_xml_ts( path ):
 
     fulltext = ' '.join( [general_data['full_title'], general_data['abstract'], fulltext] ).replace('ЉЉ','')
     word_pos = 0
-    features = ( token.lower() for token in tbwt.tokenize( fulltext ) if len(token) > 2 and not token.isnumeric() and len(token) < (1<<11) )
+    features = ( token.lower() for token in tbwt.tokenize( fulltext.translate(translate) ) if not token.isnumeric() and len(token) < (1<<11) )
     for word in features:
-        if word not in stopwords:
+        word_pos += 1
+        if word not in stopwords and len(word) > 2:
             stemmed = sbs.stem(word)
-            entry = cite_vector.setdefault( stemmed , [] )
+            entry = cite_vector.setdefault( stemmed , [1E9,-1E9] )
 
-            word_pos += 1
             if word_pos < (1<<14):
                 entry.append(word_pos)
             else:
-                logger.error("Word position too large. Cutting off tsvector")
+                logger.error("Word position too large. Cutting off tsvector, pmc:{}",general_data['pmc'])
                 break
 
     for key,val in cite_vector.items():
@@ -307,7 +312,7 @@ async def run( data ):
     except Exception as ex:
         errid = int(round(time.time()*1000)/1000)
         logger.error(f'Caught Insert Error.  UID:{errid} EX: {str(ex)}')
-        with open(f'errors/ins_ex_${errid}.json','w') as fp:
+        with open(f'errors/ins_ex_{errid}.json','w') as fp:
             json.dump(data,fp)
 
     return done
@@ -385,9 +390,10 @@ def main():
     create_db()
     
     # start 4 worker processes
-    with Pool(processes=1,maxtasksperchild=3) as pool:
+    with Pool(processes=PROCS,maxtasksperchild=5) as pool:
         # print("Building path list")
-        path_xml = xml_path_iterator('/home/nbeals/pubmed_data/full_corp')
+        # path_xml = xml_path_iterator('/home/nbeals/pubmed_data/full_corp')
+        path_xml = xml_path_iterator('/scratch/nbeals/work2/both')
         # path_xml=["/home/nbeals/pubmed_data/full_corp/J_Int_AIDS_Soc/PMC4581083.nxml"]
 
         res = []

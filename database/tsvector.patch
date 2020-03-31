@@ -10,4 +10,4 @@ index 559cf84cbc..b26e173b65 100644
 +#define MAXNUMPOS	(8192)
  #define LIMITPOS(x) ( ( (x) >= MAXENTRYPOS ) ? (MAXENTRYPOS-1) : (x) )
  
- /* This struct represents a complete tsvector datum */
+ /* This struct represents a complete tsvector datum TODO: change MAXNUMPOS to (1<<14)-1*/

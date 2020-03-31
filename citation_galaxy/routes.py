@@ -2,6 +2,7 @@
 import pathlib
 
 import citation_galaxy.views as views
+import citation_galaxy.process_signals as process_signals
 
 # from .views import index, poll, results, vote
 from .views import index, query, years
@@ -11,6 +12,7 @@ PROJECT_ROOT = pathlib.Path(__file__).parent
 
 def setup_routes(app):
     app.router.add_routes(views.routes)
+    app.router.add_routes(process_signals.routes)
 
     # app.router.add_get('/query', query)
     app.router.add_post("/query", query)

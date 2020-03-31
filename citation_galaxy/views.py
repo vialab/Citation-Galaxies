@@ -9,7 +9,7 @@ import string
 punctuation = string.punctuation + "''``\""
 removePunc = str.maketrans('', '', string.punctuation)
 
-import aiohttp_jinja2
+# import aiohttp_jinja2
 from aiohttp import web
 from aiohttp_session import get_session, setup
 from cryptography import fernet
@@ -32,110 +32,6 @@ def get_db(request):
 async def get_db_sess(request):
     return request.app['db'], await get_session(request)
 
-# select id, name, type from signaltype
-
-# @routes.post("/api/signalcategory")
-# async def signalCategory(request):
-#     db, sess = await get_db_sess(request)
-
-#     # signcalcategoryid = 
-
-
-#     cookieid = "196d2081988549fb86f38cf1944e79a9"
-#     # # TODO Generate cookie ID
-#     #   if (cookie === undefined) {
-#     # // no: set a new cookie
-#     # let nonce = Math.random().toString(),
-#     #   cookie_id =
-#     #     nonce.substring(2, nonce.length) + "_" + req.connection.remoteAddress;
-#     # cookie_id = crypto
-#     #   .createHash("md5")
-#     #   .update(cookie_id)
-#     #   .digest("hex");
-#     # res.cookie("cookieName", cookie_id, {expires: new Date(253402300000000)});
-
-#     results = await db.fetch("select id, catname, score, color from signalcategory where enabled and cookieid=$1", sess['id'])
-
-#     data = []
-#     if len(results) > 0:
-#         for result in results:
-#             data.append({
-#                 'id':       result['id'],
-#                 'catname':  result['catname'],
-#                 # 'score':    result['score'],
-#                 'color':    result['color']
-#             })
-#     else:
-#         data = [{
-#             'id':           -1,
-#             'catname':      'example category (deleted when others added)',
-#             'color':        '#ffffff'
-#         }]
-
-#     return web.json_response( {
-#         'data': data,
-#         'aliases': {},
-#         'links': {
-#             'signals': {
-#                 'params': {'id': "signalcategoryid"},
-#                 'query': "signalbycategory"
-#             }},
-#         'name': 'signalcategory',
-#         'schema': {},
-#         'parent': {}
-#     })
-
-
-# @routes.post("/api/signalbytype")
-# async def signalByType(request):
-#     db = get_db(request)
-
-#     post_data = await request.json()
-#     query_params = post_data.get('values')
-#     signaltypeid = int(query_params.get("signaltypeid", 10))
-
-#     cookieid = "196d2081988549fb86f38cf1944e79a9"
-
-#     results = await db.fetch("select id, signalcategoryid, signal, score, distance, parentid, signaltypeid from signal where enabled and signaltypeid=$1 and cookieid=$2;", signaltypeid, cookieid)
-
-#     data = [{
-#             'catname': result['catname'],
-#             'score': result['score'],
-#             'color': result['color']
-#         } for result in results ]
-
-#     return web.json_response( {
-#         'data': data,
-#         'aliases': {},
-#         'links': {},
-#         'name': 'signalcategory',
-#         'schema': {},
-#         'parent': {}
-#     })
-
-
-async def insert_signal(db, sess, post_data, qp ):
-    signal_category = qp.get('signalcategoryid', None)
-    signal_text = qp.get('signal', None)
-    signal_base = qp.get('query',[])
-
-    if signal_text and signal_category:
-        if len(signal_base)>0:
-            
-            pass
-
-        else:
-            pass # TODO What to do here?
-
-async def insert_signal_category(db, sess, post_data, qp ): #qp is query_params
-    category_name = qp.get('catname',None)
-    category_color= qp.get('color',None)
-
-    if category_name and category_color:
-        await db.execute( "INSERT INTO signalcategory(catname, cookieid, color) VALUES($1, $2, $3)", category_name, sess['id'], category_color)
-
-async def insert_signal_type(db, sess, post_data, qp):
-    pass
 
 @routes.post("/api/insert")
 async def insert_handler(request):
@@ -215,30 +111,6 @@ async def delete_handler(request):
 
     return web.json_response( {} )
 
-async def update_signal(db, sess, post_data, qp ):
-    signal_category = qp.get('signalcategoryid', None)
-    signal_text = qp.get('signal', None)
-    signal_base = qp.get('query',[])
-
-    if signal_text and signal_category:
-        if len(signal_base)>0:
-            
-            pass
-
-        else:
-            pass # TODO What to do here?
-
-async def update_signal_category(db, sess, post_data, qp ): #qp is query_params
-    category_id = int(qp.get('id',None))
-    category_name = qp.get('catname',None)
-    category_color= qp.get('color',None)
-
-    if category_name and category_color:
-        await db.execute( "update signalcategory SET catname=$2, color=$3 where id=$1", category_id, category_name, category_color)
-
-async def update_signal_type(db, sess, post_data, qp):
-    pass
-
 @routes.post("/api/update")
 async def update_handler(request):
     db, session = await get_db_sess(request)
@@ -268,13 +140,7 @@ async def update_handler(request):
         query = getattr( queries, queries.available_queries[0] ) # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
 
         await query(db, **query_params )
-    # if name == 'signalcategory':
-    #     results = await update_signal_category(db, session, post_data, query_params)
-    # elif name == 'signal':
-    #     results = await update_signal(db, session, post_data, query_params)
-    # elif name =='signaltype':
-    #     results = await update_signal_type(db, session, post_data, query_params)
- 
+         
     data = []
 
     return web.json_response( {} )
@@ -365,15 +231,12 @@ async def papers(request):
     subsearch_text = ""
     search_params = []
     if len(search_input) > 0:
-        # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
-        search_text += (
-            " where text_search @@ websearch_to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
-        )
-        # search_params.append(" & ".join((word for word in search_input)))
-        search_params.append(search_input)
+        # search_text = ' where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
+        search_text += " where text_search @@ setweight( websearch_to_tsquery('english', $1), 'BD') "  # .format( ' & '.join( ( word for word in search_input ) ) )
+        search_params.append(search_input) # TODO: use the ts_rank functions in postgres to rank?
 
         if words_left >= 0 or words_right >= 0:
-            subsearch_text = "where cite_search @@ to_tsquery('english', $2) "
+            subsearch_text = "where cite_search @@ setweight( to_tsquery('english', $2), 'BC') "
 
             subsearch_params = []
             stripped_input = search_input.translate(removePunc)
@@ -389,12 +252,6 @@ async def papers(request):
 
             search_params.append(" | ".join(subsearch_params))
 
-        # search_values = ' & '.join( ( word for word in search_input.split(' ') ) )
-
-    # else:
-    # search_text = 'article_search'
-
-    # subsearch_text += 'group by pub_year order by pub_year'
 
     querymanager = QueryManager(db, increment, search_text, subsearch_text, search_params)
 
@@ -504,12 +361,12 @@ async def query(request):
 
     if len(search_input) > 0:
         # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
-        search_text = "article_search where text_search @@ websearch_to_tsquery('english', $1)"  # .format( ' & '.join( ( word for word in search_input ) ) )
+        search_text = "article_search where text_search @@ set_weight(websearch_to_tsquery('english', $1), 'BD) "  # .format( ' & '.join( ( word for word in search_input ) ) )
         # search_params.append(" & ".join((word for word in search_input)))
         search_params.append(search_input)
 
         if words_left >= 0 or words_right >= 0:
-            subsearch_text = "where cite_search @@ to_tsquery('english', $2) "
+            subsearch_text = "where cite_search @@ setweight(to_tsquery('english', $2), 'BC') "
 
             subsearch_params = []
             stripped_input = search_input.translate(removePunc)
