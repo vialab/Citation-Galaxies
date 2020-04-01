@@ -35,7 +35,7 @@ create table insert_dummy (
 create table article_search (
     id                  SERIAL PRIMARY KEY,
     text_search         tsvector,
-    -- cite_search         tsvector,
+    -- text_search         tsvector,
     pub_year		    smallint,
     {}
 );""",
@@ -48,7 +48,7 @@ create table article_search (
 create table article_search_{} (
     id                  SERIAL PRIMARY KEY,
     text_search         tsvector,
-    -- cite_search         tsvector,
+    -- text_search         tsvector,
     pub_year		    smallint,
     {}
 ) inherits(article_search);
@@ -199,7 +199,7 @@ postpopulate_template = [
     #     "name": "Article Search Citation Search Index",
     #     "drop": "DROP INDEX IF EXISTS article_search_citations_{}; ",
     #     "drop": "",
-    #     "sql": """create index article_search_citations_{} on article_search_{} using GIN(cite_search); """,
+    #     "sql": """create index article_search_citations_{} on article_search_{} using GIN(text_search); """,
     #     "templater": lambda sql: '\n'.join( (sql.format(year,year) for year in year_range) ) + '\n'
     # },
     # {

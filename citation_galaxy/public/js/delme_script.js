@@ -138,6 +138,7 @@ function shortenVal(value) {
 //Updates the range text dynamically
 function updateTextInput(field, before, after, articleid, sendToDefault) {
     //Get the values to update
+    console.log(field);
     before = parseInt(before);
     if (before != 0) {
         before = before * -1;
@@ -395,7 +396,7 @@ function changePaperTextBoundary(articleid, year) {
                 }
 
                 if (valid == true) {
-                     // Add the result to the new list
+                    // Add the result to the new list
                     tmpResults.push(temp);
                     yearResults[year].splice(indexToInsert, 0, temp);
                     indexToInsert += 1;

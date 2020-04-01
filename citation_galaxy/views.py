@@ -236,7 +236,7 @@ async def papers(request):
         search_params.append(search_input) # TODO: use the ts_rank functions in postgres to rank?
 
         if words_left >= 0 or words_right >= 0:
-            subsearch_text = "where cite_search @@ setweight( to_tsquery('english', $2), 'BC') "
+            subsearch_text = "where text_search @@ setweight( to_tsquery('english', $2), 'BC') "
 
             subsearch_params = []
             stripped_input = search_input.translate(removePunc)
@@ -361,12 +361,12 @@ async def query(request):
 
     if len(search_input) > 0:
         # search_text = 'article_search where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
-        search_text = "article_search where text_search @@ set_weight(websearch_to_tsquery('english', $1), 'BD) "  # .format( ' & '.join( ( word for word in search_input ) ) )
+        search_text = "article_search where text_search @@ setweight(websearch_to_tsquery('english', $1), 'BD') "  # .format( ' & '.join( ( word for word in search_input ) ) )
         # search_params.append(" & ".join((word for word in search_input)))
         search_params.append(search_input)
 
         if words_left >= 0 or words_right >= 0:
-            subsearch_text = "where cite_search @@ setweight(to_tsquery('english', $2), 'BC') "
+            subsearch_text = "where text_search @@ setweight(to_tsquery('english', $2), 'BC') "
 
             subsearch_params = []
             stripped_input = search_input.translate(removePunc)

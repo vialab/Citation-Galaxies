@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/home/nbeals/miniconda3/envs/citation-galaxy/bin/python",
+    "python.pythonPath": "/home/zhills/miniconda3/envs/galaxy_env/bin/python",
     "hexdump.width": 32,
 
 
