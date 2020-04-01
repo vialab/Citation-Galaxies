@@ -71,7 +71,7 @@ def build_signal_search( signals ):
         signal_search += search_cite_tmpl.format(arg_num)
         arg_num+=1
         if words_left >= 0 or words_right >= 0:
-            # subsearch_text = "where cite_search @@ to_tsquery('english', $2) "
+            # subsearch_text = "where text_search @@ to_tsquery('english', $2) "
             subsearch_params = []
             stripped_input = search_input.translate(removePunc)
             stripped_input = stripped_input.replace(" or ", " ")

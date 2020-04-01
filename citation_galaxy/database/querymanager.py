@@ -56,7 +56,7 @@ class QueryManager:
 
     def build_counting_query(self):
         columns_in_bins = reshape_count_columns(self.percent_range)
-        body = " from (select cite_search, pub_year," + ", ".join(
+        body = " from (select text_search, pub_year," + ", ".join(
             (
                 f"case when ("
                 + "+".join((f"coalesce(cite_in_{el:02d},0)" for el in chunk))

@@ -9,7 +9,7 @@ import * as modal from './modules/modal.js';
 
 $(document).ready((x, y, z) => {
     console.log("newfront ready: ", x, y, z, modal.mode)
-    
+
     // Create global width and height variables
     vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
     vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
@@ -34,12 +34,12 @@ $(window).on('load', function () {
 
 
 function setupEventHandlers() {
-    
+
     // Rules-Tab onclick
     let rulesBut = $('#pills-admin-tab')
     rulesBut.on('click', event => {
         if (currSearchQuery.length == 0) {
-            modal.warning('Cannot Edit Rules','Please execute a search query before modifying rules.')
+            modal.warning('Cannot Edit Rules', 'Please execute a search query before modifying rules.')
 
             // Prevent the tab from showing it's content
             event.preventDefault();
