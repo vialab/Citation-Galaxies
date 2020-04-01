@@ -1,14 +1,14 @@
 var last_load = {};
 var loaded_table = "";
-var loaded_parent = {id: undefined, col: undefined};
+var loaded_parent = { id: undefined, col: undefined };
 var global_aliases;
 
-$(document).ready(function() {
+$(document).ready(function () {
   /* CRUD processes are not based on search, although a nice touch would be
     having the ability to filter the results
      */
 
-  $(document).mouseup(function(e) {
+  $(document).mouseup(function (e) {
     // not editing, so we don't need to do anything
     if ($(".edit-row.editing").length == 0) return;
     if (
@@ -27,10 +27,10 @@ function loadData(url, callback, params = {}, _async = true) {
   $.ajax({
     type: "POST",
     url: currentURL + "api/" + url,
-    data: JSON.stringify( {
+    data: JSON.stringify({
       values: params
-    } ),
-    success: function(results) {
+    }),
+    success: function (results) {
       // console.log(results);
       callback(
         results["data"],
@@ -63,7 +63,7 @@ function loadTable(
   if (typeof params == "string") params = JSON.parse(params);
   loadData(
     table_name,
-    function(results, aliases, links, actions, name, schema, parent) {
+    function (results, aliases, links, actions, name, schema, parent) {
       if (typeof callback != "undefined") callback(results);
       if (draw_table) {
         clearCrudTable();
@@ -87,7 +87,7 @@ function loadTable(
                 $.ajax({
                   type: "POST",
                   url: currentURL + "api/" + table_name,
-                  data: JSON.stringify({values: {}}),
+                  data: JSON.stringify({ values: {} }),
                   success: results => {
                     external_data[table_name] = results;
                   }
@@ -100,7 +100,7 @@ function loadTable(
           if (wait_queue.length > 0) {
             let waiting = true,
               wait = 0;
-            $.when(...wait_queue).done(function() {
+            $.when(...wait_queue).done(function () {
               populateTable(
                 results,
                 name,
@@ -201,7 +201,7 @@ function populateTable(
 
 
       let additional = 'class="'
-      if (key ==='color') {
+      if (key === 'color') {
         additional += "w-7"
       } else {
         additional += "w-auto"
@@ -237,7 +237,7 @@ function populateTable(
     // append the final row to our table
     row.appendTo(tableBody);
   }
-  signals = signals.sort(function(a, b) {
+  signals = signals.sort(function (a, b) {
     return a[headers[0]] - b[headers[0]];
   });
   // create a row for adding a completely new row
@@ -272,27 +272,27 @@ function getAliasSelect(target, alias, data) {
     $sel.append(
       " \
       <option value='" +
-        o[alias.value] +
-        "'>" +
-        o[alias.col] +
-        "</option>"
+      o[alias.value] +
+      "'>" +
+      o[alias.col] +
+      "</option>"
     );
   }
   return $sel;
 }
 
 function bindRowFunctions() {
-  $("input[type='color']").change(function(event) {
+  $("input[type='color']").change(function (event) {
     $(this).attr("value", $(this).val());
     $(this).parent().css("background-color", $(this).val());
     $(this).parent().find('label').html($(this).val())
   });
 
-  $(".edit-cell").click(function(event) {
+  $(".edit-cell").click(function (event) {
     editCrudRow(event);
   });
 
-  $("#signalTable button").click(function(event) {
+  $("#signalTable button").click(function (event) {
     let target = $(event.target);
     let signal_id = target.parent().attr("id");
 
@@ -319,7 +319,7 @@ function showAddRow() {
   $row.show();
   $row.addClass("showing");
   bindRowFunctions();
-  setTimeout(function() {
+  setTimeout(function () {
     $row.removeClass("showing");
   }, 500);
   $row.find('#catname').click()
@@ -345,7 +345,7 @@ function drawTableRow(headers, signal, signalID, aliases) {
       headers[i] == loaded_parent.col
     ) {
       html += "'>" + loaded_parent.id;
-    } else if(headers[i] == "color") {
+    } else if (headers[i] == "color") {
       let c = signal[headers[i]] ? signal[headers[i]] : "#FFFFFF";
       html += "' style='background-color:" + c
         + ";box-shadow: inset 0 0 0 5px " + c
@@ -355,19 +355,18 @@ function drawTableRow(headers, signal, signalID, aliases) {
         let data = JSON.parse(signal[headers[i]])
         c = 0
         html += ` aliased signal-cell'>`
-        for (datum of data)
-        {
-          c+=1;
-          if (c>1) {
+        for (datum of data) {
+          c += 1;
+          if (c > 1) {
             html += `<div class="d-flex flex-row justify-content-center m-2">
             <select id="signal_mod_${c}" >
-              <option ${(datum.modifier=="AND") ? 'selected' : ''} value="AND">AND</option>
-              <option ${(datum.modifier=="OR") ? 'selected' : ''} value="OR">OR</option>
-              <option ${(datum.modifier=="AND NOT") ? 'selected' : ''} value="AND NOT">AND NOT</option>
-              <option ${(datum.modifier=="OR NOT") ? 'selected' : ''} value="OR NOT">OR NOT</option>
+              <option ${(datum.modifier == "AND") ? 'selected' : ''} value="AND">AND</option>
+              <option ${(datum.modifier == "OR") ? 'selected' : ''} value="OR">OR</option>
+              <option ${(datum.modifier == "AND NOT") ? 'selected' : ''} value="AND NOT">AND NOT</option>
+              <option ${(datum.modifier == "OR NOT") ? 'selected' : ''} value="OR NOT">OR NOT</option>
             </select>
             </div>`
-            }
+          }
           html += `
           <div class="d-flex flex-row">
             <div class="p-1" style="width:40%" >
@@ -475,7 +474,7 @@ function drawActionOptions(row, headers, signal, links, actions) {
     });
   }
   // create action buttons that perform some sort of "action"
-  if (actions.length>0) {
+  if (actions.length > 0) {
     Object.keys(actions).forEach(key => {
       let action = actions[key];
       let params = {};
@@ -527,9 +526,9 @@ function deselectCrudRows(update) {
             if (row_element.hasClass("empty")) {
               row_element.text("<empty>");
             } else {
-              if(row_element.attr("id") == "color") {
-                row_element.css("background-color", $("label",row_element).html());
-                $("input[type=color]", row_element).attr("value", $("label",row_element).html());
+              if (row_element.attr("id") == "color") {
+                row_element.css("background-color", $("label", row_element).html());
+                $("input[type=color]", row_element).attr("value", $("label", row_element).html());
               } else {
                 row_element.text(row_element_val);
               }
@@ -552,7 +551,7 @@ function deselectCrudRows(update) {
 // Allow a row to be edited
 function editCrudRow(event) {
   let $color_picker = $("input[type='color']", event.target);
-  if($color_picker.length > 0) $color_picker[0].click();
+  if ($color_picker.length > 0) $color_picker[0].click();
   let selected_row = $(event.target).parents(".edit-row");
   let row_elements = selected_row.children();
   // If the row hasn't been selected for editing already
@@ -580,20 +579,20 @@ function editCrudRow(event) {
         if (!row_element.hasClass('signal-cell')) {
           row_element.attr("contenteditable", "true");
         }
-        if (row_element_id !== 'color' ){
+        if (row_element_id !== 'color') {
           // Allow the cell to be edited
-          
+
           // Disable enter presses in editable cells
-          row_element.keypress(function(event) {
+          row_element.keypress(function (event) {
             if (event.keyCode == 13) {
               event.preventDefault();
             }
           });
         } else {
           // row_element.attr('contenteditable', 'false');
-          row_element.focus( event =>{
+          row_element.focus(event => {
             // row_element.removeAttr('contenteditable')
-            console.log("focused",$(event.target.parent),event.target,event.target.parent);
+            console.log("focused", $(event.target.parent), event.target, event.target.parent);
 
             $(event.target).find('input[type=color]').click()
           })
@@ -656,11 +655,11 @@ function deleteRow(id) {
       table_name: loaded_table,
       id: id
     }),
-    success: function(results) {
+    success: function (results) {
       reloadTable();
       toast("Success!", "Row was deleted from the database.");
     },
-    error: function(err) {
+    error: function (err) {
       console.log(err);
     }
   });
@@ -675,7 +674,7 @@ function insertRow(elem) {
   if (loaded_table == "filter" || loaded_table == "restriction")
     table = "signal";
   // iterate through each cell
-  $(".edit-cell", $row).each(function(index) {
+  $(".edit-cell", $row).each(function (index) {
     let field_name = $(this).attr("id");
     let val = ""
     if ($(this).hasClass('aliased')) {
@@ -694,7 +693,7 @@ function insertRow(elem) {
       );
       return false;
     }
-    if(field_name == "color") {
+    if (field_name == "color") {
       val = $("input[type='color']", this).val();
     }
     // add to our values to update
@@ -708,7 +707,7 @@ function insertRow(elem) {
   if (loaded_parent.id !== undefined)
     values[loaded_parent.col] = loaded_parent.id;
 
-  postInsert(table, values, function(results) {
+  postInsert(table, values, function (results) {
     reloadTable();
     toast("Success!", "Row was inserted to the database.");
   });
@@ -722,12 +721,12 @@ function updateRow(elem) {
     valid_update = true;
 
   // iterate through each cell
-  $(".edit-cell", $row).each(function(index) {
+  $(".edit-cell", $row).each(function (index) {
     let field_name = $(this).attr("id");
     let val = $(this).html();
     // if we are aliased, we got to get the value from a select option
     if ($("th#" + field_name).hasClass("aliased")) {
-      [valid_update, val] = validateDataType( $("select." + field_name, this).val(), type);
+      [valid_update, val] = validateDataType($("select." + field_name, this).val(), type);
     } else {
       // validate that the data type is correct for this cell
       let type = $("th#" + field_name).data("type");
@@ -741,7 +740,7 @@ function updateRow(elem) {
         return false;
       }
     }
-    if(field_name == "color") {
+    if (field_name == "color") {
       val = $("input[type='color']", this).val();
     }
 
@@ -749,25 +748,25 @@ function updateRow(elem) {
     if (val == "") values[field_name] = null;
     else values[field_name] = val;
 
-    if (field_name =="signal") {
+    if (field_name == "signal") {
       val = [];
       let inps = $('select,input', this);
 
-      for (let i = 0; i < inps.length; i+=4) {
+      for (let i = 0; i < inps.length; i += 4) {
         let range_Left = parseInt($(inps[i]).val());
-        let range_Right = parseInt($(inps[i+1]).val());
-        let query = $(inps[i+2]).val();
-        
+        let range_Right = parseInt($(inps[i + 1]).val());
+        let query = $(inps[i + 2]).val();
+
         let record = {
           range: [range_Left, range_Right],
           query: query
         }
-        if ( i >= 4) {
-          let modifier = $(inps[i-1]).val();
+        if (i >= 4) {
+          let modifier = $(inps[i - 1]).val();
 
           record['modifier'] = modifier;
         }
-        
+
         val.push(record);
       }
       values[field_name] = JSON.stringify(val);
@@ -779,7 +778,7 @@ function updateRow(elem) {
   if (!valid_update) return;
   values["id"] = $row.attr("id").split("_")[1];
   // ship the update to the server then reload the table
-  postUpdate(loaded_table, values, function(results) {
+  postUpdate(loaded_table, values, function (results) {
     reloadTable();
     toast("Success!", "Row was updated in the database.");
   });
@@ -794,7 +793,7 @@ function postUpdate(table_name, values, callback) {
       table_name: table_name,
       values: values
     }),
-    success: function(results) {
+    success: function (results) {
       if (typeof callback != "undefined") callback(results);
     }
   });
@@ -809,7 +808,7 @@ function postInsert(table_name, values, callback) {
       table_name: table_name,
       values: values
     }),
-    success: function(results) {
+    success: function (results) {
       if (typeof callback != "undefined") callback(results);
     }
   });
@@ -822,9 +821,9 @@ function validateDataType(data, type) {
       return [!isNaN(parseInt(data)), parseInt(data)];
       break;
     case "character varying":
-      // return [true, data] # calls default instead
+    // return [true, data] # calls default instead
     default:
-      return [data === data.toString(),data];
+      return [data === data.toString(), data];
   }
 }
 
@@ -870,7 +869,7 @@ function sortTableByColumn(table, column, order) {
   type = $("th#" + column).data("type");
   tbody
     .find("tr")
-    .sort(function(a, b) {
+    .sort(function (a, b) {
       let valA = $.trim($("td#" + column, a).text()),
         valB = $.trim($("td#" + column, b).text());
       if (type == "integer" && !$("th#" + column).hasClass("aliased")) {
@@ -917,7 +916,7 @@ function getTableTitle(tableName) {
 }
 
 function rgbToHex(rgb) {
-  rgb = rgb.replace("rgb(", "").replace(")","");
+  rgb = rgb.replace("rgb(", "").replace(")", "");
   let colors = rgb.split(",")
     , r = colors[0]
     , g = colors[1]

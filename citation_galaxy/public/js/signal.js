@@ -18,7 +18,7 @@ let signal_scores = {};
 let default_color = "#bbb";
 
 // Trigger action when the contexmenu is about to be shown
-$(document).bind("mouseup", function(event) {
+$(document).bind("mouseup", function (event) {
   // if where is clicked is not the menu, hide the menu
   if ($(".custom-menu").is(":visible")) {
     if (!$(event.target).parents(".custom-menu").length > 0) {
@@ -67,10 +67,10 @@ function tagCitationSentiment(articleid, text) {
       new_text = new_text.replace(
         s.signal,
         "<span class='sentiment-text' style='background-color: " +
-          col +
-          "'>" +
-          s.signal +
-          "</span>"
+        col +
+        "'>" +
+        s.signal +
+        "</span>"
       );
       score += value * matches.length; // sum score
       n += matches.length;
@@ -101,13 +101,13 @@ function processSignals(query, year, recache = 1) {
       rangeRight: sentenceRangeBelow,
       recache: recache
     }),
-    success: function(data) {
+    success: function (data) {
       // done so let's remove this from the queue
       process_queue[year] = undefined;
       score_data[year] = processSentimentBins(data);
       if (overlay_sentiment) drawSentimentColumn(year);
     },
-    error: function() {
+    error: function () {
       process_queue[year] = undefined;
     },
     async: true
@@ -238,7 +238,7 @@ function transformSignalData(results, replace_all) {
 }
 
 function loadCategories(callback) {
-  loadData("signalcategory", function(results) {
+  loadData("signalcategory", function (results) {
     sentiment_signals = {};
     transformCategoryData(results);
     if (typeof callback != "undefined") callback();
@@ -249,7 +249,7 @@ function loadCategories(callback) {
 function loadSignals(callback) {
   loadData(
     "signalbycategory",
-    function(signals) {
+    function (signals) {
       transformSignalData(signals);
       updateInterface();
       if (typeof callback != "undefined") callback();
@@ -260,7 +260,7 @@ function loadSignals(callback) {
       //   });
       // });
     },
-    {signalcategoryid: 1}
+    { signalcategoryid: 1 }
   );
 }
 
@@ -358,19 +358,19 @@ function updateCategoryInterface() {
       </div>";
     $("#categories").append($(html));
 
-//     html = `<div class="btn-group dropright">
-//   <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-//     ${cat.name}
-//   </button>
-//   <div class="dropdown-menu">
-//     <a class="dropdown-item" href="#">AND</a>
-//     <a class="dropdown-item" href="#">OR</a>
-//     <a class="dropdown-item" href="#">AND NOT</a>
-//     <a class="dropdown-item" href="#">ORNOT</a>
-//   </div>
-// </div>
-// `
-      html = "<li class='menu-btn' onclick='addSignal(" +
+    //     html = `<div class="btn-group dropright">
+    //   <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    //     ${cat.name}
+    //   </button>
+    //   <div class="dropdown-menu">
+    //     <a class="dropdown-item" href="#">AND</a>
+    //     <a class="dropdown-item" href="#">OR</a>
+    //     <a class="dropdown-item" href="#">AND NOT</a>
+    //     <a class="dropdown-item" href="#">ORNOT</a>
+    //   </div>
+    // </div>
+    // `
+    html = "<li class='menu-btn' onclick='addSignal(" +
       id +
       ");'>" +
       cat.name +
@@ -411,7 +411,7 @@ function processAllSignals() {
       signals: sentiment_signals,
       query: currSearchQuery
     }),
-    success: function(results) {
+    success: function (results) {
       let data = results;
       score_data = data["front_data"];
       signal_scores = data["signal_scores"];
@@ -426,7 +426,7 @@ function processAllSignals() {
       $("#downloadDataButton").removeAttr("disabled");
       createVisualization(transformScores());
     },
-    error: function(err) {
+    error: function (err) {
       console.log(err);
     }
   });
@@ -477,11 +477,11 @@ function getAllChildrenKeys(signal) {
 function addSignal(cat_id) {
   let signals = [
     {
-      range: [sentenceRangeBelow,sentenceRangeAbove],
+      range: [sentenceRangeBelow, sentenceRangeAbove],
       query: currSearchQuery
     },
     {
-      range: [sentenceRangeBelow,sentenceRangeAbove],
+      range: [sentenceRangeBelow, sentenceRangeAbove],
       query: `"${$("#text-selection").val()}"`,
       modifier: 'AND'
     }
@@ -496,5 +496,5 @@ function addSignal(cat_id) {
 
 
 function requestSignalExport() {
-  
+
 }
