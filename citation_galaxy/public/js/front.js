@@ -56,6 +56,16 @@ var overlay_sentiment = false; // flag to immediately show sentiment results
 var front_data = {};
 var last_query = {};
 
+//disable searchbar and button
+/**
+ * 
+ * @param {Boolean} bool 
+ */
+function disableSearchUI(bool) {
+  $("#searchBox").attr("disabled", bool);
+  $("#searchButton").attr("disabled", bool);
+}
+
 //Used to change the increment on the main screen
 function seperationChange(increment) {
   seperations = [];
@@ -1193,6 +1203,7 @@ function getFilteredYears(
     success: function (results) {
       let data = results;
       // loaded_articles = data["nunique"];
+      disableSearchUI(false);
       if (draw) {
         drawAllYears(data["agg"]);
         if (process_signals) processAllSignals();
@@ -1338,6 +1349,7 @@ function searchForQuery(query) {
   var boundariesByPaper = {};
   indexToSortPapersOn = -1;
   // drawHome(currIncrement);
+  disableSearchUI(true); // disables the search UI to prevent another search while searching
   getFilteredYears(query, true);
 }
 
