@@ -24,17 +24,14 @@ from citation_galaxy.utils import list_in_string
 
 routes = web.RouteTableDef()
 
-
 def parseRangeString(str):
     return tuple(map(int, re.findall(r"\d+", str)))
-
 
 def get_db(request):
     return request.app['db']
 
 async def get_db_sess(request):
     return request.app['db'], await get_session(request)
-
 
 english_to_modifier = {
     'AND':      ' && ',

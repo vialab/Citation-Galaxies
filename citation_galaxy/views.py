@@ -6,8 +6,9 @@ from json import dumps, loads
 
 
 import string
+
 punctuation = string.punctuation + "''``\""
-removePunc = str.maketrans('', '', string.punctuation)
+removePunc = str.maketrans("", "", string.punctuation)
 
 # import aiohttp_jinja2
 from aiohttp import web
@@ -19,35 +20,63 @@ from citation_galaxy.database import NUMBER_COLS, QueryManager, api, schema
 from citation_galaxy.settings import config as conf
 from citation_galaxy.utils import list_in_string
 
+from citation_galaxy.wordRecommender import WordRecommender
+
+wordRecommender = WordRecommender()
+
 routes = web.RouteTableDef()
 
 
 def parseRangeString(str):
     return tuple(map(int, re.findall(r"\d+", str)))
 
-
 def get_db(request):
-    return request.app['db']
+    return request.app["db"]
 
 async def get_db_sess(request):
-    return request.app['db'], await get_session(request)
+    return request.app["db"], await get_session(request)
 
+@routes.post("/api/get-recommended-word")
+async def getWords(request):
+    top=5
+    res = []
+    post_data = await request.json()
+    for i in range(1, len(post_data)):
+        words = wordRecommender.getRecommendation([post_data[0], post_data[i]], 5)
+        for j in range(0, len(words)):
+            res.append(words[j])
+    #remove duplicates
+    for word in res:
+        if word[0] in post_data:
+            res.remove(word)
+    res.sort(reverse=True, key=lambda x:x[1])
+
+    #if greater than required suggestion amount delete the least similar
+    if len(res) > top:
+        print(len(res))
+        res= res[:-(len(res)-top)]
+        print(len(res))
+    
+    return web.json_response({"suggestions": res})
 
 @routes.post("/api/insert")
 async def insert_handler(request):
+    #print(request)
     db, sess = await get_db_sess(request)
 
     post_data = await request.json()
     # query_params = session.get('query_params',{}).copy()
     # query_params.update( post_data.get('values') )
     # query_params = post_data.get('values')
-
-    table_name = post_data.get('table_name','')
-    if table_name == 'signalbycategory':
-        table_name = 'signal'
+    table_name = post_data.get("table_name", "")
+    if table_name == "signalbycategory":
+        table_name = "signal"
+        if post_data["values"] != None:
+            post_data["values"]["signal"] = dumps(loads(post_data["values"]["signal"]))
+        print(table_name)
     # get api schema
-    api_schema = api.get('insert_' + table_name, None)
-
+    api_schema = api.get("insert_" + table_name, None)
+    print(api_schema["query"])
     if api_schema:
         # await request.read()
         # post_data = {}
@@ -55,16 +84,18 @@ async def insert_handler(request):
         # post_data = await request.json()
         # query_params = sess.get('query_params',{}).copy()
         # query_params.update( post_data.get('values') )
-        query_params = post_data.get('values',{}).copy()
-        if api_schema.get('require_cookie', False):
-            query_params['cookieid'] = sess['id']
+        query_params = post_data.get("values", {}).copy()
+        if api_schema.get("require_cookie", False):
+            query_params["cookieid"] = sess["id"]
 
-        queries = aiosql.from_str( api_schema['query'], 'asyncpg' )
-        query = getattr( queries, queries.available_queries[0] ) # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
+        queries = aiosql.from_str(api_schema["query"], "asyncpg")
+        query = getattr(
+            queries, queries.available_queries[0]
+        )  # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
 
-        await query(db, **query_params )
+        await query(db, **query_params)
 
-    return web.json_response( {} )
+    return web.json_response({})
     # return web.json_response( {
     #     'data': data,
     #     'aliases': {},
@@ -74,87 +105,92 @@ async def insert_handler(request):
     #     'parent': {}
     # })
 
-
 @routes.post("/api/delete")
 async def delete_handler(request):
     db, session = await get_db_sess(request)
 
     post_data = await request.json()
-    query_params = session.get('query_params',{}).copy()
+    query_params = session.get("query_params", {}).copy()
     # query_params.update( post_data.get('values') )
     # query_params = post_data.get('values')
-
-
-    table_name = post_data.get('table_name','')
-    if table_name == 'signalbycategory':
-        table_name = 'signal'
+    table_name = post_data.get("table_name", "")
+    if table_name == "signalbycategory":
+        table_name = "signal"
     # get api schema
-    api_schema = api.get('delete_' + table_name, None)
+    api_schema = api.get("delete_" + table_name, None)
 
     if api_schema:
-        rec_id = post_data.get('id',-1)
+        rec_id = post_data.get("id", -1)
         # await request.read()
         # post_data = {}
         # if request.has_body:
         # post_data = await request.json()
         # query_params = sess.get('query_params',{}).copy()
         # query_params.update( post_data.get('values') )
-        query_params = post_data.get('values',{}).copy()
-        query_params['id'] = rec_id
-        if api_schema.get('require_cookie', False):
-            query_params['cookieid'] = session['id']
+        query_params = post_data.get("values", {}).copy()
+        query_params["id"] = rec_id
+        if api_schema.get("require_cookie", False):
+            query_params["cookieid"] = session["id"]
 
-        queries = aiosql.from_str( api_schema['query'], 'asyncpg' )
-        query = getattr( queries, queries.available_queries[0] ) # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
+        queries = aiosql.from_str(api_schema["query"], "asyncpg")
+        query = getattr(
+            queries, queries.available_queries[0]
+        )  # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
 
-        await query(db, **query_params )
+        await query(db, **query_params)
 
-    return web.json_response( {} )
+    return web.json_response({})
 
 @routes.post("/api/update")
 async def update_handler(request):
     db, session = await get_db_sess(request)
 
     post_data = await request.json()
-    query_params = session.get('query_params',{}).copy()
-    query_params.update( post_data.get('values') )
+    query_params = session.get("query_params", {}).copy()
+    query_params.update(post_data.get("values"))
     # query_params = post_data.get('values')
 
-    table_name = post_data.get('table_name','')
-    if table_name == 'signalbycategory':
-        table_name = 'signal'
-    
-    api_schema = api.get('update_' + table_name, None)
+    table_name = post_data.get("table_name", "")
+    if table_name == "signalbycategory":
+        table_name = "signal"
+
+    api_schema = api.get("update_" + table_name, None)
 
     if api_schema:
-        query_params = post_data.get('values',{}).copy()
+        query_params = post_data.get("values", {}).copy()
         # query_params['signal'] = dumps(query_params['signal'])
-        rec_id = query_params.get('id',-1)
+        rec_id = query_params.get("id", -1)
 
-        query_params['id'] = int(rec_id)
+        query_params["id"] = int(rec_id)
         # query_params['signalcategoryid'] = int(query_params.get('signalcategoryid',-1))
-        if api_schema.get('require_cookie', False):
-            query_params['cookieid'] = session['id']
+        if api_schema.get("require_cookie", False):
+            query_params["cookieid"] = session["id"]
 
-        queries = aiosql.from_str( api_schema['query'], 'asyncpg' )
-        query = getattr( queries, queries.available_queries[0] ) # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
+        queries = aiosql.from_str(api_schema["query"], "asyncpg")
+        query = getattr(
+            queries, queries.available_queries[0]
+        )  # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
 
-        await query(db, **query_params )
-         
+        await query(db, **query_params)
+
     data = []
 
-    return web.json_response( {} )
+    return web.json_response({})
 
 
 import aiosql
-@routes.post('/api/{table_name}')
+
+
+@routes.post("/api/{table_name}")
 async def api_handler(request):
     db, sess = await get_db_sess(request)
 
-    table_name = request.match_info['table_name']
+    table_name = request.match_info["table_name"]
+    print("table_name:" + table_name)
+
     # get api schema
     api_schema = api.get(table_name, None)
-
+    print(api_schema)
     if api_schema:
         # await request.read()
         post_data = {}
@@ -162,48 +198,49 @@ async def api_handler(request):
         post_data = await request.json()
         # query_params = sess.get('query_params',{}).copy()
         # query_params.update( post_data.get('values') )
-        query_params = post_data.get('values',{}).copy()
-        if api_schema.get('require_cookie', False):
-            query_params['cookieid'] = sess['id']
+        query_params = post_data.get("values", {}).copy()
+        print(query_params)
+        if api_schema.get("require_cookie", False):
+            query_params["cookieid"] = sess["id"]
 
-        queries = aiosql.from_str( api_schema['query'], 'asyncpg' )
-        query = getattr( queries, queries.available_queries[0] ) # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
+        queries = aiosql.from_str(api_schema["query"], "asyncpg")
+        query = getattr(
+            queries, queries.available_queries[0]
+        )  # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
 
-        results = await query(db, **query_params )
-        rows = [ dict(record) for record in results ]
+        results = await query(db, **query_params)
+        rows = [dict(record) for record in results]
 
-        parent_col = api_schema.get('parent',None)
-        parent_id = query_params.get(parent_col,None)
+        parent_col = api_schema.get("parent", None)
+        parent_id = query_params.get(parent_col, None)
         parent = {}
         if parent_col and parent_id:
-            parent = {'id': parent_id, 'col': parent_col}
+            parent = {"id": parent_id, "col": parent_col}
 
-        return web.json_response({
-            'data':     rows,
-            'aliases':  api_schema.get('aliases', {}),
-            'links':    api_schema.get('links', {}),
-            'actions':  api_schema.get('actions', {}),
-            'name':     table_name,
-            'schema':   schema[api[table_name]['origin']],
-            'parent':   parent
-        })
+        return web.json_response(
+            {
+                "data": rows,
+                "aliases": api_schema.get("aliases", {}),
+                "links": api_schema.get("links", {}),
+                "actions": api_schema.get("actions", {}),
+                "name": table_name,
+                "schema": schema[api[table_name]["origin"]],
+                "parent": parent,
+            }
+        )
     else:
-        return web.json_response( {} )
+        return web.json_response({})
 
 
-@routes.post('/gateway/process/signals')
+@routes.post("/gateway/process/signals")
 async def process_signal(request):
     db, session = await get_db_sess(request)
 
     query_params = await request.json()
 
-    data = {
-        'front_data': {},
-        'signal_scores': {}
-    }
+    data = {"front_data": {}, "signal_scores": {}}
 
     return web.json_response(data)
-
 
 
 @routes.post("/gateway/papers")
@@ -216,24 +253,23 @@ async def papers(request):
     # range_list = query_params.get('selections', None)
     range_list = list(map(parseRangeString, query_params.get("selections", None)))
 
-
     last_rank = int(query_params.get("lastRank", 0))
     n_rank = query_params.get("nrank", 0)
     signals = query_params.get("signals", {})
     journal_id = query_params.get("journalid", "")
 
-    sess_params = session.get('query_params',{})
+    sess_params = session.get("query_params", {})
     search_input = sess_params.get("query", "")
     words_left = sess_params.get("rangeLeft", 0)
     words_right = query_params.get("rangeRight", 0)
-    
+
     search_text = ""
     subsearch_text = ""
     search_params = []
     if len(search_input) > 0:
         # search_text = ' where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
         search_text += " where text_search @@ setweight( websearch_to_tsquery('english', $1), 'BD') "  # .format( ' & '.join( ( word for word in search_input ) ) )
-        search_params.append(search_input) # TODO: use the ts_rank functions in postgres to rank?
+        search_params.append(search_input)  # TODO: use the ts_rank functions in postgres to rank?
 
         if words_left >= 0 or words_right >= 0:
             subsearch_text = "where text_search @@ setweight( to_tsquery('english', $2), 'BC') "
@@ -251,7 +287,6 @@ async def papers(request):
                     subsearch_params.append(f"љљ <{dist}> {word}")
 
             search_params.append(" | ".join(subsearch_params))
-
 
     querymanager = QueryManager(db, increment, search_text, subsearch_text, search_params)
 
@@ -296,8 +331,8 @@ async def paper(request):
     paper_id = int(request.rel_url.query["id"])
 
     # session = await get_session(request)
-    query_params = session.get('query_params',{})
-    query_text = query_params.get('query',"")
+    query_params = session.get("query_params", {})
+    query_text = query_params.get("query", "")
 
     querymanager = QueryManager(db)
     results = (await querymanager.do_paper_query(paper_id))[0]
@@ -323,7 +358,7 @@ async def paper(request):
                 {"citationtext": ref,}
             )
 
-        keep_sections.append( section )
+        keep_sections.append(section)
 
     data["paragraphs"] = keep_sections
 
@@ -344,8 +379,8 @@ async def query(request):
 
     # Session
     # session = await get_session(request)
-    session['query_params'] = query_params
-    session['query_params']['query'] = search_input
+    session["query_params"] = query_params
+    session["query_params"]["query"] = search_input
     # last_visit = session['last_visit'] if 'last_visit' in session else None
     # session['last_visit'] = time.time()
     # text = 'Last visited: {}'.format(last_visit)
@@ -391,10 +426,7 @@ async def query(request):
 
     querymanager = QueryManager(db, num_bins, search_text, subsearch_text, search_params)
 
-    results = await asyncio.gather(
-        querymanager.do_summing_query(),
-        querymanager.do_counting_query()
-    )
+    results = await asyncio.gather(querymanager.do_summing_query(), querymanager.do_counting_query())
 
     agg = {}
     for row in results[0]:
@@ -415,23 +447,22 @@ async def query(request):
     return web.json_response({"agg": agg})
 
 
-
 async def years(request):
     """ Returns a list of dictionaries where the dicts have an entry named "articleyear" and an integer associated with it
     """
     sess = await get_session(request)
-    if not sess.get('id',False):
+    if not sess.get("id", False):
         key = fernet.Fernet.generate_key()
-        sess.setdefault('id',key.decode('utf-8'))
+        sess.setdefault("id", key.decode("utf-8"))
 
     return web.json_response(
-        [{"articleyear": year} for year in range(conf["year_range"]["max"]-15, conf["year_range"]["max"] + 1)]
+        [{"articleyear": year} for year in range(conf["year_range"]["max"] - 15, conf["year_range"]["max"] + 1)]
         # [{"articleyear": year} for year in range(conf["year_range"]["min"], conf["year_range"]["max"] + 1)]
     )
 
 
 # @aiohttp_jinja2.template('index.html')
-@routes.get('/')
+@routes.get("/")
 async def index(request):
     return web.FileResponse("./citation_galaxy/public/index.html")
 

@@ -13,7 +13,6 @@
     "signal": {
         "id": "integer",
         "signalcategoryid": "integer",
-        "name":"character varying",
         "signal": "character varying"
-    }
+    } 
 }

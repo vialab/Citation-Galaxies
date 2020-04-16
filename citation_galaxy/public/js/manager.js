@@ -11,11 +11,7 @@ $(document).ready(function () {
   $(document).mouseup(function (e) {
     // not editing, so we don't need to do anything
     if ($(".edit-row.editing").length == 0) return;
-    if (
-      !$(e.target)
-        .parents(".edit-row")
-        .hasClass("editing")
-    ) {
+    if (!$(e.target).parents(".edit-row").hasClass("editing")) {
       deselectCrudRows(false);
     }
   });
@@ -28,7 +24,7 @@ function loadData(url, callback, params = {}, _async = true) {
     type: "POST",
     url: currentURL + "api/" + url,
     data: JSON.stringify({
-      values: params
+      values: params,
     }),
     success: function (results) {
       // console.log(results);
@@ -42,7 +38,7 @@ function loadData(url, callback, params = {}, _async = true) {
         results["parent"]
       );
     },
-    async: _async
+    async: _async,
   });
 }
 
@@ -80,7 +76,7 @@ function loadTable(
         ) {
           let wait_queue = [];
           // create a list of data loading calls to queue up
-          Object.keys(aliases).forEach(key => {
+          Object.keys(aliases).forEach((key) => {
             if (aliases[key].query !== undefined) {
               let table_name = aliases[key].query;
               let f = () =>
@@ -88,9 +84,9 @@ function loadTable(
                   type: "POST",
                   url: currentURL + "api/" + table_name,
                   data: JSON.stringify({ values: {} }),
-                  success: results => {
+                  success: (results) => {
                     external_data[table_name] = results;
-                  }
+                  },
                 });
               // push ajax function into our queue
               wait_queue.push(f());
@@ -146,7 +142,7 @@ function loadTable(
           callback: callback,
           timestamp: new Date().getTime(),
           title: getTableTitle(table_name),
-          root: last_load
+          root: last_load,
         };
       } else {
         last_load = last_load.root;
@@ -173,7 +169,7 @@ function populateTable(
 ) {
   // Create the header row
   let tableHeader = $("<thead></thead>").appendTo(table);
-  tableHeader.addClass('table-active')
+  tableHeader.addClass("table-active");
   let tableBody = $("<tbody></tbody>").appendTo(table);
   let headerRow = $("<tr></tr>").appendTo(tableHeader);
 
@@ -193,20 +189,17 @@ function populateTable(
 
         // Hack to use "name only" aliases just for the header before deleting them so it doesn't break anything else
         if (aliases[key].nameonly) {
-          title = aliases[key].name
+          title = aliases[key].name;
           delete aliases[key];
         }
       }
-
-
-
-      let additional = 'class="'
-      if (key === 'color') {
-        additional += "w-7"
+      let additional = 'class="';
+      if (key === "color") {
+        additional += "w-7";
       } else {
-        additional += "w-auto"
+        additional += "w-auto";
       }
-      additional += ' text-center f-tbl-head"'
+      additional += ' text-center f-tbl-head"';
       let element = $(
         `<th id='${key}' ${additional} data-type='${schema[key]}' onclick='sortRows(this);'>${title}</th>`
       );
@@ -219,7 +212,7 @@ function populateTable(
   }
   $("<th class='w-15 text-center f-tbl-head'>Actions</th>").appendTo(headerRow);
 
-  Object.keys(aliases).forEach(key => {
+  Object.keys(aliases).forEach((key) => {
     let $sel = getAliasSelect(
       key,
       aliases[key],
@@ -263,8 +256,8 @@ function populateTable(
   bindRowFunctions();
   let sortby = $($(".edit-cell")[0]).attr("id");
   sortTableByColumn($("#ruleTable"), sortby, "asc");
+  //createMyTable();
 }
-
 
 function getAliasSelect(target, alias, data) {
   let $sel = $("<select class='" + target + "'></select>");
@@ -272,10 +265,10 @@ function getAliasSelect(target, alias, data) {
     $sel.append(
       " \
       <option value='" +
-      o[alias.value] +
-      "'>" +
-      o[alias.col] +
-      "</option>"
+        o[alias.value] +
+        "'>" +
+        o[alias.col] +
+        "</option>"
     );
   }
   return $sel;
@@ -285,7 +278,7 @@ function bindRowFunctions() {
   $("input[type='color']").change(function (event) {
     $(this).attr("value", $(this).val());
     $(this).parent().css("background-color", $(this).val());
-    $(this).parent().find('label').html($(this).val())
+    $(this).parent().find("label").html($(this).val());
   });
 
   $(".edit-cell").click(function (event) {
@@ -312,8 +305,29 @@ function cancelAddRow(elem) {
 
 function showAddRow() {
   let $row = $("#add-new-row");
-  if ($row.length >= 1 && $row.is(":visible")) {
+  const rowLength = $(".add-row").length;
+  if (rowLength >= 1 && $row.is(":visible")) {
     $row = $row.clone();
+    if ($($row).find(".aliased").length > 0) {
+      const rangeBefore = "rangeBefore_sig_" + rowLength;
+      const rangeAfter = "rangeAfter_sig_" + rowLength;
+      const citRange = "citationRange_sig_" + rowLength;
+      $($row).find("#rangeBefore_sig_0").attr("id", rangeBefore);
+      $($row).find("#rangeAfter_sig_0").attr("id", rangeAfter);
+      $($row).find("#citationRange_sig_0").attr("id", citRange);
+      $($row)
+        .find("#" + rangeBefore)
+        .attr(
+          "oninput",
+          `updateTextInput(document.getElementById('${citRange}'), document.getElementById('${rangeBefore}') , document.getElementById('${rangeAfter}'), '', 1);`
+        );
+      $($row)
+        .find("#" + rangeAfter)
+        .attr(
+          "oninput",
+          `updateTextInput(document.getElementById('${citRange}'), document.getElementById('${rangeBefore}') , document.getElementById('${rangeAfter}'), '', 1);`
+        );
+    }
     $row.insertBefore($("#start-add-row"));
   }
   $row.show();
@@ -322,13 +336,16 @@ function showAddRow() {
   setTimeout(function () {
     $row.removeClass("showing");
   }, 500);
-  $row.find('#catname').click()
-  $row.find('#catname').focus()
+  $row.find("#catname").click();
+  $row.find("#catname").focus();
 }
 
 // create a single row marked up for our edit table
 function drawTableRow(headers, signal, signalID, aliases) {
   let row = $("<tr id='" + signalID + "' class='edit-row'></tr>");
+  if (typeof signal.signal === "string") {
+    signal.signal = JSON.parse(signal.signal);
+  }
   if (signalID == "add-new-row") row.addClass("add-row");
   // For each entry in the json
   for (let i = 1; i < headers.length; i++) {
@@ -347,55 +364,107 @@ function drawTableRow(headers, signal, signalID, aliases) {
       html += "'>" + loaded_parent.id;
     } else if (headers[i] == "color") {
       let c = signal[headers[i]] ? signal[headers[i]] : "#FFFFFF";
-      html += "' style='background-color:" + c
-        + ";box-shadow: inset 0 0 0 5px " + c
-        + ";'><input type='color' value='" + c + "'/><label contenteditable='false' class='noclick noselect'>" + c + "</label>";
+      html +=
+        "' style='background-color:" +
+        c +
+        ";box-shadow: inset 0 0 0 5px " +
+        c +
+        ";'><input type='color' value='" +
+        c +
+        "'/><label contenteditable='false' class='noclick noselect'>" +
+        c +
+        "</label>";
     } else if (headers[i] == "signal") {
       if (signal[headers[i]]) {
-        let data = JSON.parse(signal[headers[i]])
-        c = 0
-        html += ` aliased signal-cell'>`
+        let existing = $(".edit-row").length;
+        let data = signal[headers[i]];
+        c = 0;
+        html += ` aliased signal-cell'>`;
         for (datum of data) {
           c += 1;
           if (c > 1) {
             html += `<div class="d-flex flex-row justify-content-center m-2">
             <select id="signal_mod_${c}" >
-              <option ${(datum.modifier == "AND") ? 'selected' : ''} value="AND">AND</option>
-              <option ${(datum.modifier == "OR") ? 'selected' : ''} value="OR">OR</option>
-              <option ${(datum.modifier == "AND NOT") ? 'selected' : ''} value="AND NOT">AND NOT</option>
-              <option ${(datum.modifier == "OR NOT") ? 'selected' : ''} value="OR NOT">OR NOT</option>
+              <option ${
+                datum.modifier == "AND" ? "selected" : ""
+              } value="AND">AND</option>
+              <option ${
+                datum.modifier == "AND NOT" ? "selected" : ""
+              } value="AND NOT">AND NOT</option>
             </select>
-            </div>`
+            </div>`;
           }
           html += `
           <div class="d-flex flex-row">
             <div class="p-1" style="width:40%" >
               <ul class="list-inline">
                 <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
-                  <input type="range" innertext="0" min="0" max="10" value="${datum.range[0]}" step="1" class="form-control-range slider" id="rangeBefore_sig_${c}"
-                    oninput="updateTextInput(document.getElementById('citationRange_sig_${c}'), document.getElementById('rangeBefore_sig_${c}').value , document.getElementById('rangeAfter_sig_${c}').value, '', 1);">
+                  <input type="range" innertext="0" min="0" max="10" value="${
+                    datum.range[0]
+                  }" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
+                    oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}'), document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
                 </li>
                 <li class="list-inline-item align-middle m-0 p-0">
-                  <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${c}">[
-                    ${datum.range[0]}
+                  <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
+                    ${10 - datum.range[0]}
                     <- Citation -> ${datum.range[1]} ]</label>
                 </li>
                 <li class="list-inline-item m-0 p-0" style="width:23%;">
-                  <input type="range" innertext="0" min="0" max="10" value="${datum.range[1]}" step="1" class="form-control-range slider" id="rangeAfter_sig_${c}"
-                    oninput="updateTextInput(document.getElementById('citationRange_sig_${c}'), document.getElementById('rangeBefore_sig_${c}').value , document.getElementById('rangeAfter_sig_${c}').value, '', 1);">
+                  <input type="range" innertext="0" min="0" max="10" value="${
+                    datum.range[1]
+                  }" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
+                    oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}'), document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
                 </li>
               </ul>
             </div>
             <div class="p-1 flex-fill">
               <div class=\"input-group\">
-              <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${c}\" placeholder=\"Query\" value="${datum.query.replace(/"/g, '&quot;')}">
+              <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${existing}_${c}\" placeholder=\"Signal\" value="${datum.query.replace(
+            /"/g,
+            "&quot;"
+          )}">
               </div>
             </div>
-          </div>`
+          </div>`;
         }
         html += `<div id="add_signal_${signal.id}" class="d-flex flex-row justify-content-center" onclick="addToSignal('#add_signal_${signal.id}')">
                   <h1 class="flex-fill signal-add-button">+</h1>
-                </div>`
+                </div>`;
+      } else {
+        let existing = $(".edit-row").length;
+        html += ` aliased signal-cell'>`;
+        //default values based on the search
+        const beforeRangeVal = Number($("#rangeBefore").val());
+        const afterRangeVal = Number($("#rangeAfter").val());
+        const query = $("#searchBox").val();
+        html += `
+          <div class="d-flex flex-row">
+            <div class="p-1" style="width:40%" >
+              <ul class="list-inline">
+                <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
+                  <input type="range" innertext="0" min="0" max="10" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}"
+                    oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}'), document.getElementById('rangeBefore_sig_${existing}'), document.getElementById('rangeAfter_sig_${existing}'), '', 1);">
+                </li>
+                <li class="list-inline-item align-middle m-0 p-0">
+                  <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}">[
+                    ${$("#rangeBefore").attr("max") - beforeRangeVal}
+                    <- Citation -> ${afterRangeVal} ]</label>
+                </li>
+                <li class="list-inline-item m-0 p-0" style="width:23%;">
+                  <input type="range" innertext="0" min="0" max="10" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}"
+                    oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}'), document.getElementById('rangeBefore_sig_${existing}') , document.getElementById('rangeAfter_sig_${existing}'), '', 1);">
+                </li>
+              </ul>
+            </div>
+            <div class="p-1 flex-fill">
+              <div class=\"input-group\">
+              <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${existing}\" placeholder=\"Signal\" value=${query}>
+              </div>
+            </div>
+          </div>`;
+        html += `<div id="add_signal_${existing}" class="d-flex flex-row justify-content-center" onclick="addToSignal('#add_signal_${existing}')">
+          <h1 class="flex-fill signal-add-button">+</h1>
+        </div>`;
       }
     } else if (signal[headers[i]]) {
       html += "'>" + signal[headers[i]];
@@ -410,41 +479,83 @@ function drawTableRow(headers, signal, signalID, aliases) {
 
 function addToSignal(id) {
   let but = $(event.currentTarget);
+  let existing = $(".edit-row").length;
+  const beforeRangeVal = Number($("#rangeBefore").val());
+  const afterRangeVal = Number($("#rangeAfter").val());
   let c = but.siblings().length;
   html = `
   <div class="d-flex flex-row justify-content-center m-2">
-    <select id="signal_mod_${c}" >
+    <select id="signal_mod_${existing}_${c}" >
       <option selected value="AND">AND</option>
-      <option value="OR">OR</option>
       <option value="AND NOT">AND NOT</option>
-      <option value="OR NOT">OR NOT</option>
     </select>
     </div>
   <div class="d-flex flex-row">
     <div class="p-1" style="width:40%" >
       <ul class="list-inline">
         <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
-          <input type="range" innertext="0" min="0" max="10" value="0" step="1" class="form-control-range slider" id="rangeBefore_sig_${c}"
-            oninput="updateTextInput(document.getElementById('citationRange_sig_${c}'), document.getElementById('rangeBefore_sig_${c}').value , document.getElementById('rangeAfter_sig_${c}').value, '', 1);">
+          <input type="range" innertext="0" min="0" max="10" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
+            oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
         </li>
         <li class="list-inline-item align-middle m-0 p-0">
-          <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${c}">[
-            0
-            <- Citation -> 0 ]</label>
+          <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
+            ${$("#rangeBefore").attr("max") - beforeRangeVal}
+            <- Citation -> ${afterRangeVal} ]</label>
         </li>
         <li class="list-inline-item m-0 p-0" style="width:23%;">
-          <input type="range" innertext="0" min="0" max="10" value="0" step="1" class="form-control-range slider" id="rangeAfter_sig_${c}"
-            oninput="updateTextInput(document.getElementById('citationRange_sig_${c}'), document.getElementById('rangeBefore_sig_${c}').value , document.getElementById('rangeAfter_sig_${c}').value, '', 1);">
+          <input type="range" innertext="0" min="0" max="10" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
+            oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
         </li>
       </ul>
     </div>
     <div class="p-1 flex-fill">
       <div class=\"input-group\">
-      <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${c}\" placeholder=\"Query\">
+      <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${existing}_${c}\" placeholder=\"Signal\">
       </div>
     </div>
-  </div>`
+  </div>`;
+  $(html).insertBefore(but);
+}
 
+function addToSignalClick(target, query, modifier = "AND") {
+  let but = $(target);
+  let existing = $(".edit-row").length;
+  const beforeRangeVal = Number($("#rangeBefore").val());
+  const afterRangeVal = Number($("#rangeAfter").val());
+  let c = but.siblings().length;
+  html = `
+  <div class="d-flex flex-row justify-content-center m-2">
+    <select id="signal_mod_${existing}_${c}" >
+      <option ${modifier == "AND" ? "selected" : ""} value="AND">AND</option>
+      <option ${
+        modifier == "AND NOT" ? "selected" : ""
+      } value="AND NOT">AND NOT</option>
+    </select>
+    </div>
+  <div class="d-flex flex-row">
+    <div class="p-1" style="width:40%" >
+      <ul class="list-inline">
+        <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
+          <input type="range" innertext="0" min="0" max="10" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
+            oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
+        </li>
+        <li class="list-inline-item align-middle m-0 p-0">
+          <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
+            ${$("#rangeBefore").attr("max") - beforeRangeVal}
+            <- Citation -> ${afterRangeVal} ]</label>
+        </li>
+        <li class="list-inline-item m-0 p-0" style="width:23%;">
+          <input type="range" innertext="0" min="0" max="10" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
+            oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
+        </li>
+      </ul>
+    </div>
+    <div class="p-1 flex-fill">
+      <div class=\"input-group\">
+      <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${existing}_${c}\" placeholder=\"Signal\" value="${query}">
+      </div>
+    </div>
+  </div>`;
   $(html).insertBefore(but);
 }
 
@@ -456,10 +567,10 @@ function drawActionOptions(row, headers, signal, links, actions) {
   // Add the remove button first
 
   if (typeof links != "undefined") {
-    Object.keys(links).forEach(key => {
+    Object.keys(links).forEach((key) => {
       let link = links[key];
       let params = {};
-      Object.keys(link.params).forEach(id => {
+      Object.keys(link.params).forEach((id) => {
         params[link.params[id]] = signal[id];
       });
       let html =
@@ -475,7 +586,7 @@ function drawActionOptions(row, headers, signal, links, actions) {
   }
   // create action buttons that perform some sort of "action"
   if (actions.length > 0) {
-    Object.keys(actions).forEach(key => {
+    Object.keys(actions).forEach((key) => {
       let action = actions[key];
       let params = {};
       let html =
@@ -511,7 +622,7 @@ function deselectCrudRows(update) {
       for (let i = 0; i < row_elements.length; i++) {
         let row_element = $(row_elements[i]);
 
-        if (row_element.hasClass('signal-cell')) {
+        if (row_element.hasClass("signal-cell")) {
           row_element.removeAttr("contenteditable");
           continue;
         }
@@ -527,8 +638,14 @@ function deselectCrudRows(update) {
               row_element.text("<empty>");
             } else {
               if (row_element.attr("id") == "color") {
-                row_element.css("background-color", $("label", row_element).html());
-                $("input[type=color]", row_element).attr("value", $("label", row_element).html());
+                row_element.css(
+                  "background-color",
+                  $("label", row_element).html()
+                );
+                $("input[type=color]", row_element).attr(
+                  "value",
+                  $("label", row_element).html()
+                );
               } else {
                 row_element.text(row_element_val);
               }
@@ -575,11 +692,10 @@ function editCrudRow(event) {
         );
         row_element.addClass("aliased");
       } else {
-
-        if (!row_element.hasClass('signal-cell')) {
+        if (!row_element.hasClass("signal-cell")) {
           row_element.attr("contenteditable", "true");
         }
-        if (row_element_id !== 'color') {
+        if (row_element_id !== "color") {
           // Allow the cell to be edited
 
           // Disable enter presses in editable cells
@@ -590,14 +706,18 @@ function editCrudRow(event) {
           });
         } else {
           // row_element.attr('contenteditable', 'false');
-          row_element.focus(event => {
+          row_element.focus((event) => {
             // row_element.removeAttr('contenteditable')
-            console.log("focused", $(event.target.parent), event.target, event.target.parent);
+            console.log(
+              "focused",
+              $(event.target.parent),
+              event.target,
+              event.target.parent
+            );
 
-            $(event.target).find('input[type=color]').click()
-          })
+            $(event.target).find("input[type=color]").click();
+          });
         }
-
       }
     }
     $("td.empty:not(.aliased)", selected_row).html("");
@@ -653,7 +773,7 @@ function deleteRow(id) {
     url: currentURL + "api/delete",
     data: JSON.stringify({
       table_name: loaded_table,
-      id: id
+      id: id,
     }),
     success: function (results) {
       reloadTable();
@@ -661,7 +781,7 @@ function deleteRow(id) {
     },
     error: function (err) {
       console.log(err);
-    }
+    },
   });
 }
 
@@ -676,9 +796,34 @@ function insertRow(elem) {
   // iterate through each cell
   $(".edit-cell", $row).each(function (index) {
     let field_name = $(this).attr("id");
-    let val = ""
-    if ($(this).hasClass('aliased')) {
-      val = global_aliases[field_name].sel.val()
+    let val = "";
+    if ($(this).hasClass("aliased")) {
+      const res = [];
+      const numElements = $(this).find("[id*='signal_searchBox']").length;
+      //get range
+      let beforeRange = $(this).find("[id*='rangeBefore']")[0];
+      let beforeRangeVal = beforeRange.value;
+      let afterRange = $(this).find("[id*='rangeAfter']")[0];
+      let afterRangeVal = Number(afterRange.value);
+      //get query
+      let query = $(this).find("[id*='signal_searchBox_']")[0].value;
+      res.push({ range: [beforeRangeVal, afterRangeVal], query: query });
+      for (let i = 1; i < numElements; ++i) {
+        beforeRange = $(this).find("[id*='rangeBefore']")[i];
+        beforeRangeVal = beforeRange.value;
+        afterRange = $(this).find("[id*='rangeAfter']")[i];
+        afterRangeVal = Number(afterRange.value);
+        //get modifier
+        const modifier = $(this).find("[id*='signal_mod_']")[i - 1].value;
+        //get query
+        query = $(this).find("[id*='signal_searchBox_']")[i].value;
+        res.push({
+          range: [beforeRangeVal, afterRangeVal],
+          query: query,
+          modifier: modifier,
+        });
+      }
+      val = JSON.stringify(res);
     } else {
       val = $(this).html();
     }
@@ -688,6 +833,7 @@ function insertRow(elem) {
     // if it's not valid, throw an error and stop trying to update
     if (!valid_update) {
       toast(
+        execute,
         "ERROR",
         'Invalid value "' + val + '" for ' + field_name + " of type " + type
       );
@@ -710,9 +856,14 @@ function insertRow(elem) {
   postInsert(table, values, function (results) {
     reloadTable();
     toast("Success!", "Row was inserted to the database.");
+    const words = JSON.parse(values.signal).map((x) => x.query);
+    postSuggestions(words, function (res) {
+      let suggestions = "";
+      res.suggestions.map((x) => (suggestions += x[0] + "\n"));
+      toast("Suggestions", suggestions);
+    });
   });
 }
-
 // update a table using a datastructure that should remain consistent
 // JSON object that must include an id
 function updateRow(elem) {
@@ -726,7 +877,10 @@ function updateRow(elem) {
     let val = $(this).html();
     // if we are aliased, we got to get the value from a select option
     if ($("th#" + field_name).hasClass("aliased")) {
-      [valid_update, val] = validateDataType($("select." + field_name, this).val(), type);
+      [valid_update, val] = validateDataType(
+        $("select." + field_name, this).val(),
+        type
+      );
     } else {
       // validate that the data type is correct for this cell
       let type = $("th#" + field_name).data("type");
@@ -750,7 +904,7 @@ function updateRow(elem) {
 
     if (field_name == "signal") {
       val = [];
-      let inps = $('select,input', this);
+      let inps = $("select,input", this);
 
       for (let i = 0; i < inps.length; i += 4) {
         let range_Left = parseInt($(inps[i]).val());
@@ -759,20 +913,18 @@ function updateRow(elem) {
 
         let record = {
           range: [range_Left, range_Right],
-          query: query
-        }
+          query: query,
+        };
         if (i >= 4) {
           let modifier = $(inps[i - 1]).val();
 
-          record['modifier'] = modifier;
+          record["modifier"] = modifier;
         }
 
         val.push(record);
       }
       values[field_name] = JSON.stringify(val);
     }
-
-
   });
 
   if (!valid_update) return;
@@ -781,9 +933,44 @@ function updateRow(elem) {
   postUpdate(loaded_table, values, function (results) {
     reloadTable();
     toast("Success!", "Row was updated in the database.");
+    const words = JSON.parse(values.signal).map((x) =>
+      x.query.replace(" ", "_")
+    );
+    postSuggestions(words, function (res) {
+      let html = "";
+      const div = $($row).find("[id*='add_signal_']")[0].id;
+      for (let i = 0; i < res.suggestions.length; ++i) {
+        const query = res.suggestions[i][0].replace("_", " ");
+        html += `
+        <div class="custom-control custom-checkbox my-1 mr-sm-2">
+        <input type="checkbox" class="custom-control-input" id="customControlInline-${i}" onclick="suggestionClick(this, '${div}', '${query}');">
+        <label class="custom-control-label" for="customControlInline-${i}">${query}</label>
+      </div>`;
+      }
+      toast("Suggestions", html);
+    });
   });
 }
 
+function suggestionClick(cb, id, query) {
+  console.log("clicked");
+  if (cb.checked) {
+    addToSignalClick("#" + id, query);
+  } else {
+  }
+}
+//this removes only for the toast notification dont use else where
+function removeSignal(id, query) {
+  let siblings = $(id).siblings();
+  for (let i = 0; i < siblings.length; ++i) {
+    const searchBox = $(siblings[i]).find("[id*='signal_searchBox_']");
+    if (searchBox.value == query) {
+      siblings[i - 1].remove();
+      siblings[i].remove();
+      return;
+    }
+  }
+}
 // hook for sending row updates
 function postUpdate(table_name, values, callback) {
   $.ajax({
@@ -791,11 +978,11 @@ function postUpdate(table_name, values, callback) {
     url: currentURL + "api/update",
     data: JSON.stringify({
       table_name: table_name,
-      values: values
+      values: values,
     }),
     success: function (results) {
       if (typeof callback != "undefined") callback(results);
-    }
+    },
   });
 }
 
@@ -806,11 +993,27 @@ function postInsert(table_name, values, callback) {
     url: currentURL + "api/insert",
     data: JSON.stringify({
       table_name: table_name,
-      values: values
+      values: values,
     }),
     success: function (results) {
       if (typeof callback != "undefined") callback(results);
-    }
+    },
+  });
+}
+/**
+ *
+ * @param {Array.<string>} words
+ * @param {function({suggestions:Array.<string>})} callback
+ */
+function postSuggestions(words, callback) {
+  $.ajax({
+    type: "POST",
+    url: currentURL + "api/get-recommended-word",
+    data: JSON.stringify(words),
+    success: function (results) {
+      console.log(results);
+      callback(results);
+    },
   });
 }
 
@@ -897,7 +1100,7 @@ function getTableTitle(tableName) {
       return "Categories";
       break;
     case "signalbycategory":
-      return sentiment_categories[loaded_parent.id].name + " Signals";
+      return sentiment_categories[loaded_parent.id].name + " Rules";
       break;
     case "filter":
       return 'Filters for "' + sentiment_signals[loaded_parent.id].signal + '"';
@@ -917,9 +1120,15 @@ function getTableTitle(tableName) {
 
 function rgbToHex(rgb) {
   rgb = rgb.replace("rgb(", "").replace(")", "");
-  let colors = rgb.split(",")
-    , r = colors[0]
-    , g = colors[1]
-    , b = colors[2];
+  let colors = rgb.split(","),
+    r = colors[0],
+    g = colors[1],
+    b = colors[2];
   return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+function createMyTable() {
+  let table = new Table(3, $("#container"), "myTable");
+  table.setHeaderNames(["1st column", "2nd column", "3rd column"]);
+  table.appendTableToDom();
 }

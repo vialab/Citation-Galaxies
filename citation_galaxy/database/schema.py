@@ -1,4 +1,5 @@
 from citation_galaxy.settings import CODE_DIR
+
 api = {
     "signal": {
         "query": "-- name: signal\nselect id, signalcategoryid, name, signal from signal \
@@ -25,11 +26,15 @@ api = {
         "origin": "signal",
     },
     "signalbycategory": {
-        "query": "-- name: signal_by_category\nselect id, signalcategoryid, name, signal from signal \
+        "query": "-- name: signal_by_category\nselect id, signalcategoryid, signal from signal \
       where signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
-    #     "query": "-- name: signal_by_category\nselect id, signal, parentid from signal \
-    #   where enabled and signaltypeid=1 and signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
+        #     "query": "-- name: signal_by_category\nselect id, signal, parentid from signal \
+        #   where enabled and signaltypeid=1 and signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
         "require_cookie": True,
+        "aliases": {
+            "signal": {"name": "Rule", "nameonly": True},
+            "signalcategoryid": {"name": "Rule Set ID", "nameonly": True},
+        },
         # "aliases": {
         #     "signalcategoryid": {"query": "signalcategory", "value": "id", "col": "catname", "name": "category"},
         #     # "signaltypeid": {"query": "signaltype", "value": "id", "col": "name", "name": "type"},
@@ -126,8 +131,8 @@ api = {
         "query": "-- name: signal_category\nselect id, catname, color from signalcategory where cookieid=:cookieid order by id;",
         "require_cookie": True,
         "aliases": {
-            "catname":{"name": "Category Name", "nameonly": True},
-            "color":{"name": "Color", "nameonly": True},
+            "catname": {"name": "Rule Set Name", "nameonly": True},
+            "color": {"name": "Color", "nameonly": True},
             # "catname":{"name": "Category Name", "nameonly": True}
             # "catname": {"query": "signalcategory", "value": "catname", "col": "catname", "name": "Category Name"},
         },
@@ -141,12 +146,12 @@ api = {
         "origin": "signaltype",
     },
     "insert_signal": {
-        "query": "-- name: insert_signal<!\ninsert into signal(signalcategoryid, name, cookieid, signal) \
-      values( :signalcategoryid, :name, :cookieid, :signal )",
+        "query": "-- name: insert_signal<!\ninsert into signal(signalcategoryid, cookieid, signal) \
+      values( :signalcategoryid, :cookieid, :signal )",
         "require_cookie": True,
     },
     "update_signal": {
-        "query": "-- name: update_signal!\nupdate signal set name=case when :name::varchar is not null then :name else name end, signal=case when :signal::json is not null then :signal else signal end, \
+        "query": "-- name: update_signal!\nupdate signal set signal=case when :signal::json is not null then :signal else signal end, \
       signalcategoryid=case when :signalcategoryid::int is not null then :signalcategoryid else signalcategoryid end, cookieid= case when :cookieid::varchar is not null then :cookieid else cookieid end where id=:id and cookieid=:cookieid",
         "require_cookie": True,
         "aliases": {},
@@ -176,5 +181,6 @@ api = {
 }
 
 import json
-with (CODE_DIR / 'database/dbschema.json').open('r') as fp:
+
+with (CODE_DIR / "database/dbschema.json").open("r") as fp:
     schema = json.load(fp)

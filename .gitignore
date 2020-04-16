@@ -23,16 +23,18 @@ citation_percent.csv
 articles.csv
 citations.pkl
 citation_context.pkl
+*.out
 *.pkl
 *.pyc
 *.gzip
-
+dump.txt
 out_docker
 *.prof
 *.bak
-
+*.model
 **/errors
 **/tmp
+google-word2vec.bin
 misc/postgresql.conf.sample
 database/postgres
 
