@@ -58,8 +58,8 @@ var last_query = {};
 
 //disable searchbar and button
 /**
- * 
- * @param {Boolean} bool 
+ *
+ * @param {Boolean} bool
  */
 function disableSearchUI(bool) {
   $("#searchBox").attr("disabled", bool);
@@ -111,7 +111,7 @@ function normalizationChange(value) {
   let line_color = {};
   let all_max = 0;
   // get the max across all data
-  Object.keys(front_data).forEach(year => {
+  Object.keys(front_data).forEach((year) => {
     let d = front_data[year];
     if (currentLabel == 1) d = front_data[year]["papers"];
     if (d["max"] > all_max) {
@@ -119,11 +119,11 @@ function normalizationChange(value) {
     }
   });
   // draw the squares with the respective box/text color
-  Object.keys(front_data).forEach(year => {
+  Object.keys(front_data).forEach((year) => {
     let d = front_data[year];
     if (currentLabel == 1) d = front_data[year]["papers"];
     let max = d["max"];
-    Object.keys(d["content"]).forEach(box_id => {
+    Object.keys(d["content"]).forEach((box_id) => {
       let freq = d["content"][box_id];
       // Used to change the text color if the background is too dark
       let group = d3.select("#box-group-" + year + "-" + box_id);
@@ -143,7 +143,7 @@ function normalizationChange(value) {
     });
   });
   // bubble out to the overall paper vis and color the lines respectively
-  Object.keys(line_color).forEach(key => {
+  Object.keys(line_color).forEach((key) => {
     let r = 0,
       g = 0,
       b = 0;
@@ -185,7 +185,7 @@ function clearRequests(yearRequests, paperRequest, sentimentRequest) {
   }
   // clear all sentiment processing requests
   if (sentimentRequest) {
-    Object.keys(process_queue).forEach(year => {
+    Object.keys(process_queue).forEach((year) => {
       if (process_queue[year] != undefined) {
         process_queue[year].abort();
       }
@@ -232,7 +232,11 @@ function updateTextInput(field, before, after, articleid, sendToDefault) {
     boundariesByPaper[articleid] = [before, after];
   }
   field.innerHTML =
-    "[ " + beforeVal.toString() + " <- Citation -> " + afterVal.toString() + " ]";
+    "[ " +
+    beforeVal.toString() +
+    " <- Citation -> " +
+    afterVal.toString() +
+    " ]";
 }
 
 //Used to change the labels on the square boxes on the main screen (can display how many results or how many papers)
@@ -250,7 +254,7 @@ function changeLabel(choice) {
   }
 
   if (choice == 2) {
-    Object.keys(score_data).forEach(year => {
+    Object.keys(score_data).forEach((year) => {
       drawSentimentColumn(year);
     });
     $(".sentiment").show();
@@ -364,9 +368,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
 
         //Go through all minisquares, if they're on the same line get their year and run it through the selection function
         $(".minsqr.box-" + d3.event.target.id.split("_")[1]).each(function (i) {
-          let id = $(this)
-            .attr("id")
-            .split("_");
+          let id = $(this).attr("id").split("_");
           let year = id[1];
           let from = parseInt(id[2]) * currIncrement;
           let to = (parseInt(id[2]) + 1) * currIncrement;
@@ -501,8 +503,8 @@ function drawColumn(
   svgContainer.attr("height", locationY + 25 + 15); //Change the height of the container for the svg objects so no clipping occurs
   // $('#homeRow').height( locationY - 26 )
 
-  let home = $('#homeRow')
-  home.height(vh - home.position().top)
+  let home = $("#homeRow");
+  home.height(vh - home.position().top);
 
   //On click select the year
   verticalContainerHitbox.on("click", function () {
@@ -517,9 +519,7 @@ function drawColumn(
     // }
 
     $("." + label + ".minsqr").each(function (i) {
-      let id = $(this)
-        .attr("id")
-        .split("_");
+      let id = $(this).attr("id").split("_");
       let year = id[1];
       let from = parseInt(id[2]) * currIncrement;
       let to = (parseInt(id[2]) + 1) * currIncrement;
@@ -656,9 +656,7 @@ function adaptSelection(year) {
 
 function selectAllYears() {
   $(".minsqr").each(function (i) {
-    let id = $(this)
-      .attr("id")
-      .split("_");
+    let id = $(this).attr("id").split("_");
     let year = id[1];
     let from = parseInt(id[2]) * currIncrement;
     let to = (parseInt(id[2]) + 1) * currIncrement;
@@ -789,10 +787,7 @@ function prepContainers(increment) {
     currBoxPadding = 10;
   }
 
-  var homeRow = d3
-    .select("#pills-home")
-    .append("div")
-    .attr("id", "homeRow");
+  var homeRow = d3.select("#pills-home").append("div").attr("id", "homeRow");
   let distChart = homeRow
     .append("div")
     .attr("id", "distChart")
@@ -854,13 +849,16 @@ function prepContainers(increment) {
       .attr("id", "container-" + years[i].articleyear)
       .append("svg")
       .attr("width", 87)
-      .attr('class', 'year-dist-cols')
+      .attr("class", "year-dist-cols")
       .attr("id", "svg-" + years[i].articleyear);
     svgContainers.push(svg);
     drawColumn(years[i]["articleyear"], 80, 64, currBoxHeight, svg);
   }
 
-  d3.select('div.year-container:last-child > svg.year-dist-cols').attr('width', 110)
+  d3.select("div.year-container:last-child > svg.year-dist-cols").attr(
+    "width",
+    110
+  );
 }
 
 //Get the list of years from the database
@@ -874,7 +872,7 @@ function getYears(done) {
       done();
       // getFilteredYears("", true, undefined, false, true);
     },
-    async: true
+    async: true,
   });
 }
 
@@ -1054,7 +1052,7 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
         query: query,
         year: year,
         rangeLeft: rangeLeft,
-        rangeRight: rangeRight
+        rangeRight: rangeRight,
       }),
       success: function (data) {
         //Clear the results for the year
@@ -1078,7 +1076,7 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
               if (
                 data[i + j]["lemma"] == query[j] &&
                 data[i + j]["wordsentence"] ==
-                data[i + j + 1]["wordsentence"] &&
+                  data[i + j + 1]["wordsentence"] &&
                 data[i + j]["citationStart"] == data[i + j + 1]["citationStart"]
               ) {
                 valid = true;
@@ -1109,7 +1107,7 @@ function getYearResults(query, year, rangeLeft, rangeRight, increment, index) {
         processSignals(query, year);
       },
       async: true,
-      timeout: 600000
+      timeout: 600000,
     })
   );
 }
@@ -1193,12 +1191,12 @@ function getFilteredYears(
   $.ajax({
     type: "POST",
     url: currentURL + "query",
-    contentType: 'application/json',
+    contentType: "application/json",
     data: JSON.stringify({
       query: word,
       increment: currIncrement,
       rangeLeft: sentenceRangeAbove,
-      rangeRight: sentenceRangeBelow
+      rangeRight: sentenceRangeBelow,
     }),
     success: function (results) {
       let data = results;
@@ -1214,7 +1212,7 @@ function getFilteredYears(
         }
       }
       if (typeof callback !== "undefined") callback(data["agg"]);
-    }
+    },
   });
 }
 
@@ -1229,12 +1227,12 @@ function drawAllYears(data = front_data) {
 
   $(".year-container").hide();
   let all_max = 0;
-  Object.keys(data).forEach(year => {
+  Object.keys(data).forEach((year) => {
     let d = data[year];
     if (currentLabel == 1) d = data[year]["papers"];
     let max = d["max"];
     let total = 0;
-    Object.keys(d["content"]).forEach(box_id => {
+    Object.keys(d["content"]).forEach((box_id) => {
       let freq = d["content"][box_id];
       total += freq;
       // Used to change the text color if the background is too dark
@@ -1266,24 +1264,16 @@ function drawAllYears(data = front_data) {
 
   $(".hit-box")
     .on("mouseover", function (e) {
-      d3.select(".tooltip")
-        .transition()
-        .duration(300)
-        .style("opacity", 0.9);
-      let labelData = $(this)
-        .siblings("rect")
-        .data("freq");
+      d3.select(".tooltip").transition().duration(300).style("opacity", 0.9);
+      let labelData = $(this).siblings("rect").data("freq");
       d3.select(".tooltip").html(shortenVal(labelData));
       $(".tooltip").css({
         left: e.pageX + "px",
-        top: e.pageY + "px"
+        top: e.pageY + "px",
       });
     })
     .on("mouseout", function () {
-      d3.select(".tooltip")
-        .transition()
-        .duration(500)
-        .style("opacity", 0);
+      d3.select(".tooltip").transition().duration(500).style("opacity", 0);
     });
 
   //Allow the mini squares to call the main squares function since they cover it
@@ -1292,9 +1282,7 @@ function drawAllYears(data = front_data) {
     var shiftPressed = e.shiftKey;
     shiftPressed = true;
     //Prune the id string of the clicked item (minSqrHB_YEAR_NUM) to get NUM
-    var id = $(this)
-      .attr("id")
-      .split("_");
+    var id = $(this).attr("id").split("_");
     let from = parseInt(id[2]) * currIncrement;
     let to = (parseInt(id[2]) + 1) * currIncrement;
     let label = id[1] + "-" + from + "-" + to;
@@ -1314,14 +1302,23 @@ function drawAllYears(data = front_data) {
 }
 
 //Show toast notification
-function toast(title, text, duration = 2000) {
+function toast(title, text, duration = 5000) {
   $(".toast").toast("dispose");
-  $('.toast').toast({ delay: duration })
-
+  $(".toast").toast({ autohide: false });
+  let intHandle = window.setTimeout(hideToast, duration);
   $(".toast-header .mr-auto").html(title);
+  $(".toast").on("mouseenter", function () {
+    clearTimeout(intHandle);
+  });
+  $(".toast").on("mouseleave", function () {
+    intHandle = window.setTimeout(hideToast, duration);
+  });
   $(".toast-body").html(text);
-
   $(".toast").toast("show");
+}
+
+function hideToast() {
+  $(".toast").toast("hide");
 }
 
 //Run the search for the desired query
@@ -1339,7 +1336,11 @@ function searchForQuery(query) {
   if (query.toString() != currSearchQuery.toString()) {
     removeAllSelections();
     currSearchQuery = query; //Remeber to filter input to prevent sql injects
-    currSearchQuery = currSearchQuery.replace(" or ", " ").replace(" and ", " ").replace(/[^\w\s]|_/g, "").replace(/\s+/g, " ");
+    currSearchQuery = currSearchQuery
+      .replace(" or ", " ")
+      .replace(" and ", " ")
+      .replace(/[^\w\s]|_/g, "")
+      .replace(/\s+/g, " ");
     d3.select("#searchQueryLabel").html(currSearchQuery.toString());
   }
 
@@ -1364,7 +1365,7 @@ function minimizeDivider() {
 function setDivider(pageX) {
   let $div = $("#window-divider");
   $div.offset({
-    left: pageX
+    left: pageX,
   });
   let offset = pageX;
   $("#sunburst-container").width(offset);
@@ -1469,7 +1470,7 @@ $(document).ready(function () {
       $("#papers-container").width(offset);
       $("#sortOptions").width(offset);
       $dragging.offset({
-        left: e.pageX
+        left: e.pageX,
       });
     }
   });
@@ -1496,7 +1497,8 @@ $(document).ready(function () {
   });
 });
 
-
-
 var vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-var vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+var vh = Math.max(
+  document.documentElement.clientHeight,
+  window.innerHeight || 0
+);
