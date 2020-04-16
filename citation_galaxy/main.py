@@ -1,20 +1,28 @@
-import uvloop
-uvloop.install()
 import logging
 import sys
 
 import asyncpg
+import uvloop
+uvloop.install()
 # import jinja2
 # import aiohttp_jinja2
 from aiohttp import web
 
+from citation_galaxy.database.tsvector import decode_tsvector, encode_tsvector
 # from citation_galaxy.db import close_pg, init_pg
 from citation_galaxy.middlewares import setup_middlewares
 from citation_galaxy.routes import setup_routes
 from citation_galaxy.session import setup_session
 from citation_galaxy.settings import get_config
 
-# asyncio.set_event_loop_policy(uvloop.get_event_loop_policy())
+
+
+
+
+
+
+async def init_connection(conn):
+    await conn.set_type_codec( 'tsvector', schema='pg_catalog', encoder=encode_tsvector, decoder=decode_tsvector, format='binary')
 
 
 async def init_app(argv=None):
@@ -24,7 +32,7 @@ async def init_app(argv=None):
 
     print(app["config"]["postgres"])
 
-    app["db"] = await asyncpg.create_pool(**app["config"]["postgres"])
+    app["db"] = await asyncpg.create_pool(**app["config"]["postgres"],init=init_connection)
     # create db connection on startup, shutdown on exit
     # app.on_startup.append(init_pg)
     # app.on_cleanup.append(close_pg)
