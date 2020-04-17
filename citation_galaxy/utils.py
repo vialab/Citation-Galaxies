@@ -20,6 +20,5 @@ TRAFARET = T.Dict(
     }
 )
 
-
 def list_in_string( list_of_words, string_containing ):
     return any( ( True for searchword in list_of_words if searchword in string_containing ) )

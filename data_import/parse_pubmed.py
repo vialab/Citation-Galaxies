@@ -153,7 +153,7 @@ def receive_xml_ts( path ):
                 
                 if sent_num <= cite_sent: #citation happening after sentence AKA postgres tsquery: "{search term} <{dist}> ЉЉ"
                     entry[1] = max( entry[1], (rbound-rdistance) ) | tsvectorweight
-
+                
                 # word_pos += 1
                 # if word_pos < (1<<14):
                 #     entry.append(word_pos)

@@ -19,10 +19,11 @@ import citation_galaxy.database as dblib
 from citation_galaxy.database import NUMBER_COLS, QueryManager, api, schema
 from citation_galaxy.settings import config as conf
 from citation_galaxy.utils import list_in_string
+from nltk.tokenize import sent_tokenize
 
 from citation_galaxy.wordRecommender import WordRecommender
 
-wordRecommender = WordRecommender()
+#wordRecommender = WordRecommender()
 
 routes = web.RouteTableDef()
 
@@ -41,22 +42,22 @@ async def getWords(request):
     top=5
     res = []
     post_data = await request.json()
-    for i in range(1, len(post_data)):
-        words = wordRecommender.getRecommendation([post_data[0], post_data[i]], 5)
-        for j in range(0, len(words)):
-            res.append(words[j])
-    #remove duplicates
-    for word in res:
-        if word[0] in post_data:
-            res.remove(word)
-    res.sort(reverse=True, key=lambda x:x[1])
-
-    #if greater than required suggestion amount delete the least similar
-    if len(res) > top:
-        print(len(res))
-        res= res[:-(len(res)-top)]
-        print(len(res))
-    
+  #  for i in range(1, len(post_data)):
+  #      words = wordRecommender.getRecommendation([post_data[0], post_data[i]], 5)
+  #      for j in range(0, len(words)):
+  #          res.append(words[j])
+  #  #remove duplicates
+  #  for word in res:
+  #      if word[0] in post_data:
+  #          res.remove(word)
+  #  res.sort(reverse=True, key=lambda x:x[1])
+#
+  #  #if greater than required suggestion amount delete the least similar
+  #  if len(res) > top:
+  #      print(len(res))
+  #      res= res[:-(len(res)-top)]
+  #      print(len(res))
+  #  
     return web.json_response({"suggestions": res})
 
 @routes.post("/api/insert")
@@ -242,6 +243,67 @@ async def process_signal(request):
 
     return web.json_response(data)
 
+def parseText(text, ranges, searchedTerms):
+    #aggregate text
+    aggText=""
+    citationToken= 'ЉЉ'
+    citationToken = citationToken.lower()
+    sentenceHits=[]
+    binHits=[]
+    text=loads(text)
+    puncTokens= ':|\!|\.|\,|\/|\:|\;|\"'
+    for block in text:
+        aggText += block["text"]
+    #find word position
+    sentences = sent_tokenize(aggText.lower()) 
+    #analyze range
+    for i in range(0, len(searchedTerms)):
+        for j in range(0, len(sentences)):
+            if searchedTerms[i] in re.sub(puncTokens, '',sentences[j]):
+                #check left
+                found=False
+                left=ranges[searchedTerms[i]][0]+2
+                for k in range(0, left):
+                    #check if we are going past the index
+                    idx = j-k
+                    if idx < 0:
+                        break
+                    if citationToken in sentences[idx]:
+                        #create sentence hit
+                        #check if full range exceeds array bounds
+                        leftBounds = j-(ranges[searchedTerms[i]][0] +1)
+                        rightBounds = j+(ranges[searchedTerms[i]][1] +2)
+                        if leftBounds < 0:
+                            leftBounds=0
+                        if rightBounds > len(sentences):
+                            rightBounds -= rightBounds - (len(sentences)+1)
+                        sentenceHits.append(sentences[leftBounds:rightBounds])
+                        binHits.append(int(j / len(sentences) * 100))
+                        found=True
+                        break
+                if found:
+                    continue
+                #check right if left was not found
+                right=ranges[searchedTerms[i]][0]+2
+                for k in range(0, right):
+                    if searchedTerms[i] in  re.sub(puncTokens, '',sentences[j]):
+                        idx = j+k
+                        #check if idx is outside the bounds of the sentence array
+                        if idx >= len(sentences):
+                            break
+                        if citationToken in sentences[idx]:
+                            #create sentence hit
+                            #check if full range exceeds array bounds
+                            leftBounds = j-(ranges[searchedTerms[i]][0] +1)
+                            rightBounds = j+(ranges[searchedTerms[i]][1] +2)
+                            if leftBounds < 0:
+                                leftBounds=0
+                            if rightBounds > len(sentences):
+                                rightBounds -= rightBounds - (len(sentences)+1)
+                            sentenceHits.append(sentences[leftBounds:rightBounds])
+                            binHits.append(int(j / len(sentences) * 100))
+    #return sentenceHits and their respective binHits in the paper
+    return sentenceHits, binHits
 
 @routes.post("/gateway/papers")
 async def papers(request):
@@ -250,6 +312,7 @@ async def papers(request):
     # print("query:",request,db.question.select())
     query_params = await request.json()
     increment = int(query_params.get("increment", 10))
+
     # range_list = query_params.get('selections', None)
     range_list = list(map(parseRangeString, query_params.get("selections", None)))
 
@@ -280,7 +343,6 @@ async def papers(request):
             stripped_input = stripped_input.replace(" and ", " ")
             for word in stripped_input.split(" "):
                 for dist in range(0, words_left + 1):
-
                     subsearch_params.append(f"{word} <{dist}> љљ")
 
                 for dist in range(0, words_right + 1):
@@ -292,11 +354,13 @@ async def papers(request):
 
     tasks = [querymanager.do_papers_query(year_range_tup, n_rank, last_rank) for year_range_tup in range_list]
     results = await asyncio.gather(*tasks)
-
     sorted_articles = {}
+    sorted_text={}
     years = set()
     journals = {}
-
+    searchedTerms = [query_params["query"]]
+    ranges = {}
+    ranges[query_params["query"]] = [query_params["rangeLeft"], query_params["rangeRight"]]
     for yearResults in results:
         for (count, row) in enumerate(yearResults):
             rec = {
@@ -306,23 +370,26 @@ async def papers(request):
                 "rank": (count + 1) + last_rank,
                 "total": 0,
             }
-
-            for (chunk, count) in dblib.reshape_count_columns(increment):
-                rec["content"][count] = row[f"ref_count_{count}"]
-
+            sentenceHits, binHits = parseText(row["sections"], ranges, searchedTerms)
+            if len(sentenceHits) == 0:
+                print("Error: 0 sentenceHits for paper id " + str(row["id"]))
+            for i in range(0, 10):
+                rec["content"][i] = 0
+            for hit in binHits:
+                rec["content"][int(hit/10)] += 1
+            #do the paper chunks
+            #for (chunk, count) in dblib.reshape_count_columns(increment):
+            #    rec["content"][count] = row[f"ref_count_{count}"]
             journal_id = int(row.get("journalid", 0))
             # journals.setdefault(journal_id, {"title": row["journaltitle"], "years": set()})
             # journals[journal_id]['years'].add(row['pub_year'])
             years.add(row["pub_year"])
-
             rec["max"] = max(rec["content"].values())
 
             sorted_articles[row["id"]] = rec
-
-    maxCount = max(d["max"] for d in sorted_articles.values())
-
-    return web.json_response({"max": maxCount, "papers": sorted_articles, "years": list(years), "journals": journals,})
-
+            sorted_text[row["id"]] = sentenceHits
+    maxCount = 6
+    return web.json_response({"max": maxCount, "papers": sorted_articles, "sentenceHits":sorted_text ,"years": list(years), "journals": journals})
 
 @routes.get("/gateway/paper")
 async def paper(request):

@@ -116,28 +116,23 @@ def encode_tsvector( tsvector ):
     return bufret.getbuffer()
 
 def decode_tsvector(bin_vector):
-    tsvector = []
-
+    # tsvector = []
+    tsvector={}
     wordcount = struct.unpack_from( '!I', bin_vector, 0)[0]
     offset = 4
     for wordidx in range(wordcount):
         wordbuf = []
-
         wordlength = 0
         while struct.unpack_from( '!s', bin_vector, offset + wordlength )[0] != b'\x00':
             wordlength += 1
-
         word = struct.unpack_from( f'!{wordlength}s', bin_vector, offset)[0].decode('utf-8')
         offset += wordlength+1
-
         numberpositions = struct.unpack_from( '!H', bin_vector, offset )[0]
         offset += 2
-
-        worddata = ( word, struct.unpack_from( f'!{numberpositions}H', bin_vector, offset ) )
+        worddata = struct.unpack_from( f'!{numberpositions}H', bin_vector, offset )
         offset += 2*numberpositions
-
-        tsvector.append( worddata )
-
+        # tsvector.append( worddata )
+        tsvector.setdefault(word,worddata)
     return tsvector
 
 
