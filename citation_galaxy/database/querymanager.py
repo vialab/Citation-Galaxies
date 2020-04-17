@@ -51,7 +51,6 @@ class QueryManager:
 
     async def do_summing_query(self):
         query_text = self.build_summing_query().format(self.search_text, self.subsearch_text)
-
         return await self.do_query(query_text)
 
     def build_counting_query(self):
@@ -90,7 +89,7 @@ class QueryManager:
         body += f" order by ref_count_{ int(right_col/self.percent_range ) } desc limit {rowLimit} offset {rowOffset}"
 
         return (
-            "select t2.id, t2.pub_year, "
+            "select t2.id, t2.pub_year, t2.sections, t1.text_search,"
             + ", ".join(
                 (
                     "(" + "+".join((f"coalesce(cite_in_{col:02d},0)" for col in chunk)) + f") as ref_count_{count}"
@@ -103,7 +102,6 @@ class QueryManager:
 
     async def do_papers_query(self, *args, **kwargs):
         query_text = self.build_papers_query(*args, **kwargs).format(self.search_text, self.subsearch_text)
-
         return await self.do_query(query_text)
 
     def build_paper_query(self, id):
