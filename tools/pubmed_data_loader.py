@@ -150,7 +150,6 @@ async def main():
             #await post_text(pubmed_id, wordMap, sentMap, twordMap, tsentMap,tcitWord, tcitSent, conn)
             await post_meta(pubmed_id, authors, title, date, journal, affiliations, conn)
         except Exception as e:
-            yagmail.SMTP('codinfreakgf@gmail.com', 'shEA45thr5').send('codinfreakgf@gmail.com', 'error', 'path: ' + path+"\n" + "error: " + str(e))
             continue
 
         #print(sentMap)
