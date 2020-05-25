@@ -233,9 +233,9 @@ function updateTextInput(field, before, after, articleid, sendToDefault) {
   }
   field.innerHTML =
     "[ " +
-    beforeVal.toString() +
+    (beforeVal + 1).toString() +
     " <- Citation -> " +
-    afterVal.toString() +
+    (afterVal + 1).toString() +
     " ]";
 }
 

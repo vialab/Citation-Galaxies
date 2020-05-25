@@ -400,14 +400,14 @@ function drawTableRow(headers, signal, signalID, aliases) {
               <ul class="list-inline">
                 <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
                   <input type="range" innertext="0" min="0" max="10" value="${
-                    datum.range[0]
+                    10 - datum.range[0]
                   }" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
                     oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}'), document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
                 </li>
                 <li class="list-inline-item align-middle m-0 p-0">
                   <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
-                    ${10 - datum.range[0]}
-                    <- Citation -> ${datum.range[1]} ]</label>
+                    ${datum.range[0] + 1}
+                    <- Citation -> ${datum.range[1] + 1} ]</label>
                 </li>
                 <li class="list-inline-item m-0 p-0" style="width:23%;">
                   <input type="range" innertext="0" min="0" max="10" value="${
@@ -427,7 +427,7 @@ function drawTableRow(headers, signal, signalID, aliases) {
             </div>
           </div>`;
         }
-        html += `<div id="add_signal_${signal.id}" class="d-flex flex-row justify-content-center" onclick="addToSignal('#add_signal_${signal.id}')">
+        html += `<div id="add_signal_${signal.id}" class="d-flex flex-row justify-content-center" ondragover="allowDrop(event)" ondrop="onDrop(event,this)" onclick="addToSignal('#add_signal_${signal.id}')">
                   <h1 class="flex-fill signal-add-button">+</h1>
                 </div>`;
       } else {
@@ -447,8 +447,8 @@ function drawTableRow(headers, signal, signalID, aliases) {
                 </li>
                 <li class="list-inline-item align-middle m-0 p-0">
                   <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}">[
-                    ${$("#rangeBefore").attr("max") - beforeRangeVal}
-                    <- Citation -> ${afterRangeVal} ]</label>
+                    ${$("#rangeBefore").attr("max") - beforeRangeVal + 1}
+                    <- Citation -> ${afterRangeVal + 1} ]</label>
                 </li>
                 <li class="list-inline-item m-0 p-0" style="width:23%;">
                   <input type="range" innertext="0" min="0" max="10" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}"
@@ -462,7 +462,7 @@ function drawTableRow(headers, signal, signalID, aliases) {
               </div>
             </div>
           </div>`;
-        html += `<div id="add_signal_${existing}" class="d-flex flex-row justify-content-center" onclick="addToSignal('#add_signal_${existing}')">
+        html += `<div id="add_signal_${existing}" class="d-flex flex-row justify-content-center" ondragover="allowDrop(event)" ondrop="onDrop(event,this)" onclick="addToSignal('#add_signal_${existing}')">
           <h1 class="flex-fill signal-add-button">+</h1>
         </div>`;
       }
@@ -476,7 +476,14 @@ function drawTableRow(headers, signal, signalID, aliases) {
   }
   return row;
 }
-
+function onDrop(event, element) {
+  console.log(element);
+  console.log(event.dataTransfer.getData("Text"));
+  addToSignalClick("#" + element.id, event.dataTransfer.getData("Text"));
+}
+function allowDrop(ev) {
+  ev.preventDefault();
+}
 function addToSignal(id) {
   let but = $(event.currentTarget);
   let existing = $(".edit-row").length;
@@ -499,8 +506,8 @@ function addToSignal(id) {
         </li>
         <li class="list-inline-item align-middle m-0 p-0">
           <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
-            ${$("#rangeBefore").attr("max") - beforeRangeVal}
-            <- Citation -> ${afterRangeVal} ]</label>
+            ${$("#rangeBefore").attr("max") - beforeRangeVal + 1}
+            <- Citation -> ${afterRangeVal + 1} ]</label>
         </li>
         <li class="list-inline-item m-0 p-0" style="width:23%;">
           <input type="range" innertext="0" min="0" max="10" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
@@ -802,7 +809,7 @@ function insertRow(elem) {
       const numElements = $(this).find("[id*='signal_searchBox']").length;
       //get range
       let beforeRange = $(this).find("[id*='rangeBefore']")[0];
-      let beforeRangeVal = beforeRange.value;
+      let beforeRangeVal = beforeRange.max - beforeRange.value;
       let afterRange = $(this).find("[id*='rangeAfter']")[0];
       let afterRangeVal = Number(afterRange.value);
       //get query
@@ -810,7 +817,7 @@ function insertRow(elem) {
       res.push({ range: [beforeRangeVal, afterRangeVal], query: query });
       for (let i = 1; i < numElements; ++i) {
         beforeRange = $(this).find("[id*='rangeBefore']")[i];
-        beforeRangeVal = beforeRange.value;
+        beforeRangeVal = Number(beforeRange.max - beforeRange.value);
         afterRange = $(this).find("[id*='rangeAfter']")[i];
         afterRangeVal = Number(afterRange.value);
         //get modifier
@@ -856,11 +863,21 @@ function insertRow(elem) {
   postInsert(table, values, function (results) {
     reloadTable();
     toast("Success!", "Row was inserted to the database.");
-    const words = JSON.parse(values.signal).map((x) => x.query);
+    const words = JSON.parse(values.signal).map((x) =>
+      x.query.replace(" ", "_")
+    );
     postSuggestions(words, function (res) {
-      let suggestions = "";
-      res.suggestions.map((x) => (suggestions += x[0] + "\n"));
-      toast("Suggestions", suggestions);
+      let html = "";
+      const div = $($row).find("[id*='add_signal_']")[0].id;
+      for (let i = 0; i < res.suggestions.length; ++i) {
+        const query = res.suggestions[i][0].replace("_", " ");
+        html += `
+        <div class="custom-control custom-checkbox my-1 mr-sm-2">
+        <input type="checkbox" class="custom-control-input" id="customControlInline-${i}" onclick="suggestionClick(this, '${div}', '${query}');">
+        <label class="custom-control-label" for="customControlInline-${i}">${query}</label>
+      </div>`;
+      }
+      toast("Suggestions", html);
     });
   });
 }
@@ -907,12 +924,12 @@ function updateRow(elem) {
       let inps = $("select,input", this);
 
       for (let i = 0; i < inps.length; i += 4) {
-        let range_Left = parseInt($(inps[i]).val());
+        let range_Left = parseInt(inps[i].max - $(inps[i]).val());
         let range_Right = parseInt($(inps[i + 1]).val());
         let query = $(inps[i + 2]).val();
 
         let record = {
-          range: [range_Left, range_Right],
+          range: [Number(range_Left), Number(range_Right)],
           query: query,
         };
         if (i >= 4) {

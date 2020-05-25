@@ -131,7 +131,7 @@ api = {
         "query": "-- name: signal_category\nselect id, catname, color from signalcategory where cookieid=:cookieid order by id;",
         "require_cookie": True,
         "aliases": {
-            "catname": {"name": "Rule Set Name", "nameonly": True},
+            "catname": {"name": "Category Name", "nameonly": True},
             "color": {"name": "Color", "nameonly": True},
             # "catname":{"name": "Category Name", "nameonly": True}
             # "catname": {"query": "signalcategory", "value": "catname", "col": "catname", "name": "Category Name"},

@@ -119,9 +119,9 @@ function changePaperTextBoundary(articleid, year) {
         year: year,
         rangeLeft: boundariesByPaper[articleid][0],
         rangeRight: boundariesByPaper[articleid][1],
-        paperid: articleid
+        paperid: articleid,
       }),
-      success: function(data) {
+      success: function (data) {
         //Filter data for ngram - similar to how the filtering is done on the main screen
         var tmpResults = [];
         var loopOffset = currSearchQuery.length;
@@ -217,7 +217,7 @@ function changePaperTextBoundary(articleid, year) {
                     data[j][k]["citationauthors"],
                     data[j][k]["citationyear"],
                     startSentence,
-                    endSentence
+                    endSentence,
                   ]);
                 }
               }
@@ -240,7 +240,7 @@ function changePaperTextBoundary(articleid, year) {
         }
         getPaperBoundary(articleid, neededBoundaries, currPaper, true);
         changingPaper = false;
-      }
+      },
     })
   );
 }
@@ -251,14 +251,14 @@ function prepPaperText(articleid, neededBoundaries, container, display) {
     $.ajax({
       type: "POST",
       url: currentURL + "paperText",
-      data: JSON.stringify({articleid: articleid}),
-      success: function(data) {
+      data: JSON.stringify({ articleid: articleid }),
+      success: function (data) {
         //console.log(paperText);
         paperText[articleid] = data;
         getPaperBoundary(articleid, neededBoundaries, container, display);
       },
       async: true,
-      timeout: 600000
+      timeout: 600000,
     })
   );
 }
@@ -271,9 +271,9 @@ function getPaperBoundary(articleid, neededBoundaries, container, display) {
       url: currentURL + "sectionBoundary",
       data: JSON.stringify({
         articleid: articleid,
-        neededBoundaries: neededBoundaries
+        neededBoundaries: neededBoundaries,
       }),
-      success: function(data) {
+      success: function (data) {
         //Matches the sentencenum to the location
         for (var i = 0; i < paperData[articleid].length; i++) {
           for (var k = 0; k < paperData[articleid][i].length; k++) {
@@ -288,7 +288,7 @@ function getPaperBoundary(articleid, neededBoundaries, container, display) {
                   paperData[articleid][i][k].length - 2
                 ] = [
                   data[j]["startlocationpaper"],
-                  data[j]["endlocationpaper"]
+                  data[j]["endlocationpaper"],
                 ];
               }
               if (
@@ -301,7 +301,7 @@ function getPaperBoundary(articleid, neededBoundaries, container, display) {
                   paperData[articleid][i][k].length - 1
                 ] = [
                   data[j]["startlocationpaper"],
-                  data[j]["endlocationpaper"]
+                  data[j]["endlocationpaper"],
                 ];
               }
             }
@@ -348,7 +348,7 @@ function getPaperBoundary(articleid, neededBoundaries, container, display) {
         );
       },
       async: true,
-      timeout: 600000
+      timeout: 600000,
     })
   );
 }
@@ -420,7 +420,7 @@ function drawPapers(signal_id, signal_cat_id) {
     lastRank: 0,
     nrank: nPaperLoad,
     signals: {},
-    journalid: ""
+    journalid: "",
   };
 
   // add a set of signals based on their category
@@ -435,10 +435,10 @@ function drawPapers(signal_id, signal_cat_id) {
     // alternatively, filter by a single signal
     if (typeof signal_id != "undefined") {
       values["signals"][signal_id] = sentiment_signals[signal_id];
-      for(let f of sentiment_signals[signal_id].filters) {
+      for (let f of sentiment_signals[signal_id].filters) {
         values["signals"][f] = sentiment_signals[f];
       }
-      for(let f of sentiment_signals[signal_id].restrictions) {
+      for (let f of sentiment_signals[signal_id].restrictions) {
         values["signals"][f] = sentiment_signals[f];
       }
     }
@@ -448,13 +448,13 @@ function drawPapers(signal_id, signal_cat_id) {
       type: "POST",
       url: processURL + "papers",
       data: JSON.stringify(values),
-      success: function(data) {
+      success: function (data) {
         // paper_data = JSON.parse(data);
         paper_data = data;
         drawPapersByIndex(paper_data);
       },
       async: true,
-      timeout: 600000
+      timeout: 600000,
     })
   );
 }
@@ -473,39 +473,40 @@ function drawPapersByIndex(results, local_norm = false) {
     .append("div")
     .attr("class", "container-fluid transition")
     .attr("id", "papers-container");
-  
-  let nav = paperRow.append('ul')
-    .attr('class', 'nav nav-fill nav-pills mb-3')
+
+  let nav = paperRow
+    .append("ul")
+    .attr("class", "nav nav-fill nav-pills mb-3")
     // .append('div')
-      // .attr('class','nav nav-tabs nav-justified')
-      .attr('id','papers-container-nav-tabs')
-      .attr('role','tablist');
+    // .attr('class','nav nav-tabs nav-justified')
+    .attr("id", "papers-container-nav-tabs")
+    .attr("role", "tablist");
 
-  active = false
+  active = false;
   for (let year of results.years.sort()) {
-    let tab = nav.append('li')
-      .attr('class','nav-item')
-      .append('a')
-      .attr('class', 'nav-link')
-      .attr('id', `papers-nav-tab-${year}`)
-      .attr('data-toggle', 'pill')
-      .attr('href', `#papers-nav-${year}`)
-      .attr('role', 'tab')
-      .attr('aria-controls', `papers-nav-${year}`)
+    let tab = nav
+      .append("li")
+      .attr("class", "nav-item")
+      .append("a")
+      .attr("class", "nav-link")
+      .attr("id", `papers-nav-tab-${year}`)
+      .attr("data-toggle", "pill")
+      .attr("href", `#papers-nav-${year}`)
+      .attr("role", "tab")
+      .attr("aria-controls", `papers-nav-${year}`);
 
-      if (!active) {
-        tab.attr('class', 'nav-link active')
-        active = true
-      }
-      tab.append('h2')
-        .text(year)
+    if (!active) {
+      tab.attr("class", "nav-link active");
+      active = true;
+    }
+    tab.append("h2").text(year);
   }
 
+  let navContent = paperRow
+    .append("div")
+    .attr("class", "tab-content border")
+    .attr("id", "papers-container-nav-content");
 
-  let navContent = paperRow.append('div')
-    .attr('class', 'tab-content border')
-    .attr('id', 'papers-container-nav-content')
-  
   // minimizeDivider();
   let papers = results["papers"];
   let all_max = results["max"];
@@ -542,17 +543,18 @@ function drawPapersByIndex(results, local_norm = false) {
     // }
   } else {
     // only categorize by years
-    active = false
+    active = false;
     for (let y of results.years.sort()) {
-      let content = navContent.append('div')
-        .attr('class', 'tab-pane fade')
-        .attr('id', `papers-nav-${y}`)
-        .attr('role', 'tabpanel')
-        .attr('aria-labelledby', `papers-nav-tab-${y}`)
+      let content = navContent
+        .append("div")
+        .attr("class", "tab-pane fade")
+        .attr("id", `papers-nav-${y}`)
+        .attr("role", "tabpanel")
+        .attr("aria-labelledby", `papers-nav-tab-${y}`);
 
       if (!active) {
-        content.attr('class', 'tab-pane fade active show')
-        active = true
+        content.attr("class", "tab-pane fade active show");
+        active = true;
       }
 
       let yearRow = content
@@ -569,27 +571,37 @@ function drawPapersByIndex(results, local_norm = false) {
         .attr("class", "row col-sm-12 papers overflow-auto")
         .attr("data-year", y);
 
+      $(`#papers-row-${y} > div.papers`).on("scroll", function () {
+        console.log($(this), $(this).scrollTop());
+        let el = $(this);
+        // if ($(this).scrollTop() >= $(this).offset().top + $('.div').
+        // outerHeight() - vh) {
+        if (el.scrollTop() >= el.get(0).scrollHeight - el.outerHeight()) {
+          console.log("You reached the end of the DIV");
 
-      $(`#papers-row-${y} > div.papers`).on('scroll', function() { 
-        console.log($(this),$(this).scrollTop())
-        let el = $(this)
-        // if ($(this).scrollTop() >= $(this).offset().top + $('.div'). 
-            // outerHeight() - vh) {
-        if (el.scrollTop() >= (el.get(0).scrollHeight - el.outerHeight())) {
-            
-            console.log('You reached the end of the DIV'); 
-
-            el.find('div.load-more').click()
+          el.find("div.load-more").click();
         }
       });
     }
   }
-  drawPaperList(papers, all_max, local_norm);
+  drawPaperList(
+    papers,
+    all_max,
+    results["sentenceHits"],
+    results["ruleHits"],
+    local_norm
+  );
 }
 
-function drawPaperList(papers, all_max, local_norm = false) {
+function drawPaperList(
+  papers,
+  all_max,
+  sentenceHits,
+  ruleHits,
+  local_norm = false
+) {
   // now draw the actual papers
-  Object.keys(papers).forEach(key => {
+  Object.keys(papers).forEach((key) => {
     let container_id = "#papers-row-" + papers[key].year;
     if (indexToSortPapersOn == "journaltitle") {
       container_id =
@@ -609,15 +621,15 @@ function drawPaperList(papers, all_max, local_norm = false) {
       .attr("class", "paper-thumbnail")
       .attr("data-rank", papers[key]["rank"])
       .attr("width", 115)
-      .attr("height", 168);
-    paperText[key] = [{articleyear: 1}];
+      .attr("height", 198);
+    paperText[key] = [{ articleyear: 1 }];
     let activeLines = [];
     let activeLinesPercents = [];
     let lines = papers[key]["content"];
     let max = all_max;
     if (local_norm) max = papers[key].max;
     // set list of lines with different color strengths to draw
-    Object.keys(lines).forEach(i => {
+    Object.keys(lines).forEach((i) => {
       activeLines.push(lines[i] > 0);
       activeLinesPercents.push(lines[i] / max);
     });
@@ -628,7 +640,9 @@ function drawPaperList(papers, all_max, local_norm = false) {
       activeLinesPercents,
       svgContainer,
       key,
-      false
+      false,
+      sentenceHits[key],
+      ruleHits[key]
     );
   });
   // delete the load buttons from before to redraw at end of list
@@ -650,7 +664,7 @@ function loadMorePapers(elem) {
   let $sibs = $(".paper-thumbnail", $papers);
   let last_rank = Math.max.apply(
     Math,
-    $.map($sibs.toArray(), function(node) {
+    $.map($sibs.toArray(), function (node) {
       return $(node).data("rank");
     })
   );
@@ -675,9 +689,9 @@ function loadMorePapers(elem) {
         journalid: jid,
         lastRank: last_rank,
         nrank: nPaperLoad,
-        signals: {}
+        signals: {},
       }),
-      success: function(data) {
+      success: function (data) {
         let extra_papers = data;
         paper_data["papers"] = $.extend(
           paper_data["papers"],
@@ -689,10 +703,15 @@ function loadMorePapers(elem) {
           paper_data["journals"],
           extra_papers["journals"]
         );
-        drawPaperList(extra_papers["papers"], paper_data["max"]);
+        drawPaperList(
+          extra_papers["papers"],
+          paper_data["max"],
+          extra_papers["sentenceHits"],
+          extra_papers["ruleHits"]
+        );
       },
       async: true,
-      timeout: 600000
+      timeout: 600000,
     })
   );
 }
@@ -702,10 +721,7 @@ function drawPapers2() {
   //Remove old row
   d3.select("#paperRow").remove();
   //Append a row for all the papers
-  paperRow = d3
-    .select("#pills-papers")
-    .append("div")
-    .attr("class", "row");
+  paperRow = d3.select("#pills-papers").append("div").attr("class", "row");
 
   paperData = {};
   //Loop through all selections
@@ -769,7 +785,7 @@ function drawPapers2() {
             yearResults[year][j][k]["citationauthors"],
             yearResults[year][j][k]["citationyear"],
             startSentence,
-            endSentence
+            endSentence,
           ]);
         }
       }
@@ -803,11 +819,11 @@ function drawPapers2() {
       .append("svg")
       .attr("class", "paper-thumbnail")
       .attr("width", 115)
-      .attr("height", 168); //Container for paper to go into
+      .attr("height", 198); //Container for paper to go into
 
     boundariesByPaper[temp[paper][0]] = [
       sentenceRangeAbove,
-      sentenceRangeBelow
+      sentenceRangeBelow,
     ]; //Used so that each paper has a reference of their boundaries, so that they can change seperate of the rest
 
     //If the paper text hasnt been downloaded already, download it
@@ -820,7 +836,7 @@ function drawPapers2() {
   }
 
   //Hide the popover if a click is made outside any papers
-  $("html").on("click", function(e) {
+  $("html").on("click", function (e) {
     //Did not click a popover toggle or popover
     if (
       $(e.target).data("toggle") !== "popover" &&
@@ -846,7 +862,9 @@ function drawPaper(
   activeLinesPercents,
   svgContainer,
   articleid,
-  display
+  display,
+  sentenceHits,
+  ruleHits
 ) {
   //Filter for dropshadows
   var filter = svgContainer
@@ -885,7 +903,7 @@ function drawPaper(
     .attr("rx", 3)
     .attr("xy", 3)
     .attr("width", sizex)
-    .attr("height", sizey)
+    .attr("height", sizey + 20)
     .attr("id", "paperRect")
     .attr("filter", `url(#dropshadowPaper-${articleid})`)
     .style("fill", d3.rgb(248, 249, 250));
@@ -916,6 +934,23 @@ function drawPaper(
       .attr("y2", locationY)
       .attr("stroke-width", lineSizeY);
     locationY += minLinePadding + lineSizeY;
+  }
+  let uniqueCategories = {};
+  for (let i = 0; i < ruleHits.length; ++i) {
+    for (let j = 0; j < ruleHits[i].length; ++j) {
+      uniqueCategories[ruleHits[i][j].name] = 1;
+    }
+  }
+  uniqueCategories = Object.keys(uniqueCategories).length;
+  if (uniqueCategories) {
+    svgContainer
+      .append("text")
+      .attr("x", sizex / 2)
+      .attr("y", sizey + 10)
+      .attr("dy", ".35em")
+      .attr("opacity", 0.7)
+      .attr("font-weight", "bold")
+      .text(uniqueCategories);
   }
 
   //Creates a filter for the little notification circle applied to the papers
@@ -981,18 +1016,17 @@ function drawPaper(
   // let $popover = $(this).popover({ html: true, container: 'body', trigger: 'manual' });
 
   //Allows only one popup at a time - if a popup other than the one clicked is active, it is hidden
-  $(squareHitBox.node()).on("click", function(e) {
-    let article_id = $(this)
-      .attr("id")
-      .split("_")[0];
+  $(squareHitBox.node()).on("click", function (e) {
+    let article_id = $(this).attr("id").split("_")[0];
     // setPopoverContent(article_id)
-    getPopoverContent(article_id);
+    getPopoverContent(article_id, sentenceHits, ruleHits);
     // enable popovers as we need them
     let $popover = $(this).popover({
       html: true,
       container: "body",
-      trigger: "manual"
+      trigger: "manual",
     });
+
     // clear the data whenever we hide a popover to keep our html clean
     // $(this).on("hidden.bs.popover", function(e) {
     //   d3.select(this).attr("data-content", "");
@@ -1013,10 +1047,7 @@ function drawPaper(
 
     //If the paper was recently selected (checked by looking at the stroke on the paper), then add a stroke
     if (
-      d3
-        .select(this.parentNode)
-        .select("#paperRect")
-        .style("stroke") == "none"
+      d3.select(this.parentNode).select("#paperRect").style("stroke") == "none"
     ) {
       drawBorder(d3.select(this.parentNode).select("#paperRect"), false);
       currentPaperIndicator = d3
@@ -1034,9 +1065,9 @@ function drawPaper(
   //Used to tell if the specific paper's popover should be shown immediately after creation - used when changing boundaries
   if (display == true) {
     //Simulates mouse click on the paper
-    jQuery.fn.d3Click = function() {
+    jQuery.fn.d3Click = function () {
       //Used to click the d3 object (svg)
-      this.each(function(i, e) {
+      this.each(function (i, e) {
         var evt = new MouseEvent("click");
         e.dispatchEvent(evt);
       });
@@ -1054,19 +1085,19 @@ function cycleVisibility(item) {
     item.parentElement.parentElement.childNodes[9].childNodes[1],
     item.parentElement.parentElement.childNodes[11].childNodes[1],
     item.parentElement.parentElement.childNodes[13].childNodes[1],
-    item.parentElement.parentElement.childNodes[15].childNodes[1]
+    item.parentElement.parentElement.childNodes[15].childNodes[1],
   ];
 
   var mainPage = [
     item.parentElement.parentElement.parentElement.parentElement.parentElement
       .childNodes[1],
     item.parentElement.parentElement.parentElement.parentElement.parentElement
-      .childNodes[10]
+      .childNodes[10],
   ];
 
   var id = currentPaperSelected
     .selectAll("rect")
-    .filter(function(d, i) {
+    .filter(function (d, i) {
       return i === 2;
     })
     .attr("id");
@@ -1118,9 +1149,7 @@ function switchToPapers() {
   if (selections.length == 0) {
     selectAllYears(); // default is to show all :)
   }
-  d3.select("#pills-papers")
-    .selectAll(".row")
-    .remove(); //Remove all objects that might still be there
+  d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
 
   //Remove the paper row - append a message about the slow computation time, and run the search for the papers
   d3.select("#paperRow").remove();
@@ -1142,16 +1171,16 @@ function switchToPapers() {
   d3.select("#paperSortButton").style("display", null); //Unhide sort button for papers
 
   $("#pills-papers-tab").tab("show");
-  executeAsync(function() {
+  executeAsync(function () {
     drawPapers();
   }, 500);
 }
 
-function getPopoverContent(articleid) {
+function getPopoverContent(articleid, sentenceHits, ruleHits) {
   $.ajax({
     type: "GET",
     url: processURL + "paper?id=" + articleid,
-    success: function(results) {
+    success: function (results) {
       // let data = JSON.parse(results);
       let data = results;
       let $modal = $("#generic-modal");
@@ -1175,38 +1204,93 @@ function getPopoverContent(articleid) {
       // popover.append("h2").text(article_title);
 
       let list = popover.append("ul").attr("class", "list-group citation-text");
-      data["paragraphs"].forEach(p => {
-        let full_text = p.text;
-        listEntry = list.append("li").attr("class", "list-group-item");
+      let counter = 0;
+      sentenceHits.forEach((p) => {
+        let full_text = "";
+        let listEntry = list.append("li").attr("class", "list-group-item");
+        for (let i = 0; i < ruleHits[counter].length; ++i) {
+          let tmp = JSON.parse(ruleHits[counter][i]["signals"]);
+          let words = [];
+          for (let j in tmp) {
+            const rule = JSON.parse(tmp[j]);
+            const tmpWords = rule.map((x) => x.query);
+            words = words.concat(tmpWords);
+          }
+          full_text += `<div class='rule-glyph' onmouseenter='glyphEnter(this);' onmouseleave='glyphExit(this);' style='background-color:${ruleHits[counter][i]["color"]}' words='${words}'></div>`;
+        }
+        counter++;
+        full_text += "<br/><div class='text-field'>";
+        let text = p.join("");
         // markup search query words in this paragraph
         if (currSearchQuery.length > 0) {
           for (let query of currSearchQuery.split(" ")) {
-            full_text = full_text.replace(
-              new RegExp(query,'gi'),
+            text = text.replace(
+              new RegExp(query, "gi"),
               "<span class='query-text'> $& </span>"
             );
           }
         }
-        let citations = [];
+        full_text += text;
+        full_text += "</div>";
         // full_text = tagCitationSentiment(articleid, full_text);
-        p.citations.forEach(c => {
-          let citation_text = c.citationtext;
-          if (!citations.includes(citation_text)) {
-            full_text = full_text.replace(
-              ' ' + citation_text + ' ',
-              " <span class='citation'>" + citation_text + "</span> " // Have to add spaces to we replace the text correctly
-            );
-            // citations.push(citation_text); // TODO: decide to highlight them all, or just once
-          }
-        });
+        //p.citations.forEach(c => {
+        //  let citation_text = c.citationtext;
+        //  if (!citations.includes(citation_text)) {
+        //    full_text = full_text.replace(
+        //      ' ' + citation_text + ' ',
+        //      " <span class='citation'>" + citation_text + "</span> " // Have to add spaces to we replace the text correctly
+        //    );
+        //    // citations.push(citation_text); // TODO: decide to highlight them all, or just once
+        //  }
+        //});
         // use the markup text
         listEntry.html(full_text);
       });
+      if ($($modal).find("#rule-div").length == 0) {
+        $($modal).append("<div class='rule-div' id='rule-div'></div>");
+      }
+      if ($("#rule-div", $modal).find("#pills-admin").length == 0) {
+        $("#rule-div", $modal).append($("#pills-admin").clone());
+        $("#pills-admin").remove();
+      }
       $modal.modal("show");
-    }
+      $($modal).find("#pills-admin").addClass("active show");
+      loadTable("signalcategory", undefined, true, transformCategoryData);
+    },
   });
 }
-
+function glyphEnter(element) {
+  let words = $(element).attr("words");
+  words = words.split(",");
+  let parent = $(element).parent();
+  let textField = $(parent).find(".text-field");
+  let text = $(textField).html();
+  for (const i in words) {
+    text = text.replace(
+      new RegExp(" " + words[i] + " ", "gi"),
+      `<span class='query-text' style='background-color:white;outline: 2px solid ${$(
+        element
+      ).css("background-color")}; border-radius:3px;'>$&</span>`
+    );
+  }
+  $(textField).html(text);
+}
+function glyphExit(element) {
+  let words = $(element).attr("words");
+  words = words.split(",");
+  let parent = $(element).parent();
+  let textField = $(parent).find(".text-field");
+  let text = $(textField).text();
+  if (currSearchQuery.length > 0) {
+    for (let query of currSearchQuery.split(" ")) {
+      text = text.replace(
+        new RegExp(query, "gi"),
+        "<span class='query-text'> $& </span>"
+      );
+    }
+  }
+  $(textField).html(text);
+}
 function setPopoverContent(articleid) {
   //Append the relevant paper data in the popover
   // var popover = d3.select("#popover_text");
@@ -1271,7 +1355,7 @@ function setPopoverContent(articleid) {
     // now markup search query words
     for (let query of currSearchQuery.split(" ")) {
       full_text = full_text.replace(
-        new RegExp(query,'gi'),
+        new RegExp(query, "gi"),
         "<span class='query-text'>$&</span>"
       );
     }
@@ -1299,7 +1383,7 @@ function setPopoverContent(articleid) {
   }
   $modal.modal("show");
 
-  $("#popover_text .list-group-item").on("click", function() {
+  $("#popover_text .list-group-item").on("click", function () {
     selectPaperViewBoundary(this);
     updateReferencesSelected([
       this.id,
@@ -1307,7 +1391,7 @@ function setPopoverContent(articleid) {
       paperText[this.id][0]["articletitle"],
       paperText[this.id][0]["articleyear"],
       paperText[this.id][0]["journaltitle"],
-      paperText[this.id][0]["papertext"].length
+      paperText[this.id][0]["papertext"].length,
     ]);
   });
 }

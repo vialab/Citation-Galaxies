@@ -18,34 +18,34 @@ let signal_scores = {};
 let default_color = "#bbb";
 
 // Trigger action when the contexmenu is about to be shown
-$(document).bind("mouseup", function (event) {
-  // if where is clicked is not the menu, hide the menu
-  if ($(".custom-menu").is(":visible")) {
-    if (!$(event.target).parents(".custom-menu").length > 0) {
-      $(".custom-menu").hide(100);
-    }
-  }
-  // Avoid the real one
-  let sel = window.getSelection();
-  if (sel.toString() != "") {
-    // only show custom menu when we are highlighting in a popover
-    if (
-      $(sel.getRangeAt(0).commonAncestorContainer.parentNode)
-        .parent()
-        .hasClass("citation-text")
-    ) {
-      console.log("yay");
-      $("#text-selection").val(sel);
-      $(".custom-menu")
-        .finish()
-        .toggle(100)
-        .css({
-          top: event.pageY + "px",
-          left: event.pageX + "px"
-        });
-    }
-  }
-});
+//$(document).bind("mouseup", function (event) {
+//  // if where is clicked is not the menu, hide the menu
+//  if ($(".custom-menu").is(":visible")) {
+//    if (!$(event.target).parents(".custom-menu").length > 0) {
+//      $(".custom-menu").hide(100);
+//    }
+//  }
+//  // Avoid the real one
+//  let sel = window.getSelection();
+//  if (sel.toString() != "") {
+//    // only show custom menu when we are highlighting in a popover
+//    if (
+//      $(sel.getRangeAt(0).commonAncestorContainer.parentNode)
+//        .parent()
+//        .hasClass("citation-text")
+//    ) {
+//      console.log("yay");
+//      $("#text-selection").val(sel);
+//      $(".custom-menu")
+//        .finish()
+//        .toggle(100)
+//        .css({
+//          top: event.pageY + "px",
+//          left: event.pageX + "px"
+//        });
+//    }
+//  }
+//});
 
 // given paper citation text, get matching rule counts
 function tagCitationSentiment(articleid, text) {
@@ -67,10 +67,10 @@ function tagCitationSentiment(articleid, text) {
       new_text = new_text.replace(
         s.signal,
         "<span class='sentiment-text' style='background-color: " +
-        col +
-        "'>" +
-        s.signal +
-        "</span>"
+          col +
+          "'>" +
+          s.signal +
+          "</span>"
       );
       score += value * matches.length; // sum score
       n += matches.length;
@@ -99,7 +99,7 @@ function processSignals(query, year, recache = 1) {
       ruleSet: sentiment_signals, // for backprocessing
       rangeLeft: sentenceRangeAbove,
       rangeRight: sentenceRangeBelow,
-      recache: recache
+      recache: recache,
     }),
     success: function (data) {
       // done so let's remove this from the queue
@@ -110,7 +110,7 @@ function processSignals(query, year, recache = 1) {
     error: function () {
       process_queue[year] = undefined;
     },
-    async: true
+    async: true,
   });
 }
 
@@ -120,22 +120,22 @@ function processSentimentBins(data) {
     sorted_data = {
       max_value: 0,
       max_count: 0,
-      total_value: new Array(bin_count).fill(0).map(() => 0)
+      total_value: new Array(bin_count).fill(0).map(() => 0),
     };
 
   // for each category (positive/neutral/negative)
-  Object.keys(sentiment_categories).forEach(k => {
+  Object.keys(sentiment_categories).forEach((k) => {
     let cat_id = k.toString();
     // create an empty array of n bins for values and counts
     sorted_data[cat_id] = {
-      value: new Array(bin_count).fill(0).map(() => 0)
+      value: new Array(bin_count).fill(0).map(() => 0),
     };
   });
 
   for (let row of data) {
     let bin_num = Math.floor((row.percent * 100) / currIncrement);
     // score should have all the same sentiment categories
-    Object.keys(row.score).forEach(k => {
+    Object.keys(row.score).forEach((k) => {
       let cat_id = k.toString();
       let val = Math.abs(row.score[cat_id]);
       sorted_data[cat_id]["value"][bin_num] += val;
@@ -210,7 +210,7 @@ function transformCategoryData(results, replace_all = false) {
     sentiment_categories[cat.id] = {
       name: cat.catname,
       // value: cat.score,
-      color: cat.color
+      color: cat.color,
     };
   }
 }
@@ -339,7 +339,7 @@ function updateCategoryInterface() {
   // update global html elements to reflect any changes to categories
   $("#categories").html("");
   $(".custom-menu").html("");
-  Object.keys(sentiment_categories).forEach(id => {
+  Object.keys(sentiment_categories).forEach((id) => {
     let cat = sentiment_categories[id];
     $("#rule-type").append(
       " \
@@ -370,7 +370,8 @@ function updateCategoryInterface() {
     //   </div>
     // </div>
     // `
-    html = "<li class='menu-btn' onclick='addSignal(" +
+    html =
+      "<li class='menu-btn' onclick='addSignal(" +
       id +
       ");'>" +
       cat.name +
@@ -382,7 +383,7 @@ function updateCategoryInterface() {
 // create a generic select input of categories
 function getCategorySelect() {
   let $sel = $("<select class='sel-cat'></select>");
-  Object.keys(sentiment_categories).forEach(id => {
+  Object.keys(sentiment_categories).forEach((id) => {
     let cat = sentiment_categories[id];
     $sel.append(" \
       <option value='" + id + "'>" + cat.name + "</option>");
@@ -409,26 +410,23 @@ function processAllSignals() {
       increment: currIncrement,
       // loaded_articles: loaded_articles,
       signals: sentiment_signals,
-      query: currSearchQuery
+      query: currSearchQuery,
     }),
     success: function (results) {
       let data = results;
       score_data = data["front_data"];
       signal_scores = data["signal_scores"];
-      Object.keys(score_data).forEach(year => {
+      Object.keys(score_data).forEach((year) => {
         drawSentimentColumn(year);
       });
-      toast(
-        "Processing Complete!",
-        "Begin your searching."
-      );
+      toast("Processing Complete!", "Begin your searching.");
       $("#changeLabelItem2").removeClass("disabled");
       $("#downloadDataButton").removeAttr("disabled");
       createVisualization(transformScores());
     },
     error: function (err) {
       console.log(err);
-    }
+    },
   });
 }
 
@@ -438,7 +436,7 @@ function filterSignals(category, pid) {
   // filter by a category
   if (typeof category != "undefined") {
     let acc = {};
-    Object.keys(filtered_data).forEach(key => {
+    Object.keys(filtered_data).forEach((key) => {
       if (filtered_data[key].category == category) {
         acc[key] = filtered_data[key];
       }
@@ -452,7 +450,7 @@ function filterSignals(category, pid) {
     let keys = getAllChildrenKeys(signal);
     let acc = {};
     keys.push(pid);
-    Object.keys(filtered_data).forEach(key => {
+    Object.keys(filtered_data).forEach((key) => {
       if (keys.includes(key)) {
         acc[key] = filtered_data[key];
       }
@@ -478,23 +476,20 @@ function addSignal(cat_id) {
   let signals = [
     {
       range: [sentenceRangeBelow, sentenceRangeAbove],
-      query: currSearchQuery
+      query: currSearchQuery,
     },
     {
       range: [sentenceRangeBelow, sentenceRangeAbove],
       query: `"${$("#text-selection").val()}"`,
-      modifier: 'AND'
-    }
-  ]
+      modifier: "AND",
+    },
+  ];
   let values = {
     signalcategoryid: cat_id,
     name: $("#text-selection").val(),
-    signal: JSON.stringify(signals)
+    signal: JSON.stringify(signals),
   };
   postInsert("signal", values);
 }
 
-
-function requestSignalExport() {
-
-}
+function requestSignalExport() {}

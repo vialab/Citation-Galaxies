@@ -410,7 +410,6 @@ def main():
             res.append( pool.apply_async( process_main, (chunk,) ) )
             chunk = []
 
-
         logger.success("All work batches created.")
         logger.success("Total Records inserted: ",sum( [r.get() for r in res] ) )
 

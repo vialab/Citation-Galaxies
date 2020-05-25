@@ -32,7 +32,7 @@
   margin: 1.5rem 0 0 0;
   background-color: rgba(240, 240, 240, 0.5);
   cursor: pointer;
-  color: lightgray; 
+  color: lightgray;
 }
 .signal-add-button:hover {
   background-color: rgba(230, 240, 255, 0.8);
@@ -112,7 +112,7 @@
 
 .load-more {
   width: 115px;
-  height: 168px;
+  height: 188px;
 }
 
 .load-more .btn {
@@ -204,7 +204,7 @@
 }
 
 #papers-container .papers {
-  justify-content: center;
+  justify-content: flex-start;
   max-height: calc(80vh - 42px);
 }
 
@@ -265,7 +265,7 @@ svg text {
   width: 100%;
   height: 6px;
   border-radius: 5px;
-  background: #d3d3d3;
+  background: #017bfb;
   outline: none;
   opacity: 0.7;
   -webkit-transition: 0.2s;
@@ -393,12 +393,11 @@ a.disabled {
 }
 
 /* #sortOptions { */
-  /* position: fixed; */
-  /* right: 0px; */
-  /* margin-bottom: 10px; */
-  /* z-index: 5; */
+/* position: fixed; */
+/* right: 0px; */
+/* margin-bottom: 10px; */
+/* z-index: 5; */
 /* } */
-
 
 #alert {
   z-index: 10;
@@ -637,6 +636,10 @@ g text {
   margin: 0;
   padding: 0;
 }
+.modal-dialog-centered {
+  float: left;
+  margin: auto;
+}
 
 .full-screen .modal-content {
   height: auto;
@@ -663,3 +666,19 @@ g text {
   }
 }
 
+.rule-div {
+  position: fixed;
+  top: 0px;
+  bottom: 0px;
+  right: 0px;
+  left: 900px;
+  background-color: white;
+}
+
+.rule-glyph {
+  border-radius: 50%;
+  margin: 3px;
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+}

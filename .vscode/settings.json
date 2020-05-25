@@ -1,10 +1,10 @@
 {
-    "python.pythonPath": "/home/zhills/miniconda3/envs/galaxy_env/bin/python",
+    "python.pythonPath": "tools/bin/python",
     "hexdump.width": 32,
 
 
     "python.analysis.downloadChannel": "daily",
-    "python.formatting.provider": "black",
+    "python.formatting.provider": "yapf",
     "python.formatting.blackArgs": ["--line-length","120"],
     
     "python.jediEnabled": false,

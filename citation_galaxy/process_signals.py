@@ -12,6 +12,7 @@ import time
 from json import dumps, loads
 from pathlib import Path
 
+import aiohttp
 from aiohttp import web
 from aiohttp_session import get_session, setup
 from cryptography import fernet
@@ -134,10 +135,38 @@ async def process_signals(request):
             jobs.append(db.execute(query, *args))
 
     results = await asyncio.gather(*jobs)
-    await create_corpus(db, cookie_id, categories, signals)
 
-    return web.json_response(results)
+    response = web.StreamResponse()
+    response.content_type = 'application/gzip'
+    await response.prepare(request)
+    mpwriter = 1
+    corps = await create_corpus(db, cookie_id, categories, signals, mpwriter)
 
+    for corp in corps:
+        for chunk in corp:
+            # print("CHU: ",chunk)
+            await response.write(chunk)
+        # await asyncio.sleep(1)
+    return response
+    # with aiohttp.MultipartWriter('mixed') as mpwriter:
+    #     mpwriter.append(open(__file__,'rb')) # Example writing file i think
+
+
+    #     return mpwriter
+
+    # return web.json_response(results)
+
+@routes.get("/signals/test")
+async def test(request):
+    print("TEST")
+    response = web.StreamResponse()
+    response.content_type = 'application/gzip'
+    await response.prepare(request)
+    for _ in range(100):
+        b = bytearray('line %d\n' % _, 'utf-8')
+        await response.write(b)
+        # await asyncio.sleep(1)
+    return response
 
 async def add_job(coro):
     task = asyncio.create_task(coro)
@@ -145,11 +174,14 @@ async def add_job(coro):
     return task
 
 
-async def create_corpus(db, cookie_id, categories, signals):
+async def create_corpus(db, cookie_id, categories, signals, mpwriter):
+    corps = []
     for category in categories:
-        task = await add_job(create_corpus_category(db, cookie_id, category))
+        # task = await add_job(create_corpus_category(db, cookie_id, category))
+        task = await create_corpus_category(db, cookie_id, category, mpwriter)
+        corps.append(task)
 
-    return task
+    return corps
 
 
 def put_citations_back(sections):
@@ -162,7 +194,8 @@ def put_citations_back(sections):
     return keep_sections
 
 
-async def create_corpus_category(db, cookie_id, category):
+async def create_corpus_category(db, cookie_id, category, mpwriter):
+    chunks = []
     async with db.acquire() as con:
         async with con.transaction():
             count = 0
@@ -178,32 +211,35 @@ async def create_corpus_category(db, cookie_id, category):
                     {
                         "title": record["title"],
                         "abstract": record["abstract"],
-                        "sections": text_sections,
+                        "sections": json.dumps(text_sections),
                         "general": record["general"],
                     }
                 )
                 count += 1
 
                 if (count % MAX_ART_PER_CORP) == 0:
-                    write_chunk(articles, category, cookie_id, chunk)
+                    chunks.append(write_chunk(articles, category, cookie_id, mpwriter, chunk))
                     chunk += 1
                     articles = []
 
-            write_chunk(articles, category, cookie_id, chunk)
+            chunks.append(write_chunk(articles, category, cookie_id, mpwriter, chunk))
+    return chunks
 
 
-def write_chunk(articles, category, cookie_id, chunk_num=1):
+def write_chunk(articles, category, cookie_id, mpwriter, chunk_num=1, ):
     category_data = {"generated_at_utc": time.time(), "user_cookieid": cookie_id, "name": category["catname"]}
 
     category_data["articles"] = articles
     # write the file
-    file_path = CORP_PATH / f"user-{cookie_id}" / f'{category["catname"]}/{chunk_num:03d}.json.gz'
+    # file_path = CORP_PATH / f"user-{cookie_id}" / f'{category["catname"]}/{chunk_num:03d}.json.gz'
 
-    if not file_path.parent.exists():
-        file_path.parent.mkdir(parents=True)
+    # if not file_path.parent.exists():
+    #     file_path.parent.mkdir(parents=True)
 
-    if file_path.exists():
-        file_path.unlink(missing_ok=True)
+    # if file_path.exists():
+    #     file_path.unlink(missing_ok=True)
 
-    with gzip.open(file_path, "wt") as fp:
-        json.dump(category_data, fp, indent=1)
+    # with gzip.open(file_path, "wt") as fp:
+    #     json.dump(category_data, fp, indent=1)
+    bdata = json.dumps(category_data, indent=1).encode('utf-8')
+    return gzip.compress( bdata , compresslevel=5 )

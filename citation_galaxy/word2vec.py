@@ -11,10 +11,11 @@ import asyncio
 import json
 import gensim
 from gensim.models.callbacks import CallbackAny2Vec
+from nltk.tokenize import word_tokenize
 import sys
 import yagmail
 
-modelName = "word2vec.model"
+modelName = "word2vec_pubmed.model"
 
 
 class SentenceGenerator:
@@ -25,7 +26,8 @@ class SentenceGenerator:
     def __iter__(self):
         with open(self.fileName, 'r') as f:
             for line in f:
-                yield line.strip('\n')
+                result = word_tokenize(line.strip('\n'))
+                yield result
 
 class EpochLogger(CallbackAny2Vec):
     def on_train_end(self, model):
@@ -33,7 +35,6 @@ class EpochLogger(CallbackAny2Vec):
         
     def on_epoch_end(self, model):
         model.save(modelName)
-        yagmail.SMTP("codinfreakgf@gmail.com", "shEA45thr5").send("codinfreakgf@gmail.com", "debugging", "epoch ended")
 
 logger = EpochLogger()
 

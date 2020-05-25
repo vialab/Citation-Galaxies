@@ -22,11 +22,11 @@ from citation_galaxy.utils import list_in_string
 from nltk.tokenize import sent_tokenize
 
 from citation_galaxy.wordRecommender import WordRecommender
+from citation_galaxy.process_signals import build_signal_search
 
-#wordRecommender = WordRecommender()
+wordRecommender = WordRecommender()
 
 routes = web.RouteTableDef()
-
 
 def parseRangeString(str):
     return tuple(map(int, re.findall(r"\d+", str)))
@@ -42,22 +42,21 @@ async def getWords(request):
     top=5
     res = []
     post_data = await request.json()
-  #  for i in range(1, len(post_data)):
-  #      words = wordRecommender.getRecommendation([post_data[0], post_data[i]], 5)
-  #      for j in range(0, len(words)):
-  #          res.append(words[j])
-  #  #remove duplicates
-  #  for word in res:
-  #      if word[0] in post_data:
-  #          res.remove(word)
-  #  res.sort(reverse=True, key=lambda x:x[1])
-#
-  #  #if greater than required suggestion amount delete the least similar
-  #  if len(res) > top:
-  #      print(len(res))
-  #      res= res[:-(len(res)-top)]
-  #      print(len(res))
-  #  
+    for i in range(1, len(post_data)):
+        words = wordRecommender.getRecommendation([post_data[0], post_data[i]], 5)
+        for j in range(0, len(words)):
+            res.append(words[j])
+    #remove duplicates
+    for word in res:
+        if word[0] in post_data:
+            res.remove(word)
+    res.sort(reverse=True, key=lambda x:x[1])
+    #if greater than required suggestion amount delete the least similar
+    if len(res) > top:
+        print(len(res))
+        res= res[:-(len(res)-top)]
+        print(len(res))
+    
     return web.json_response({"suggestions": res})
 
 @routes.post("/api/insert")
@@ -173,9 +172,7 @@ async def update_handler(request):
         )  # Gets the first created query from the list of queries. This is because i feed individual queries in on it's own and generate them that way
 
         await query(db, **query_params)
-
     data = []
-
     return web.json_response({})
 
 
@@ -236,74 +233,160 @@ async def api_handler(request):
 @routes.post("/gateway/process/signals")
 async def process_signal(request):
     db, session = await get_db_sess(request)
-
     query_params = await request.json()
-
     data = {"front_data": {}, "signal_scores": {}}
-
     return web.json_response(data)
 
-def parseText(text, ranges, searchedTerms):
+def parseText(text, ranges, searchedTerm, ruleSet):
     #aggregate text
     aggText=""
     citationToken= 'ЉЉ'
     citationToken = citationToken.lower()
+    referenceList=[]
     sentenceHits=[]
-    binHits=[]
+    binHits = []
+    ruleSetHits=[]
     text=loads(text)
     puncTokens= ':|\!|\.|\,|\/|\:|\;|\"'
     for block in text:
         aggText += block["text"]
+        referenceList = referenceList + block["reference_ids"]
+    citationMap=[]
     #find word position
     sentences = sent_tokenize(aggText.lower()) 
+    for j in range(0, len(sentences)):
+        res = [i for i in range(0,len(sentences[j])) if sentences[j].startswith(citationToken, i)] 
+        citationMap.append(referenceList[:len(res)])
+        del referenceList[:len(res)]
+
     #analyze range
-    for i in range(0, len(searchedTerms)):
-        for j in range(0, len(sentences)):
-            if searchedTerms[i] in re.sub(puncTokens, '',sentences[j]):
-                #check left
-                found=False
-                left=ranges[searchedTerms[i]][0]+2
-                for k in range(0, left):
-                    #check if we are going past the index
-                    idx = j-k
-                    if idx < 0:
+    for j in range(0, len(sentences)):
+        if searchedTerm in re.sub(puncTokens, '',sentences[j]):
+            #check left
+            found=False
+            left=ranges[searchedTerm][0]+2
+            for k in range(0, left):
+                #check if we are going past the index
+                idx = j-k
+                if idx < 0:
+                    break
+                if citationToken in sentences[idx]:
+                    #create sentence hit
+                    #check if full range exceeds array bounds
+                    leftBounds = j-(ranges[searchedTerm][0] +1)
+                    rightBounds = j+(ranges[searchedTerm][1] +2)
+                    if leftBounds < 0:
+                        leftBounds=0
+                    if rightBounds > len(sentences):
+                        rightBounds -= rightBounds - (len(sentences)+1)
+                    sentenceHits.append(replaceCitationTokens(citationMap,sentences[leftBounds:rightBounds], leftBounds))
+                    binHits.append(int(j / len(sentences) * 100))
+                    found = True
+                    categoriesFound=[]
+                    for i in ruleSet:
+                        for rules in ruleSet[i]["signals"]:
+                            categoryHit=True
+                            maxRange=0
+                            maxLeft=0
+                            maxRight=0
+                            for rule in loads(rules["signal"]):
+                                ruleLeft = j - (int(rule["range"][0])+1)
+                                ruleRight = j + (int(rule["range"][1])+2)
+                                if ruleLeft < 0:
+                                    ruleLeft = 0
+                                if ruleRight > len(sentences):
+                                    ruleRight -= ruleRight - (len(sentences) + 1)
+                                if maxRange < ruleRight - ruleLeft:
+                                    maxRange = ruleRight - ruleLeft
+                                    maxLeft = ruleLeft
+                                    maxRight = ruleRight
+                                if ("modifier" in rule) == False:
+                                    rule["modifier"] = "AND"
+                                if checkRule(sentences[ruleLeft:ruleRight], rule["query"], rule["modifier"]) == False:
+                                    categoryHit=False
+                                    break
+                            if categoryHit:
+                                categoriesFound.append({"name": ruleSet[i]["name"], "color": ruleSet[i]["color"], "signals": dumps(dict(ruleSet[i]["signals"]))})
+                                end = len(sentenceHits) -1
+                                if len(sentenceHits[end]) <  maxRange:
+                                    sentenceHits[end] = replaceCitationTokens(citationMap,sentences[maxLeft:maxRight], maxLeft)
+                                break
+                    ruleSetHits.append(categoriesFound)
+                    break
+            if found:
+                continue
+            #check right if left was not found
+            right=ranges[searchedTerm][0]+2
+            for k in range(0, right):
+                if searchedTerm in  re.sub(puncTokens, '', sentences[j]):
+                    idx = j+k
+                    #check if idx is outside the bounds of the sentence array
+                    if idx >= len(sentences):
                         break
                     if citationToken in sentences[idx]:
                         #create sentence hit
                         #check if full range exceeds array bounds
-                        leftBounds = j-(ranges[searchedTerms[i]][0] +1)
-                        rightBounds = j+(ranges[searchedTerms[i]][1] +2)
+                        leftBounds = j-(ranges[searchedTerm][0] +1)
+                        rightBounds = j+(ranges[searchedTerm][1] +2)
                         if leftBounds < 0:
                             leftBounds=0
                         if rightBounds > len(sentences):
                             rightBounds -= rightBounds - (len(sentences)+1)
-                        sentenceHits.append(sentences[leftBounds:rightBounds])
+                        sentenceHits.append(replaceCitationTokens(citationMap,sentences[leftBounds:rightBounds], leftBounds))
                         binHits.append(int(j / len(sentences) * 100))
-                        found=True
-                        break
-                if found:
-                    continue
-                #check right if left was not found
-                right=ranges[searchedTerms[i]][0]+2
-                for k in range(0, right):
-                    if searchedTerms[i] in  re.sub(puncTokens, '',sentences[j]):
-                        idx = j+k
-                        #check if idx is outside the bounds of the sentence array
-                        if idx >= len(sentences):
-                            break
-                        if citationToken in sentences[idx]:
-                            #create sentence hit
-                            #check if full range exceeds array bounds
-                            leftBounds = j-(ranges[searchedTerms[i]][0] +1)
-                            rightBounds = j+(ranges[searchedTerms[i]][1] +2)
-                            if leftBounds < 0:
-                                leftBounds=0
-                            if rightBounds > len(sentences):
-                                rightBounds -= rightBounds - (len(sentences)+1)
-                            sentenceHits.append(sentences[leftBounds:rightBounds])
-                            binHits.append(int(j / len(sentences) * 100))
+                        categoriesFound=[]
+                        for i in ruleSet:
+                            for rules in ruleSet[i]["signals"]:
+                                maxRange=0
+                                maxLeft=0
+                                maxRight=0
+                                categoryHit=True
+                                for rule in loads(rules["signal"]):
+                                    ruleLeft = j - (int(rule["range"][0])+1)
+                                    ruleRight = j + (int(rule["range"][1])+2)
+                                    if ruleLeft < 0:
+                                        ruleLeft = 0
+                                    if ruleRight > len(sentences):
+                                        ruleRight -= ruleRight - (len(sentences)+1)
+                                    if maxRange < ruleRight - ruleLeft:
+                                        maxRange = ruleRight - ruleLeft
+                                        maxLeft = ruleLeft
+                                        maxRight = ruleRight
+                                    if ("modifier" in rule) == False:
+                                        rule["modifier"] = "AND"
+                                    if checkRule(sentences[ruleLeft:ruleRight], rule["query"], rule["modifier"]) == False:
+                                        categoryHit=False
+                                        break
+                                if categoryHit:
+                                    categoriesFound.append({"name": ruleSet[i]["name"], "color": ruleSet[i]["color"], "signals": dumps(dict(ruleSet[i]["signals"]))})
+                                    end = len(sentenceHits) -1
+                                    if len(sentenceHits[end]) <  maxRange:
+                                        sentenceHits[end] = replaceCitationTokens(citationMap,sentences[maxLeft:maxRight], maxLeft)
+                                    break
+                        ruleSetHits.append(categoriesFound)
+                        break                       
     #return sentenceHits and their respective binHits in the paper
-    return sentenceHits, binHits
+    return sentenceHits, binHits, ruleSetHits
+def replaceCitationTokens(referenceMap, sentences, minIdx):
+    citationToken= 'ЉЉ'
+    citationToken = citationToken.lower()
+    for j in range(0, len(sentences)):
+        for i in range(0, len(referenceMap[minIdx+j])):
+            sentences[j] = sentences[j].replace(citationToken, referenceMap[minIdx+j][i],1)
+    return sentences
+def checkRule(sentences, rule, modifier):
+    puncTokens= ':|\!|\.|\,|\/|\:|\;|\"'
+    if modifier == "AND":
+        for sentence in sentences:
+            if rule in re.sub(puncTokens, '', sentence):
+                return True
+        return False
+    else:
+        for sentence in sentences:
+            if rule in re.sub(puncTokens, '', sentence):
+                return False
+        return True
+
 
 @routes.post("/gateway/papers")
 async def papers(request):
@@ -312,12 +395,25 @@ async def papers(request):
     # print("query:",request,db.question.select())
     query_params = await request.json()
     increment = int(query_params.get("increment", 10))
+    query_params["cookie_id"] = session["id"]
+    last_rank = int(query_params.get("lastRank", 0))
+    n_rank = query_params.get("nrank", 0)
+    #categories = await db.fetch("select id, catname from signalcategory where cookieid=$1", query_params["cookie_id"])
+    #ruleQuery = "select article_text.title, article_text.id, article_text.pub_year, article_text.sections from article_search inner join article_text on article_search .id = article_text.id"
+    #limit = f"limit {n_rank} offset {last_rank}"
+    #jobs = []
+    #for category in categories:
+    #    signals = await db.fetch(
+    #        "select id, signal from signal where signalcategoryid=$1 and cookieid=$2", int(category["id"]), query_params["cookie_id"]
+    #    )
+    #    for signal in signals:
+    #        subquery, args = build_signal_search(signal)
+    #        mainQuery = ruleQuery + subquery.replace("article_search","") + limit
+    #        jobs.append(db.fetch(mainQuery, *args))
+    #results = await asyncio.gather(*jobs)
 
     # range_list = query_params.get('selections', None)
     range_list = list(map(parseRangeString, query_params.get("selections", None)))
-
-    last_rank = int(query_params.get("lastRank", 0))
-    n_rank = query_params.get("nrank", 0)
     signals = query_params.get("signals", {})
     journal_id = query_params.get("journalid", "")
 
@@ -333,10 +429,8 @@ async def papers(request):
         # search_text = ' where ts_search @@ to_tsquery(\'{0}\')'.format( ' & '.join( ( word for word in search_input ) ) )
         search_text += " where text_search @@ setweight( websearch_to_tsquery('english', $1), 'BD') "  # .format( ' & '.join( ( word for word in search_input ) ) )
         search_params.append(search_input)  # TODO: use the ts_rank functions in postgres to rank?
-
         if words_left >= 0 or words_right >= 0:
             subsearch_text = "where text_search @@ setweight( to_tsquery('english', $2), 'BC') "
-
             subsearch_params = []
             stripped_input = search_input.translate(removePunc)
             stripped_input = stripped_input.replace(" or ", " ")
@@ -344,21 +438,24 @@ async def papers(request):
             for word in stripped_input.split(" "):
                 for dist in range(0, words_left + 1):
                     subsearch_params.append(f"{word} <{dist}> љљ")
-
                 for dist in range(0, words_right + 1):
                     subsearch_params.append(f"љљ <{dist}> {word}")
-
             search_params.append(" | ".join(subsearch_params))
-
     querymanager = QueryManager(db, increment, search_text, subsearch_text, search_params)
-
     tasks = [querymanager.do_papers_query(year_range_tup, n_rank, last_rank) for year_range_tup in range_list]
     results = await asyncio.gather(*tasks)
     sorted_articles = {}
+    categories = await db.fetch("select id, catname, color from signalcategory where cookieid=$1", session["id"])
+    res={}
+    for category in categories:
+        signals = await db.fetch(
+            "select id, signal from signal where signalcategoryid=$1 and cookieid=$2", int(category["id"]), session["id"]
+        )
+        res[category["id"]]={"name": category["catname"], "color": category["color"], "signals": signals}
     sorted_text={}
     years = set()
     journals = {}
-    searchedTerms = [query_params["query"]]
+    ruleHits = {}
     ranges = {}
     ranges[query_params["query"]] = [query_params["rangeLeft"], query_params["rangeRight"]]
     for yearResults in results:
@@ -370,7 +467,7 @@ async def papers(request):
                 "rank": (count + 1) + last_rank,
                 "total": 0,
             }
-            sentenceHits, binHits = parseText(row["sections"], ranges, searchedTerms)
+            sentenceHits, binHits, ruleInfo = parseText(row["sections"], ranges, query_params["query"], res)
             if len(sentenceHits) == 0:
                 print("Error: 0 sentenceHits for paper id " + str(row["id"]))
             for i in range(0, 10):
@@ -388,8 +485,9 @@ async def papers(request):
 
             sorted_articles[row["id"]] = rec
             sorted_text[row["id"]] = sentenceHits
+            ruleHits[row["id"]] = ruleInfo
     maxCount = 6
-    return web.json_response({"max": maxCount, "papers": sorted_articles, "sentenceHits":sorted_text ,"years": list(years), "journals": journals})
+    return web.json_response({"max": maxCount, "papers": sorted_articles, "sentenceHits":sorted_text, "ruleHits": ruleHits, "years": list(years), "journals": journals})
 
 @routes.get("/gateway/paper")
 async def paper(request):
@@ -526,8 +624,17 @@ async def years(request):
         [{"articleyear": year} for year in range(conf["year_range"]["max"] - 15, conf["year_range"]["max"] + 1)]
         # [{"articleyear": year} for year in range(conf["year_range"]["min"], conf["year_range"]["max"] + 1)]
     )
-
-
+@routes.post("/api/get-rules")
+async def getRules(request):
+    db,session = await get_db_sess(request)
+    categories = await db.fetch("select id, catname, color from signalcategory where cookieid=$1", session["id"])
+    res={}
+    for category in categories:
+        signals = await db.fetch(
+            "select id, signal from signal where signalcategoryid=$1 and cookieid=$2", int(category["id"]), session["id"]
+        )
+        res[category["id"]]={"name": category["catname"], "color": category["color"], "signals": signals}
+    return web.json_response(dumps(res))
 # @aiohttp_jinja2.template('index.html')
 @routes.get("/")
 async def index(request):
