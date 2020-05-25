@@ -1,13 +1,25 @@
-const { Pool } = require("pg");
+const pool = require("./database");
 const express = require("express");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const email = require("./email");
+
 const saltRounds = 10;
 
-const pool = new Pool({
-  connectionString: process.env.DB_AUTH_STRING,
-});
+/**
+ * @param {Request} req
+ */
+const saveSession = async (req) => {
+  return new Promise((res, rej) => {
+    req.session.save((err) => {
+      if (err) {
+        console.error(err);
+        return rej(err);
+      }
+      res(true);
+    });
+  });
+};
 /**
  *
  * @param {JSON} expectedKeys
@@ -166,10 +178,19 @@ const authUser = async (req, res) => {
     result.rows[0].password
   );
   if (match) {
-    res.status(200).send("data");
-  }
-};
+    req.session.user = sentInfo.email;
+    res.redirect("/dashboard");
 
+    return;
+  }
+
+  res.status(400).redirect("/");
+};
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
 const verifyUser = async (req, res) => {
   const urlParams = new URLSearchParams(req.query);
   if (!(urlParams.has("hash_key") && urlParams.has("email"))) {

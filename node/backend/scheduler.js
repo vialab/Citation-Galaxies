@@ -17,4 +17,4 @@ const scheduleTask = (cronJob, func) => {
   scheduler.scheduleJob(cronJob, func);
 };
 
-module.export = scheduleTask;
+module.exports = scheduleTask;
