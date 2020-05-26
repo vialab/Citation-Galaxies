@@ -8,21 +8,21 @@
     <link
       rel="apple-touch-icon"
       sizes="180x180"
-      href="/favicon/apple-touch-icon.png"
+      href="apple-touch-icon.png"
     />
     <link
       rel="icon"
       type="image/png"
       sizes="32x32"
-      href="/favicon/favicon-32x32.png"
+      href="favicon-32x32.png"
     />
     <link
       rel="icon"
       type="image/png"
       sizes="16x16"
-      href="/favicon/favicon-16x16.png"
+      href="favicon-16x16.png"
     />
-    <link rel="manifest" href="/favicon/site.webmanifest" />
+    <link rel="manifest" href="site.webmanifest" />
 
     <!--External Resources-->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
@@ -56,18 +56,18 @@
     />
 
     <!--Local files, mainly script and stylesheet-->
-    <script type="module" src="js/newfront.js"></script>
+    <script type="module" src="newfront.js"></script>
     <!-- <script src="js/modal.js"></script> -->
-    <script src="js/table.js"></script>
-    <script src="js/front.js"></script>
-    <script src="js/paper.js"></script>
-    <script src="js/manager.js"></script>
-    <script src="js/signal.js"></script>
-    <script src="js/rule.js"></script>
-    <script src="js/action.js"></script>
-    <script src="js/sequences.js"></script>
-    <link rel="stylesheet" type="text/css" href="css/style.css" />
-    <link rel="stylesheet" type="text/css" href="css/sequences.css" />
+    <script src="table.js"></script>
+    <script src="front.js"></script>
+    <script src="paper.js"></script>
+    <script src="manager.js"></script>
+    <script src="signal.js"></script>
+    <script src="rule.js"></script>
+    <script src="action.js"></script>
+    <script src="sequences.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link rel="stylesheet" type="text/css" href="sequences.css" />
   </head>
 
   <body>
@@ -194,7 +194,7 @@
                   for="formControlRange"
                   style="margin: 0 0 10px 0;"
                   id="citationRange"
-                  >[ 1 <- Citation -> 1 ]</label
+                  >[ 1 <img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img> 1 ]</label
                 >
               </li>
               <li class="list-inline-item">
@@ -738,7 +738,7 @@
                 for="formControlRange"
                 style="margin: 0 0 10px 0; display: none;"
                 id="citationRangePopOver"
-                >[ 0 <- Citation -> 0 ]
+                >[ 0 <img src="arrow.png" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img> 0 ]
               </label>
             </li>
             <li class="list-inline-item">

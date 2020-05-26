@@ -5,6 +5,11 @@ const crypto = require("crypto");
 const email = require("./email");
 
 const saltRounds = 10;
+const HTTP_CODES = {
+  SUCCESS: 200,
+  INVALID_DATA_TYPE: 400,
+  INVALID_VALUES: 422,
+};
 
 /**
  * @param {Request} req
@@ -54,7 +59,7 @@ const createUser = async (req, res) => {
   let sentInfo = reqValid(requiredInfo, req);
   //check input
   if (!sentInfo) {
-    res.status(400).send("Invalid Input");
+    res.status(HTTP_CODES.INVALID_DATA_TYPE).send("Invalid Input");
     return;
   }
   values = [sentInfo.email];
@@ -64,7 +69,7 @@ const createUser = async (req, res) => {
     values
   );
   if (userRow.rowCount) {
-    res.status(400).send("account exists");
+    res.status(HTTP_CODES.INVALID_VALUES).send("account exists");
     return;
   }
   //check if user exists but they have not verified
@@ -74,7 +79,7 @@ const createUser = async (req, res) => {
   );
   if (UserUnverifiedRow.rowCount) {
     res
-      .status(400)
+      .status(HTTP_CODES.INVALID_DATA_TYPE)
       .send(
         "account exists, please verify your email by clicking the link in the email we sent you."
       );
@@ -116,10 +121,14 @@ const createUser = async (req, res) => {
     (err, info) => {
       if (err) {
         console.error(err);
-        res.status(400).send("Error sending email to the supplied account.");
+        res
+          .status(HTTP_CODES.INVALID_VALUES)
+          .send("Error sending email to the supplied account.");
         return;
       }
-      res.status(200).send("Please check your email for verification link.");
+      res
+        .status(HTTP_CODES.SUCCESS)
+        .send("Please check your email for verification link.");
       console.log(info);
     }
   );
@@ -135,7 +144,7 @@ const deleteUser = async (req, res) => {
   //validate info
   let sentInfo = reqValid(requiredInfo, req);
   if (sentInfo == null) {
-    res.status(400).send("Invalid Input");
+    res.status(HTTP_CODES.INVALID_DATA_TYPE).send("Invalid Input");
     return;
   }
   //authenticate user
@@ -150,9 +159,9 @@ const deleteUser = async (req, res) => {
   if (match) {
     //if authenticated user, delete user
     pool.query("DELETE FROM users WHERE email=$1", [sentInfo.email]);
-    res.status(200).send("deleted");
+    res.status(HTTP_CODES.SUCCESS).send("deleted");
   } else {
-    res.status(404).send("invalid credentials");
+    res.status(HTTP_CODES.INVALID_VALUES).send("invalid credentials");
   }
 };
 /**
@@ -164,27 +173,27 @@ const authUser = async (req, res) => {
   const requiredInfo = { email: "", password: "" };
   let sentInfo = reqValid(requiredInfo, req);
   if (sentInfo == null) {
-    res.status(400).send("Invalid Input");
+    res.status(HTTP_CODES.INVALID_DATA_TYPE).send("Invalid Input");
     return;
   }
   const values = [sentInfo.email];
   const result = await pool.query("SELECT * FROM users WHERE email=$1", values);
   if (!result.rowCount) {
-    res.status(404).send("email does not exist");
+    res.status(HTTP_CODES.INVALID_VALUES).send("email does not exist");
     return;
   }
   const match = await bcrypt.compare(
     sentInfo.password,
     result.rows[0].password
   );
+
   if (match) {
     req.session.user = sentInfo.email;
     res.redirect("/dashboard");
-
     return;
   }
 
-  res.status(400).redirect("/");
+  res.status(HTTP_CODES.INVALID_VALUES).redirect("/");
 };
 /**
  *
@@ -194,7 +203,7 @@ const authUser = async (req, res) => {
 const verifyUser = async (req, res) => {
   const urlParams = new URLSearchParams(req.query);
   if (!(urlParams.has("hash_key") && urlParams.has("email"))) {
-    res.status(400).send("Invalid Input");
+    res.status(HTTP_CODES.INVALID_DATA_TYPE).send("Invalid Input");
     return;
   }
   //check if email and hash_key exist
@@ -204,7 +213,7 @@ const verifyUser = async (req, res) => {
     values
   );
   if (!matched.rowCount) {
-    res.status(400).send("Invalid Input");
+    res.status(HTTP_CODES.INVALID_VALUES).send("Invalid Input");
     return;
   }
   //delete user from unverified table
@@ -218,7 +227,79 @@ const verifyUser = async (req, res) => {
     matched.rows[0].password,
   ]);
   //now a verified user
-  res.status(200).send("Account verified");
+  res.status(HTTP_CODES.SUCCESS).send("Account verified");
+};
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
+const recoverUser = async (req, res) => {
+  const requiredInfo = { email: "" };
+  let sentInfo = reqValid(requiredInfo, req);
+  if (sentInfo == null) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE).send("Invalid Input");
+    return;
+  }
+  let result = await pool.query("SELECT * FROM users WHERE email=$1", [
+    sentInfo.email,
+  ]);
+  //email exists
+  if (result.rowCount) {
+    let passwordRecovery = crypto.randomBytes(15).toString("hex");
+    //send new password
+    email.sendMail(
+      {
+        to: sentInfo.email,
+        subject: "Account Recovery",
+        text: "New Password: " + passwordRecovery,
+      },
+      (err, info) => {
+        if (err) {
+          console.error(err);
+          return;
+        }
+      }
+    );
+    bcrypt.hash(passwordRecovery, saltRounds).then(function (result) {
+      pool.query("UPDATE users SET password=$1 WHERE email=$2", [
+        result,
+        sentInfo.email,
+      ]);
+    });
+    return;
+  }
+  result = await pool.query("SELECT * FROM users_unverified WHERE email=$1", [
+    sentInfo.email,
+  ]);
+  if (!result.rowCount) {
+    res.status(HTTP_CODES.INVALID_VALUES).send("Invalid Input");
+    return;
+  } else {
+    let passwordRecovery = crypto.randomBytes(15).toString("hex");
+    //send new password
+    email.sendMail(
+      {
+        to: sentInfo.email,
+        subject: "Account Recovery",
+        text: "New Password: " + passwordRecovery,
+      },
+      (err, info) => {
+        if (err) {
+          console.error(err);
+          return;
+        }
+      }
+    );
+    bcrypt.hash(passwordRecovery, saltRounds).then(function (result) {
+      pool.query("UPDATE users_unverified SET password=$1 WHERE email=$2", [
+        result,
+        sentInfo.email,
+      ]);
+    });
+    res.status(HTTP_CODES.SUCCESS);
+    return;
+  }
 };
 
 module.exports = { getUser, createUser, deleteUser, authUser, verifyUser };

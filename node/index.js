@@ -4,11 +4,15 @@ const app = express();
 var session = require("express-session");
 const cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
-const routes = require("./backend/routes");
+const userRoutes = require("./backend/userRoutes");
+const apiRoutes = require("./backend/api");
 const { v4: uuidv4 } = require("uuid");
 const port = 4000;
 
-//init express packages
+/******path routes *******/
+const apiPath = "api";
+const userPath = "user";
+/**********initialize app***********/
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser(process.env.SECRET));
@@ -24,33 +28,37 @@ app.use(
     cookie: { secure: false, expires: 60000 },
   })
 );
-
-var sessionChecker = (req, res, next) => {
-  if (req.session.user && req.session.id) {
-    res.redirect("/dashboard");
-  } else {
-    next();
-  }
-};
-
-app.get("/", (req, res) => res.sendFile(__dirname + "/frontend/login.html"));
-app.get("/create-account", (req, res) =>
-  res.sendFile(__dirname + "/frontend/createuser.html")
+/****************serving folders ******************/
+app.use(express.static(__dirname + "/public"));
+app.use(express.static(__dirname + "/frontend/css"));
+app.use(express.static(__dirname + "/frontend/js"));
+app.use(express.static(__dirname + "/frontend/favicon"));
+/****************user routes ***************************/
+app.get(`${userPath}/create`, (req, res) =>
+  res.sendFile(__dirname + "/frontend/html/createuser.html")
 );
-app.get("/verify-user", routes.verifyUser);
-app.post("/auth-user", routes.authUser);
-app.post("/create-user", routes.createUser);
+app.get(`${userPath}/verify`, userRoutes.verifyUser);
+app.post(`${userPath}/auth`, userRoutes.authUser);
+app.post(`${userPath}/create`, userRoutes.createUser);
+app.get(`${userPath}/forgot-password`, (req, res) => {
+  res.sendFile(__dirname + "/frontend/html/passwordrecovery.html");
+});
+/***************page routes ****************************/
+app.get("/", (req, res) =>
+  res.sendFile(__dirname + "/frontend/html/login.html")
+);
 //dash board
 app.get("/dashboard", (req, res) => {
   console.log(req.session);
   if (req.session.user && req.session.id) {
-    res.sendFile(__dirname + "/frontend/index.html");
+    res.sendFile(__dirname + "/frontend/html/index.html");
   } else {
     console.log("issue");
     res.redirect("/");
   }
 });
-
+/*************api routes *****************************/
+app.get(`/${apiPath}/years`, apiRoutes.years);
 app.listen(port, () =>
   console.log(`Example app listening at http://localhost:${port}`)
 );

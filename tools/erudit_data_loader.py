@@ -84,15 +84,11 @@ async def walker(directory:str, conn):
                 await post_text(get_analytics(data), paper_id, conn)
     return
 
-
-
-
 async def main():
     conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
     await walker('/home/zhills/erudit_data/new_data', conn)
     await conn.close()
     return
-
 
 asyncio.get_event_loop().run_until_complete(main())
 

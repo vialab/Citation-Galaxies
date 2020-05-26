@@ -109,7 +109,7 @@ def getTextAnalysis(buffer: str):
     return getSentences(buffer), getWords(buffer)
 
 async def createWordTable(conn):
-    await conn.fetchrow('''SELECT full_text_words FROM pubmed_text ''')
+    await conn.fetchrow('''SELECT loop_over_rows() ''')
     return
 
 async def post_meta(pub_id, authors, title, year, journal, affiliation, conn):
@@ -127,9 +127,11 @@ async def post_text(pub_id, abs_word, abs_sent, text_word, text_sent,
         text_cit_sent)
     return
     
-async def create_word_map(conn):
+async def create_word_map():
+    conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
     await conn.fetchrow('''SELECT loop_over_rows()''')
     return
+    
 async def main():
     conn = await asyncpg.connect(
         'postgresql://citationdb:citationdb@localhost:5435/citationdb')
@@ -154,6 +156,6 @@ async def main():
 
         #print(sentMap)
 
-asyncio.get_event_loop().run_until_complete(main())
+asyncio.get_event_loop().run_until_complete(create_word_map())
 
 #testEmail()
