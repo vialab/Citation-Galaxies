@@ -308,19 +308,15 @@ div.tooltip {
 #homeRow {
   display: flex;
   flex-wrap: nowrap;
-
+  justify-content: center;
   overflow: auto;
   /* overflow-x: auto;
   overflow-y: auto; */
   /* max-height: calc(80vh - 24px); */
 }
 
-#distChart {
-  flex: 1 1 auto;
-}
-
 #years {
-  flex: 4 4 auto;
+  /*flex: 4 4 auto;*/
   display: flex;
   /* overflow-x: scroll; */
   /* overflow-x: auto; */

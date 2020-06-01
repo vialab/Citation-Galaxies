@@ -302,4 +302,11 @@ const recoverUser = async (req, res) => {
   }
 };
 
-module.exports = { getUser, createUser, deleteUser, authUser, verifyUser };
+module.exports = {
+  getUser,
+  createUser,
+  deleteUser,
+  authUser,
+  verifyUser,
+  recoverUser,
+};

@@ -34,15 +34,16 @@ app.use(express.static(__dirname + "/frontend/css"));
 app.use(express.static(__dirname + "/frontend/js"));
 app.use(express.static(__dirname + "/frontend/favicon"));
 /****************user routes ***************************/
-app.get(`${userPath}/create`, (req, res) =>
+app.get(`/${userPath}/create-account`, (req, res) =>
   res.sendFile(__dirname + "/frontend/html/createuser.html")
 );
-app.get(`${userPath}/verify`, userRoutes.verifyUser);
-app.post(`${userPath}/auth`, userRoutes.authUser);
-app.post(`${userPath}/create`, userRoutes.createUser);
-app.get(`${userPath}/forgot-password`, (req, res) => {
+app.get(`/${userPath}/verify`, userRoutes.verifyUser);
+app.post(`/${userPath}/auth`, userRoutes.authUser);
+app.post(`/${userPath}/create`, userRoutes.createUser);
+app.get(`/${userPath}/forgot-password`, (req, res) => {
   res.sendFile(__dirname + "/frontend/html/passwordrecovery.html");
 });
+app.post(`/${userPath}/recover`, userRoutes.recoverUser);
 /***************page routes ****************************/
 app.get("/", (req, res) =>
   res.sendFile(__dirname + "/frontend/html/login.html")
@@ -59,6 +60,8 @@ app.get("/dashboard", (req, res) => {
 });
 /*************api routes *****************************/
 app.get(`/${apiPath}/years`, apiRoutes.years);
+app.post(`/${apiPath}/search`, apiRoutes.citationSearch);
+
 app.listen(port, () =>
   console.log(`Example app listening at http://localhost:${port}`)
 );

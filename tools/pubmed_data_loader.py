@@ -57,7 +57,6 @@ def getText(pub_dict: str):
     #pub_dict[""]
     return
 
-
 def getAbstract(pub_dict: str):
     return pub_dict["abstract"]
 
@@ -104,7 +103,20 @@ def getCitationsAnalysis(buffer: list):
     res = re.sub(expr, citationToken, textBuffer)
     wordMap, sentMap = getTextAnalysis(res)
     return wordMap, sentMap, checkMap(wordMap), checkMap(sentMap)
-
+def getDataDump(buffer: list):
+    expr = "\[(.*?)\]"
+    citationToken = "ЉЉ"
+    textBuffer = ""
+    for section in buffer:
+        ids = section["reference_ids"]
+        text = section["text"]
+        if citationToken in text:
+            exit(-2)
+        textBuffer += text + " "
+    textBuffer = textBuffer[:-1]
+    res = re.sub(expr, citationToken, textBuffer)
+    return  word_tokenize(res), sent_tokenize(res), res
+ 
 def getTextAnalysis(buffer: str):
     return getSentences(buffer), getWords(buffer)
 
@@ -126,10 +138,24 @@ async def post_text(pub_id, abs_word, abs_sent, text_word, text_sent,
         json.dumps(text_word), json.dumps(text_sent), text_cit_word,
         text_cit_sent)
     return
-    
+async def post_data(pub_id, title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text, conn):
+    await conn.execute('''INSERT INTO pubmed_data(id, title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING''', int(pub_id), title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text)
+    return
 async def create_word_map():
+    BATCH_SIZE=100
     conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
-    await conn.fetchrow('''SELECT loop_over_rows()''')
+    #get number of rows in pubmed table
+    result = await conn.fetchrow('''SELECT count(*) FROM pubmed_text''')
+    print(result["count"])
+    for i in range(0, result["count"], BATCH_SIZE):
+        print(i)
+        rows = await conn.fetch('''SELECT * FROM pubmed_text INNER JOIN pubmed_meta ON pubmed_text.id=pubmed_meta.id OFFSET $1 LIMIT $2''', i, BATCH_SIZE)
+        for j in range(0, len(rows)):
+            row = rows[j]
+            text = json.loads(row["full_text_sentences"])
+            table = "pubmed_word_map_"+str(row["year"])
+            for word in text:
+                await conn.execute(f"INSERT INTO {table}(word, article_ids) VALUES($1,$2) ON CONFLICT(word) DO UPDATE SET article_ids=array_append({table}.article_ids, $3)",word,[int(row["id"])], int(row["id"]) )
     return
     
 async def main():
@@ -139,18 +165,22 @@ async def main():
     for path in paths:
         try:
             meta, text = parse(path)
-            journal = getJournal(meta)
-            authors = getAuthors(meta)
+            #journal = getJournal(meta)
+            #authors = getAuthors(meta)
             title = getTitle(meta)
             pubmed_id = getPubMed_id(meta)
-            date = getPublicationDate(meta)
-            affiliations = getAffiliations(meta)
-            #abstract = getAbstract(meta)
+            #date = getPublicationDate(meta)
+            #affiliations = getAffiliations(meta)
+            abstract = getAbstract(meta)
            # twordMap, tsentMap, tcitWord, tcitSent = getCitationsAnalysis(text)
+            words, sentences, full_text = getDataDump(text)
             #await post_meta(pubmed_id, authors, title, date, journal, affiliations, conn)
             #wordMap, sentMap = getTextAnalysis(abstract)
+            abstract_words = word_tokenize(abstract)
+            abstract_sentences = sent_tokenize(abstract)
             #await post_text(pubmed_id, wordMap, sentMap, twordMap, tsentMap,tcitWord, tcitSent, conn)
-            await post_meta(pubmed_id, authors, title, date, journal, affiliations, conn)
+            #await post_meta(pubmed_id, authors, title, date, journal, affiliations, conn)
+            await post_data(pubmed_id,title, words, sentences, abstract_words, abstract_sentences, abstract, full_text, conn)
         except Exception as e:
             continue
 

@@ -40,4 +40,5 @@
         }
     ],
     "sqltools.useNodeRuntime": true,
+    "debug.node.autoAttach": "on",
 }

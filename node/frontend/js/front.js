@@ -231,12 +231,23 @@ function updateTextInput(field, before, after, articleid, sendToDefault) {
   } else if (sendToDefault == 0) {
     boundariesByPaper[articleid] = [before, after];
   }
-  field.innerHTML =
+  //let tempString = field.innerHTML;
+  let tempString = field.innerHTML.slice(4, -4);
+  tempString =
     "[ " +
-    (beforeVal + 1).toString() +
-    " <- Citation -> " +
-    (afterVal + 1).toString() +
+    beforeVal.toString() +
+    " " +
+    tempString +
+    " " +
+    afterVal.toString() +
     " ]";
+  field.innerHTML = tempString;
+  //field.innerHTML =
+  //  "[ " +
+  //  (beforeVal + 1).toString() +
+  //  " <- Citation -> " +
+  //  (afterVal + 1).toString() +
+  //  " ]";
 }
 
 //Used to change the labels on the square boxes on the main screen (can display how many results or how many papers)
@@ -865,7 +876,7 @@ function prepContainers(increment) {
 function getYears(done) {
   $.ajax({
     type: "GET",
-    url: currentURL + "years",
+    url: currentURL + "api/years",
     success: function (data) {
       years = data;
       prepContainers(currIncrement);
@@ -1325,8 +1336,9 @@ function hideToast() {
 //TODO - prevent SQL injections
 function searchForQuery(query) {
   prepContainers(currIncrement);
+
   if (query == "") {
-    getFilteredYears("", true, undefined, false, true);
+    //getFilteredYears("", true, undefined, false, true);
     return;
   }
   // query = query.replace(/[^a-zA-Z ]/g, "").split(" ");
@@ -1351,7 +1363,23 @@ function searchForQuery(query) {
   indexToSortPapersOn = -1;
   // drawHome(currIncrement);
   disableSearchUI(true); // disables the search UI to prevent another search while searching
-  getFilteredYears(query, true);
+  console.log({ term: query, range: [sentenceRangeAbove, sentenceRangeBelow] });
+  //call api
+  $.ajax({
+    type: "POST",
+    url: "/api/search",
+    contentType: "application/json",
+    data: JSON.stringify({
+      rule: { term: query, range: [sentenceRangeAbove, sentenceRangeBelow] },
+    }),
+    success: function (results) {
+      let data = results;
+      // loaded_articles = data["nunique"];
+      disableSearchUI(false);
+      drawAllYears(data);
+    },
+  });
+  //getFilteredYears(query, true);
 }
 
 function maximizeDivider() {
