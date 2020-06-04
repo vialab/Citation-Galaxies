@@ -5,9 +5,10 @@ const HTTP_CODES = {
   SUCCESS: 200,
   INVALID_DATA_TYPE: 400,
   INVALID_VALUES: 422,
+  FORBIDDEN: 403,
 };
 /**********************On restart clear temporary table map **************************/
-pool.query("SELECT clean_up_user_result_tables()"); //function is a user defined function stored in db
+//pool.query("SELECT clean_up_user_result_tables()"); //function is a user defined function stored in db
 // 3 different types of queries [sentences, words, [sentences relative to citation, words relative to citation]]
 //two different datasets [erudit, pubmed]
 //regex
@@ -22,7 +23,7 @@ const reqValid = (expectedKeys, req) => {
   const keys = Object.keys(expectedKeys);
   const body = req.body;
   for (const idx in keys) {
-    if (!keys[idx] in body) {
+    if (!(keys[idx] in body)) {
       return null;
     }
     expectedKeys[keys[idx]] = body[keys[idx]];
@@ -47,13 +48,6 @@ const validRule = (rule) => {
     return false;
   }
   return true;
-};
-/**
- *
- * @param {Request} req
- */
-const loggedIn = (req) => {
-  return req.session.id && req.session.user;
 };
 
 /**
@@ -83,6 +77,24 @@ const validRules = (rules) => {
         return result;
         break;
     }
+  }
+  return result;
+};
+/**
+ *
+ * @param {Array.<string>} selection
+ * each string should look like 'year-start-end'
+ */
+const convertSelection = (selection) => {
+  const SELECT_MAP = ["year", "start", "end"];
+  let result = [];
+  for (let i = 0; i < selection.length; ++i) {
+    let bin = {};
+    let buffer = selection[i].split("-");
+    for (let j = 0; j < SELECT_MAP.length; ++j) {
+      bin[SELECT_MAP[j]] = Number(buffer[j]);
+    }
+    result.push(bin);
   }
   return result;
 };
@@ -127,34 +139,9 @@ const createTempTable = async (req) => {
  *
  * @param {Request} req
  * @param {Response} res
- */
-const singleSearchCitation = async (req, res) => {
-  const requiredInfo = { rule: { range: [], term: "" } };
-  let sentInfo = reqValid(requiredInfo, req);
-  if (sentInfo == null) {
-    res.status(400).send("invalid data");
-    return;
-  }
-  if (!validRule(sentInfo.rule)) {
-    res.status(404).send("invalid values");
-  }
-  //everything is good, time to query
-  const result = await pool.query(
-    "SELECT sq.id FROM (SELECT id,full_text_citations, jsonb_array_castint(full_text_words->$1) AS words FROM pubmed_text) AS sq WHERE get_citation_range(sq.words, sq.full_text_citations, $2, $3) = true",
-    [sentInfo.term, -sentInfo.range[0], sentInfo.range[1]]
-  );
-};
-/**
- *
- * @param {Request} req
- * @param {Response} res
  * @todo fix the static years for the returned result
  */
 const citationSearch = async (req, res) => {
-  if (!loggedIn(req)) {
-    res.status(HTTP_CODES.INVALID_DATA_TYPE).send("not logged in");
-    return;
-  }
   const rule = req.body.rule;
   if (!validRule(rule)) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
@@ -201,7 +188,196 @@ const citationSearch = async (req, res) => {
   }
   res.status(HTTP_CODES.INVALID_VALUES);
 };
+/**
+ * @todo store the rule that hit in the temp tables for further use.
+ * @param {Request} req
+ * @param {Response} res
+ * {papers:{content: {0: 22, 1: 21, 2: 21, 3: 18, 4: 21, 5: 21, 6: 20, 7: 18, 8: 20, 9: 17}, max: 22, year: 2005, rank: 8, total: 0}, ruleHits:{}, sentenceHits:{}}
+ * papers
+ */
+const getPapers = async (req, res) => {
+  //check if we have a tablename stored in the session data
+  if (!req.session.tableName) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE).send("not logged in");
+    return;
+  }
+  const requiredInfo = { selections: [], rangeLeft: 0, rangeRight: 0 };
+  let sentInfo = reqValid(requiredInfo, req);
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE).send("not logged in");
+  }
+  let bins = convertSelection(sentInfo.selections);
+  let result = {};
+  let tableResults = await pool.query(
+    `SELECT citation_location, p_year as year, title, sentences, pubmed_data.id, num_os FROM ${req.session.tableName} INNER JOIN pubmed_data ON ${req.session.tableName}.id=pubmed_data.id WHERE p_year = ANY($1)`,
+    [
+      bins.map((x) => {
+        return x.year;
+      }),
+    ]
+  );
+  //check if any results were returned, there should be results at this point
+  if (!tableResults.rowCount) {
+    res.status(HTTP_CODES.SUCCESS).send(result);
+    return;
+  }
+  let papers = {};
+  let ruleHits = {};
+  let sentenceHits = {};
+  const numOfBins = 9;
+  const selectedBins = bins.map((x) => {
+    return x.start / (numOfBins + 1);
+  });
+  for (let i = 0; i < tableResults.rows.length; ++i) {
+    let content = {
+      0: 0,
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+      6: 0,
+      7: 0,
+      8: 0,
+      9: 0,
+    };
+    let row = tableResults.rows[i];
+    const unique_citation = Array.from(new Set(row.citation_location));
+    papers[row.id] = {};
+    ruleHits[row.id] = [];
+    //get the content hits for the paper glyph
+    for (let k = 0; k < row.citation_location.length; ++k) {
+      content[
+        Math.floor((row.citation_location[k] / row.num_os) * numOfBins)
+      ] += 1;
+    }
+    let correctBin = false;
+    for (let l = 0; l < selectedBins.length; ++l) {
+      if (content[selectedBins]) {
+        correctBin = true;
+        break;
+      }
+    }
+    if (!correctBin) {
+      delete papers[row.id];
+      continue;
+    }
+    papers[row.id]["content"] = content;
+    papers[row.id]["year"] = row.year;
+    sentenceHits[row.id] = [];
+    papers[row.id]["max"] = Math.max(...Object.values(content));
+    papers[row.id]["total"] = Object.values(content).reduce((a, b) => a + b, 0);
 
+    //generate the text for the vis
+    for (let j = 0; j < unique_citation.length; ++j) {
+      //make sure it does not go into the negative
+      const leftIdx = Math.max(0, unique_citation[j] - sentInfo.rangeLeft);
+      //make sure it does not index outside of the array
+      const rightIdx = Math.min(
+        row.sentences.length,
+        unique_citation[j] + sentInfo.rangeRight + 1
+      ); // +1 due to exclusion clause
+      let text = row.sentences.slice(leftIdx, rightIdx);
+      sentenceHits[row.id].push(text);
+    }
+  }
+  result.papers = papers;
+  result.ruleHits = ruleHits;
+  result.sentenceHits = sentenceHits;
+  result.years = bins.map((x) => {
+    return x.year;
+  });
+  res.status(HTTP_CODES.SUCCESS).send(result);
+  return;
+};
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
+const checkExistingWork = async (req, res) => {
+  const queryResult = await pool.query(
+    "SELECT table_name FROM table_map_temp WHERE table_owner=$1",
+    [req.session.user]
+  );
+  if (!queryResult.rowCount) {
+    //does not exist
+    res.status(200).send({ exists: 0 });
+    return;
+  }
+  res.status(200).send({ exists: 1 });
+};
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
+const loadExistingWork = async (req, res) => {
+  //check if table exists
+  const queryResult = await pool.query(
+    "SELECT table_name FROM table_map_temp WHERE table_owner=$1",
+    [req.session.user]
+  );
+  if (!queryResult.rowCount) {
+    res.status(HTTP_CODES.INVALID_VALUES);
+    return;
+  }
+  let row = queryResult.rows[0];
+  //set the table name for the session
+  req.session.tableName = row.table_name;
+
+  const aggResults = await pool.query(`SELECT * FROM ${req.session.tableName}`);
+  let result = {};
+  for (let i = 2003; i <= 2020; ++i) {
+    result[i] = {
+      content: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 },
+      max: 0,
+    };
+  }
+  if (aggResults.rowCount) {
+    //move the results of the query into an object. The object is legacy format to support the frontend
+    const numOfBins = 10;
+    for (let i = 0; i < aggResults.rows.length; ++i) {
+      for (let j = 0; j < aggResults.rows[i].citation_location.length; ++j) {
+        const idx = Math.floor(
+          (aggResults.rows[i].citation_location[j] /
+            aggResults.rows[i].num_os) *
+            numOfBins
+        );
+        result[aggResults.rows[i].p_year]["content"][idx] += 1;
+      }
+    }
+    for (let i = 2003; i <= 2020; ++i) {
+      result[i].max = Object.values(result[i]["content"]).reduce(
+        (a, b) => a + b,
+        0
+      );
+    }
+    res.status(HTTP_CODES.SUCCESS).send(result);
+    return;
+  }
+};
+/**
+ * 
+ * @param {Request} req 
+ * @param {Response} res 
+ */
+const getPaper = async (req,res)=>{
+  const requiredInfo = {paper_id:0};
+  let sentInfo = reqValid(requiredInfo, req);
+  if(!sentInfo)
+  {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  const paperInfo = await pool.query("SELECT * FROM pubmed_data INNER JOIN pubmed_meta ON pubmed_data.id=pubmed_meta.id INNER JOIN pubmed_text ON pubmed_data.id=pubmed_text.id WHERE id=$1",[sentInfo.paper_id]);
+  if(!paperInfo.rowCount)
+  {
+    res.status(HTTP_CODES.SUCCESS).send(null);
+    return;
+  }
+  res.status(HTTP_CODES.SUCCESS).send({articletitle:paperInfo.title, articlejournal:paperInfo.journal, articleyear:});
+}
 /**
  *
  *
@@ -280,4 +456,11 @@ const years = (req, res) => {
   res.send(result);
 };
 
-module.exports = { years, citationSearch };
+module.exports = {
+  years,
+  citationSearch,
+  getPapers,
+  getPaper,
+  checkExistingWork,
+  loadExistingWork,
+};

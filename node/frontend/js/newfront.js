@@ -10,6 +10,9 @@ $(document).ready((x, y, z) => {
   // Create global width and height variables
   vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+  $("#load-existing-work").on("click", loadExistingWork);
+  //check if previous work is available
+  checkExistingWork();
 });
 
 $(window).on("load", function () {
@@ -58,3 +61,34 @@ d3.selection.prototype.first = function () {
 d3.selection.prototype.last = function () {
   return d3.select(this.nodes()[this.size() - 1]);
 };
+
+function checkExistingWork() {
+  $.ajax({
+    type: "GET",
+    url: "/api/existing-work",
+    success: displayExistingWorkOption,
+  });
+}
+
+function displayExistingWorkOption(result) {
+  console.log(result);
+  if (!result) {
+    return;
+  }
+  $("#existing-work").modal("toggle");
+}
+
+function loadExistingWork() {
+  $("#existing-work").modal("toggle");
+  disableSearchUI(true); // disables the search UI to prevent another search while searching
+  $.ajax({
+    type: "GET",
+    url: "/api/get-existing-work",
+    success: function (results) {
+      let data = results;
+      // loaded_articles = data["nunique"];
+      disableSearchUI(false);
+      drawAllYears(data);
+    },
+  });
+}

@@ -25,9 +25,23 @@ app.use(
     secret: process.env.SECRET,
     resave: true,
     saveUninitialized: true,
-    cookie: { secure: false, expires: 60000 },
+    cookie: { secure: false, expires: 600000 },
   })
 );
+//middleware to check that user has logged in. disregards any paths that include /${userPath}/
+app.all("*", (req, res, next) => {
+  if (req.path.includes(`/${userPath}/`)) {
+    return next();
+  }
+  if (req.path === "/") {
+    return next();
+  }
+  if (!(req.session.id && req.session.user)) {
+    res.redirect("/");
+    return;
+  }
+  return next();
+});
 /****************serving folders ******************/
 app.use(express.static(__dirname + "/public"));
 app.use(express.static(__dirname + "/frontend/css"));
@@ -61,7 +75,10 @@ app.get("/dashboard", (req, res) => {
 /*************api routes *****************************/
 app.get(`/${apiPath}/years`, apiRoutes.years);
 app.post(`/${apiPath}/search`, apiRoutes.citationSearch);
-
+app.post(`/${apiPath}/papers`, apiRoutes.getPapers);
+app.get(`/${apiPath}/existing-work`, apiRoutes.checkExistingWork);
+app.get(`/${apiPath}/get-existing-work`, apiRoutes.loadExistingWork);
+app.get(`/${apiPath}/paper`, apiRoutes.getPaper);
 app.listen(port, () =>
   console.log(`Example app listening at http://localhost:${port}`)
 );

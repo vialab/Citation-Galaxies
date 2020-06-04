@@ -446,7 +446,8 @@ function drawPapers(signal_id, signal_cat_id) {
   paperRequests.push(
     $.ajax({
       type: "POST",
-      url: processURL + "papers",
+      url: "/api/papers",
+      contentType: "application/json",
       data: JSON.stringify(values),
       success: function (data) {
         // paper_data = JSON.parse(data);
