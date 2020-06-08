@@ -78,7 +78,9 @@ app.post(`/${apiPath}/search`, apiRoutes.citationSearch);
 app.post(`/${apiPath}/papers`, apiRoutes.getPapers);
 app.get(`/${apiPath}/existing-work`, apiRoutes.checkExistingWork);
 app.get(`/${apiPath}/get-existing-work`, apiRoutes.loadExistingWork);
-app.get(`/${apiPath}/paper`, apiRoutes.getPaper);
+app.post(`/${apiPath}/paper`, apiRoutes.getPaper);
+app.post(`/${apiPath}/rules`, apiRoutes.getRules);
+app.post(`/${apiPath}/rules-table`, apiRoutes.loadRules);
 app.listen(port, () =>
   console.log(`Example app listening at http://localhost:${port}`)
 );

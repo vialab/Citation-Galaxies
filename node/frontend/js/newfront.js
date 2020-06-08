@@ -46,7 +46,7 @@ function setupEventHandlers() {
         $("#pills-admin").remove();
         $("#pills-tabContent").append(clone);
       }
-      loadTable("signalcategory", undefined, true, transformCategoryData);
+      loadTable("rules-table", undefined, true, transformCategoryData);
     }
   });
 }
@@ -85,7 +85,18 @@ function loadExistingWork() {
     type: "GET",
     url: "/api/get-existing-work",
     success: function (results) {
-      let data = results;
+      let data = results.result;
+      const max = Number($("#rangeBefore").attr("max"));
+      $("#rangeBefore").val(max - results.info.range_left);
+      $("#rangeAfter").val(results.info.range_right);
+      $("#searchBox").val(results.info.term);
+      $("#citationRange")
+        .find("#left-range")
+        .text("[ " + results.info.range_left + " ");
+      $("#citationRange")
+        .find("#right-range")
+        .text(" " + results.info.range_right + " ]");
+      currSearchQuery = results.info.term;
       // loaded_articles = data["nunique"];
       disableSearchUI(false);
       drawAllYears(data);

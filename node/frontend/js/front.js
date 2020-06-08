@@ -231,17 +231,13 @@ function updateTextInput(field, before, after, articleid, sendToDefault) {
   } else if (sendToDefault == 0) {
     boundariesByPaper[articleid] = [before, after];
   }
-  //let tempString = field.innerHTML;
-  let tempString = field.innerHTML.slice(4, -4);
-  tempString =
-    "[ " +
-    beforeVal.toString() +
-    " " +
-    tempString +
-    " " +
-    afterVal.toString() +
-    " ]";
-  field.innerHTML = tempString;
+  $(field)
+    .find("#left-range")
+    .text("[ " + beforeVal.toString() + " ");
+  $(field)
+    .find("#right-range")
+    .text(" " + afterVal.toString() + " ]");
+  //field.innerHTML = tempString;
   //field.innerHTML =
   //  "[ " +
   //  (beforeVal + 1).toString() +

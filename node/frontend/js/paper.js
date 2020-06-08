@@ -1179,8 +1179,11 @@ function switchToPapers() {
 
 function getPopoverContent(articleid, sentenceHits, ruleHits) {
   $.ajax({
-    type: "GET",
-    url: processURL + "paper?id=" + articleid,
+    type: "POST",
+    url: "api/paper/",
+    contentType: "application/json",
+    data: JSON.stringify({ paper_id: articleid }),
+
     success: function (results) {
       // let data = JSON.parse(results);
       let data = results;

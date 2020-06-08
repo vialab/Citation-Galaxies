@@ -41,14 +41,7 @@ const reqValid = (expectedKeys, req) => {
   }
   return expectedKeys;
 };
-/**
- *
- * @param {Request} req
- * @param {Response} res
- */
-const getUser = async (req, res) => {
-  pool.query("INSERT INTO users(email, password) VALUES($1, $2)");
-};
+
 /**
  *
  * @param {Request} req
@@ -189,6 +182,7 @@ const authUser = async (req, res) => {
 
   if (match) {
     req.session.user = sentInfo.email;
+    req.session.user_id = result.rows[0].id;
     res.redirect("/dashboard");
     return;
   }
@@ -303,7 +297,6 @@ const recoverUser = async (req, res) => {
 };
 
 module.exports = {
-  getUser,
   createUser,
   deleteUser,
   authUser,

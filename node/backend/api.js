@@ -7,6 +7,12 @@ const HTTP_CODES = {
   INVALID_VALUES: 422,
   FORBIDDEN: 403,
 };
+const RULE_OPERATORS = {
+  DEFAULT: 0,
+  OR: 1,
+  AND: 2,
+  NOT: 3,
+};
 /**********************On restart clear temporary table map **************************/
 //pool.query("SELECT clean_up_user_result_tables()"); //function is a user defined function stored in db
 // 3 different types of queries [sentences, words, [sentences relative to citation, words relative to citation]]
@@ -150,6 +156,11 @@ const citationSearch = async (req, res) => {
   //should check / get the rules here for now single search
   //create temp table to store results in
   await createTempTable(req);
+  //assign the rules to the temp
+  await pool.query(
+    "UPDATE table_map_temp SET initial_search=ROW($1,$2,$3,$4) WHERE table_owner=$5",
+    [rule.term, rule.range[0], rule.range[1], 0, req.session.user]
+  );
   //get the result of the search and store in the user temporary table
   await pool.query(
     `INSERT INTO ${req.session.tableName} SELECT * FROM get_matrix($1, $2, $3);`,
@@ -188,6 +199,7 @@ const citationSearch = async (req, res) => {
   }
   res.status(HTTP_CODES.INVALID_VALUES);
 };
+const citationSearchWithRules = async (req, res) => {};
 /**
  * @todo store the rule that hit in the temp tables for further use.
  * @param {Request} req
@@ -279,6 +291,7 @@ const getPapers = async (req, res) => {
       ); // +1 due to exclusion clause
       let text = row.sentences.slice(leftIdx, rightIdx);
       sentenceHits[row.id].push(text);
+      ruleHits[row.id].push([]);
     }
   }
   result.papers = papers;
@@ -315,7 +328,7 @@ const checkExistingWork = async (req, res) => {
 const loadExistingWork = async (req, res) => {
   //check if table exists
   const queryResult = await pool.query(
-    "SELECT table_name FROM table_map_temp WHERE table_owner=$1",
+    "SELECT table_name, jsonb_build_object('term', (initial_search).term, 'range_left', (initial_search).range_left, 'range_right', (initial_search).range_right, 'operator', (initial_search).operator) as info FROM table_map_temp WHERE table_owner=$1",
     [req.session.user]
   );
   if (!queryResult.rowCount) {
@@ -328,6 +341,7 @@ const loadExistingWork = async (req, res) => {
 
   const aggResults = await pool.query(`SELECT * FROM ${req.session.tableName}`);
   let result = {};
+  const queryInfo = queryResult.rows[0].info;
   for (let i = 2003; i <= 2020; ++i) {
     result[i] = {
       content: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 },
@@ -353,95 +367,73 @@ const loadExistingWork = async (req, res) => {
         0
       );
     }
-    res.status(HTTP_CODES.SUCCESS).send(result);
+    res.status(HTTP_CODES.SUCCESS).send({ info: queryInfo, result: result });
     return;
   }
 };
 /**
- * 
- * @param {Request} req 
- * @param {Response} res 
+ *
+ * @param {Request} req
+ * @param {Response} res
  */
-const getPaper = async (req,res)=>{
-  const requiredInfo = {paper_id:0};
+const getPaper = async (req, res) => {
+  const requiredInfo = { paper_id: 0 };
   let sentInfo = reqValid(requiredInfo, req);
-  if(!sentInfo)
-  {
+  if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  const paperInfo = await pool.query("SELECT * FROM pubmed_data INNER JOIN pubmed_meta ON pubmed_data.id=pubmed_meta.id INNER JOIN pubmed_text ON pubmed_data.id=pubmed_text.id WHERE id=$1",[sentInfo.paper_id]);
-  if(!paperInfo.rowCount)
-  {
+  const paperInfo = await pool.query(
+    "SELECT * FROM pubmed_data INNER JOIN pubmed_meta ON pubmed_data.id=pubmed_meta.id INNER JOIN pubmed_text ON pubmed_data.id=pubmed_text.id WHERE pubmed_data.id=$1",
+    [sentInfo.paper_id]
+  );
+  if (!paperInfo.rowCount) {
     res.status(HTTP_CODES.SUCCESS).send(null);
     return;
   }
-  res.status(HTTP_CODES.SUCCESS).send({articletitle:paperInfo.title, articlejournal:paperInfo.journal, articleyear:});
-}
-/**
- *
- *
- * @param {Request} req
- * @param {Response} res
- */
-const multiRuleSearchCitation = async (req, res) => {
-  const requiredInfo = { rules: [] };
-  //error checking
-  const sentInfo = reqValid(requiredInfo, req);
-  if (sentInfo == null) {
-    res.status(404).send("invalid data");
-    return;
-  }
-  if (!validRules(sentInfo)) {
-    res.status(404).send("invalid values");
-    return;
-  }
-  //everything is good, time to query
+  res.status(HTTP_CODES.SUCCESS).send({
+    articletitle: paperInfo.rows[0].title,
+    journaltitle: paperInfo.rows[0].journal,
+    articleyear: paperInfo.rows[0].year,
+  });
 };
 
-/***************************************regex section***************************************/
-/**
- *
- * @param {Request} req
- * @param {Response} res
- */
-const multiRuleSearchRegexCitation = async (req, res) => {
-  const requiredInfo = { rules: [] };
-  //error checking
-  const sentInfo = reqValid(requiredInfo, req);
-  if (sentInfo == null) {
-    res.status(404).send("invalid data");
-    return;
-  }
-  if (!validRules(sentInfo)) {
-    res.status(404).send("invalid values");
-    return;
-  }
+const getRules = async (req, res) => {
+  const result = await pool.query(
+    `SELECT rules FROM user_rules WHERE user_id=$1`,
+    [req.session.user_id]
+  );
+  res.status(HTTP_CODES.SUCCESS).send(result.rows);
 };
-/**
- *
- * @param {Request} req
- * @param {Response} res
- */
-const singleSearchRegexCitation = async (req, res) => {
-  const requiredInfo = { rule: { range: [], term: "" } };
+const loadRules = async (req, res) => {
+  const result = await pool.query(
+    "SELECT * FROM user_rules WHERE id=ANY((SELECT array_agg(rules) FROM table_map_temp WHERE table_owner=$1))",
+    [req.session.user]
+  );
+  res.status(HTTP_CODES.SUCCESS).send(result.rows);
+};
+const addRule = async (req, res) => {
+  const requiredInfo = { name: "", color: 0, rules: {} };
   let sentInfo = reqValid(requiredInfo, req);
-  if (sentInfo == null) {
-    res.status(400).send("invalid data");
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  if (!validRule(sentInfo.rule)) {
-    res.status(404).send("invalid values");
-  }
-  //everything is good, time to query
-  const {
-    result,
-  } = await pool.query(
-    "SELECT count(*) FROM (SELECT full_text_citations, jsonb_array_castint(full_text_words->$1) AS words FROM pubmed_text) AS sq WHERE get_citation_range(sq.words, sq.full_text_citations, $2) = true",
-    [sentInfo.term, sentInfo.range[0]]
+  await pool.query(
+    "INSERT INTO user_rules(user_id, name, color, rules) VALUES($1,$2,$3,ROW($4,$5,$6,$7))",
+    [
+      req.session.user_id,
+      sentInfo.name,
+      sentInfo.color,
+      sentInfo.rules.term,
+      sentInfo.rules.range[0],
+      sentInfo.rules.range[1],
+      sentInfo.rules.operator,
+    ]
   );
 };
-
+const updateRule = async (req, res) => {};
+const addRuleToQuery = async (req, res) => {};
 /*************************misc api ******************/
 /**
  *
@@ -463,4 +455,6 @@ module.exports = {
   getPaper,
   checkExistingWork,
   loadExistingWork,
+  getRules,
+  loadRules,
 };
