@@ -26,6 +26,7 @@ function loadData(url, callback, params = {}, _async = true) {
     data: JSON.stringify({
       values: params,
     }),
+    contentType: "application/json",
     success: function (results) {
       // console.log(results);
       callback(
@@ -580,9 +581,10 @@ function drawActionOptions(row, headers, signal, links, actions) {
       Object.keys(link.params).forEach((id) => {
         params[link.params[id]] = signal[id];
       });
+      params["table_name"] = link.query;
       let html =
         "<button class='btn btn-primary ml-2 more-actions' onclick='loadTable(\"" +
-        link.query +
+        "rules-table" +
         '",' +
         JSON.stringify(params).replace(/\\"/g, "'") +
         ")'>" +
@@ -1007,7 +1009,8 @@ function postUpdate(table_name, values, callback) {
 function postInsert(table_name, values, callback) {
   $.ajax({
     type: "POST",
-    url: currentURL + "api/insert",
+    url: currentURL + "api/add-rule-set",
+    contentType: "application/json",
     data: JSON.stringify({
       table_name: table_name,
       values: values,

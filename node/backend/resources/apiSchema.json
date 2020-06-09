@@ -1,0 +1,72 @@
+{
+  "signal": {
+    "query": "-- name: signal\nselect id, signalcategoryid, name, signal from signal where cookieid=:cookieid;",
+    "require_cookie": true,
+    "origin": "signal"
+  },
+  "signalbycategory": {
+    "query": "-- name: signal_by_category\nselect id, signalcategoryid, signal from signal where signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
+    "require_cookie": true,
+    "aliases": {
+      "rules": { "name": "Rule", "nameonly": true },
+      "signalcategoryid": { "name": "Rule Set ID", "nameonly": true }
+    },
+    "origin": "signal",
+    "parent": "signalcategoryid"
+  },
+  "signalbytype": {
+    "query": "-- name: signal_by_type\nselect id, signalcategoryid, signal,  from signal where id=:signaltypeid and cookieid=:cookieid;",
+    "require_cookie": true,
+    "origin": "signal"
+  },
+  "signalcategory": {
+    "query": "-- name: signal_category\nselect id, catname, color from signalcategory where cookieid=:cookieid order by id;",
+    "require_cookie": true,
+    "aliases": {
+      "name": { "name": "Category Name", "nameonly": true },
+      "color": { "name": "Color", "nameonly": true }
+    },
+    "links": {
+      "signals": {
+        "params": { "id": "signalcategoryid" },
+        "query": "signalbycategory"
+      }
+    },
+    "origin": "signalcategory"
+  },
+  "signaltypee": {
+    "query": "-- name: signal_type\nselect id, name, type from signaltype",
+    "aliases": {},
+    "require_cookie": false,
+    "origin": "signaltype"
+  },
+  "insert_signal": {
+    "query": "-- name: insert_signal<!\ninsert into signal(signalcategoryid, cookieid, signal) values( :signalcategoryid, :cookieid, :signal )",
+    "require_cookie": true
+  },
+  "update_signal": {
+    "query": "-- name: update_signal!\nupdate signal set signal=case when :signal::json is not null then :signal else signal end, signalcategoryid=case when :signalcategoryid::int is not null then :signalcategoryid else signalcategoryid end, cookieid= case when :cookieid::varchar is not null then :cookieid else cookieid end where id=:id and cookieid=:cookieid",
+    "require_cookie": true,
+    "aliases": {}
+  },
+  "delete_signal": {
+    "query": "-- name: delete_signal!\ndelete from signal where id=:id and cookieid=:cookieid",
+    "require_cookie": true,
+    "aliases": {}
+  },
+  "insert_signalcategory": {
+    "query": "-- name: insert_signal_category<!\ninsert into signalcategory(catname, color, cookieid) values(:catname, :color, :cookieid);",
+    "require_cookie": true,
+    "aliases": {}
+  },
+  "update_signalcategory": {
+    "query": "-- name: update_signal_category!\nupdate signalcategory set catname=case when :catname is not null then :catname else catname end, color=case when :color is not null then :color else color end where id=:id and cookieid=:cookieid ;",
+    "require_cookie": true,
+    "aliases": {}
+  },
+  "delete_signalcategory": {
+    "query": "-- name: delete_signal_category!\ndelete from signalcategory where id=:id and cookieid=:cookieid ;",
+    "require_cookie": true,
+    "aliases": {}
+  }
+}

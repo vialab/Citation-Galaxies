@@ -399,6 +399,7 @@ function drawFirstColumn(sizex, sizey, colsize, svgContainer, numOfLines) {
     locationY += minLinePadding + lineSizeY;
 
     //TODO: The lines on the paper glpyh are very close, but not exactly lined up with the row it represents
+
     lineLocationEnd += (currBoxPadding + currBoxHeight) * increment;
 
     //Push the lines used in the glpyh so that the color can be dynamically updated when other columns load

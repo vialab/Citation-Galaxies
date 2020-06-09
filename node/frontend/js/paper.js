@@ -477,7 +477,7 @@ function drawPapersByIndex(results, local_norm = false) {
 
   let nav = paperRow
     .append("ul")
-    .attr("class", "nav nav-fill nav-pills mb-3")
+    .attr("class", "nav nav-tabs mb-3")
     // .append('div')
     // .attr('class','nav nav-tabs nav-justified')
     .attr("id", "papers-container-nav-tabs")

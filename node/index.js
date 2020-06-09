@@ -25,7 +25,7 @@ app.use(
     secret: process.env.SECRET,
     resave: true,
     saveUninitialized: true,
-    cookie: { secure: false, expires: 600000 },
+    cookie: { secure: false, expires: 6000000 },
   })
 );
 //middleware to check that user has logged in. disregards any paths that include /${userPath}/
@@ -81,6 +81,7 @@ app.get(`/${apiPath}/get-existing-work`, apiRoutes.loadExistingWork);
 app.post(`/${apiPath}/paper`, apiRoutes.getPaper);
 app.post(`/${apiPath}/rules`, apiRoutes.getRules);
 app.post(`/${apiPath}/rules-table`, apiRoutes.loadRules);
+app.post(`/${apiPath}/add-rule-set`, apiRoutes.addRuleSet);
 app.listen(port, () =>
   console.log(`Example app listening at http://localhost:${port}`)
 );
