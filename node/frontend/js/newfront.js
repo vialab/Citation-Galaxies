@@ -47,7 +47,7 @@ function setupEventHandlers() {
         $("#pills-tabContent").append(clone);
       }
       loadTable(
-        "rules-table",
+        "rule-sets-table",
         { table_name: "signalcategory" },
         true,
         transformCategoryData

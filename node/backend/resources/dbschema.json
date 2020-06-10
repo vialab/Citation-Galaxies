@@ -1,18 +1,17 @@
 {
-    "signalcategory": {
-        "id": "integer",
-        "catname": "character varying",
-        "color": "character varying"
-    },
-    "signaltype": {
-        "id": "integer",
-        "name": "character varying",
-        "type": "integer",
-        "psignalid": "integer"
-    },
-    "signal": {
-        "id": "integer",
-        "signalcategoryid": "integer",
-        "signal": "character varying"
-    } 
+  "signalcategory": {
+    "id": "integer",
+    "catname": "character varying",
+    "color": "character varying"
+  },
+  "signaltype": {
+    "id": "integer",
+    "name": "character varying",
+    "type": "integer",
+    "psignalid": "integer"
+  },
+  "signal": {
+    "id": "integer",
+    "rules": "character varying"
+  }
 }

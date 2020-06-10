@@ -63,8 +63,8 @@ const validRule = (rule) => {
  * @param {Array.<{range:Number[], term:string, operator:string}>} rules
  */
 const validRules = (rules) => {
-  const result = true;
-  for (const i = 0; i < rules.length; ++i) {
+  let result = true;
+  for (let i = 1; i < rules.length; ++i) {
     result = result && validRule(rules[i]);
     if (!result) {
       return result;
@@ -424,7 +424,7 @@ const getRules = async (req, res) => {
  * @param {Request} req
  * @param {Response} res
  */
-const loadRules = async (req, res) => {
+const loadRuleSets = async (req, res) => {
   const requireInfo = { table_name: "" };
   let sentInfo = reqValid(requireInfo, { body: req.body.values });
   if (!sentInfo) {
@@ -448,9 +448,44 @@ const loadRules = async (req, res) => {
   if (parent_col && parent_id) {
     parent = { id: parent_id, col: parent_col };
   }
-  let data = result.rows.map((x) => {
-    tableInfo.aliases.for;
+  res.status(HTTP_CODES.SUCCESS).send({
+    data: isEmpty(extrapolateRequiredData(result.rows, tableInfo.aliases)),
+    aliases: isEmpty(tableInfo.aliases),
+    links: isEmpty(tableInfo.links),
+    actions: isEmpty(tableInfo.actions),
+    name: sentInfo.table_name,
+    schema: isEmpty(dbSchema[tableInfo["origin"]]),
+    parent: isEmpty(parent),
   });
+};
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
+const loadRules = async (req, res) => {
+  const requiredInfo = { signalcategoryid: 0, table_name: "" };
+  let sentInfo = reqValid(requiredInfo, { body: req.body.values });
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  const result = await pool.query("SELECT * FROM user_rules WHERE id=$1", [
+    sentInfo.id,
+  ]);
+  const isEmpty = (property) => {
+    if (!property) {
+      return {};
+    }
+    return property;
+  };
+  const tableInfo = apiSchema[sentInfo.table_name];
+  const parent_col = tableInfo["parent"];
+  const parent_id = req.body.values[parent_col];
+  let parent = {};
+  if (parent_col && parent_id) {
+    parent = { id: parent_id, col: parent_col };
+  }
   res.status(HTTP_CODES.SUCCESS).send({
     data: isEmpty(extrapolateRequiredData(result.rows, tableInfo.aliases)),
     aliases: isEmpty(tableInfo.aliases),
@@ -470,6 +505,9 @@ const extrapolateRequiredData = (data, schema) => {
     tableInfo.id = data[j].id;
     for (let i = 0; i < keys.length; ++i) {
       tableInfo[keys[i]] = data[j][keys[i]];
+      if (data[j][keys[i]] == null) {
+        return [];
+      }
     }
     result.push(tableInfo);
   }
@@ -481,24 +519,39 @@ const extrapolateRequiredData = (data, schema) => {
  * @param {Response} res
  */
 const addRule = async (req, res) => {
-  const requiredInfo = { name: "", color: 0, rules: {} };
-  let sentInfo = reqValid(requiredInfo, req);
+  const requiredInfo = { signalcategoryid: 0, rules: {} };
+  let sentInfo = reqValid(requiredInfo, { body: req.body.values });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
+  sentInfo.rules = JSON.parse(sentInfo.rules);
+  if (!validRules(sentInfo.rules)) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  let array_gen = sentInfo.rules.map((x, i) => {
+    const idx = i * 4 + 1;
+    return `(${idx},${idx + 1},${idx + 2},${idx + 3})`;
+  });
   await pool.query(
-    "INSERT INTO user_rules(user_id, name, color, rules) VALUES($1,$2,$3,ROW($4,$5,$6,$7))",
-    [
-      req.session.user_id,
-      sentInfo.name,
-      sentInfo.color,
-      sentInfo.rules.term,
-      sentInfo.rules.range[0],
-      sentInfo.rules.range[1],
-      sentInfo.rules.operator,
-    ]
+    `UPDATE user_rules SET rules=array_agg(rules, array[${array_gen}]::text_rule[]]) WHERE id=$1`,
+    [sentInfo.signalcategoryid, ...reduce(sentInfo.rules)]
   );
+};
+/**
+ *this is used to reduce the array of objects to a tuple array which can be spread for the query
+ * @param {Array.<{term:string,range:[],operator:string}>} arr
+ */
+const reduce = (arr) => {
+  let result = [];
+  for (let i = 0; i < arr.length; ++i) {
+    result.push(arr[i].term);
+    result.push(arr[i].range[0]);
+    result.push(arr[i].range[1]);
+    result.push(arr[i].operator);
+  }
+  return result;
 };
 /**
  *
@@ -506,7 +559,7 @@ const addRule = async (req, res) => {
  * @param {Response} res
  */
 const addRuleSet = async (req, res) => {
-  const requiredInfo = { catname: "", color: 0 };
+  const requiredInfo = { name: "", color: 0 };
   let sentInfo = reqValid(requiredInfo, { body: req.body.values });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
@@ -514,7 +567,7 @@ const addRuleSet = async (req, res) => {
   }
   const result = await pool.query(
     "INSERT INTO user_rules(user_id, name, color) VALUES($1,$2,$3) RETURNING id",
-    [req.session.user_id, sentInfo.catname, sentInfo.color]
+    [req.session.user_id, sentInfo.name, sentInfo.color]
   );
   if (!result.rowCount) {
     res.status(HTTP_CODES.INVALID_VALUES);
@@ -561,7 +614,8 @@ module.exports = {
   checkExistingWork,
   loadExistingWork,
   getRules,
-  loadRules,
+  loadRuleSets,
   addRule,
   addRuleSet,
+  loadRules,
 };

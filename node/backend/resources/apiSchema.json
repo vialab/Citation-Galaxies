@@ -4,12 +4,11 @@
     "require_cookie": true,
     "origin": "signal"
   },
-  "signalbycategory": {
+  "rules-table": {
     "query": "-- name: signal_by_category\nselect id, signalcategoryid, signal from signal where signalcategoryid=:signalcategoryid and cookieid=:cookieid;",
     "require_cookie": true,
     "aliases": {
-      "rules": { "name": "Rule", "nameonly": true },
-      "signalcategoryid": { "name": "Rule Set ID", "nameonly": true }
+      "rules": { "name": "Rule", "nameonly": true }
     },
     "origin": "signal",
     "parent": "signalcategoryid"
@@ -29,7 +28,7 @@
     "links": {
       "signals": {
         "params": { "id": "signalcategoryid" },
-        "query": "signalbycategory"
+        "query": "rules-table"
       }
     },
     "origin": "signalcategory"

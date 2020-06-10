@@ -80,8 +80,10 @@ app.get(`/${apiPath}/existing-work`, apiRoutes.checkExistingWork);
 app.get(`/${apiPath}/get-existing-work`, apiRoutes.loadExistingWork);
 app.post(`/${apiPath}/paper`, apiRoutes.getPaper);
 app.post(`/${apiPath}/rules`, apiRoutes.getRules);
+app.post(`/${apiPath}/rule-sets-table`, apiRoutes.loadRuleSets);
 app.post(`/${apiPath}/rules-table`, apiRoutes.loadRules);
-app.post(`/${apiPath}/add-rule-set`, apiRoutes.addRuleSet);
+app.post(`/${apiPath}/insert/rule-sets-table`, apiRoutes.addRuleSet);
+app.post(`/${apiPath}/insert/rules-table`, apiRoutes.addRule);
 app.listen(port, () =>
   console.log(`Example app listening at http://localhost:${port}`)
 );

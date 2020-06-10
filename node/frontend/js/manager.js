@@ -375,7 +375,7 @@ function drawTableRow(headers, signal, signalID, aliases) {
         "'/><label contenteditable='false' class='noclick noselect'>" +
         c +
         "</label>";
-    } else if (headers[i] == "signal") {
+    } else if (headers[i] == "rules") {
       if (signal[headers[i]]) {
         let existing = $(".edit-row").length;
         let data = signal[headers[i]];
@@ -387,10 +387,10 @@ function drawTableRow(headers, signal, signalID, aliases) {
             html += `<div class="d-flex flex-row justify-content-center m-2">
             <select id="signal_mod_${c}" >
               <option ${
-                datum.modifier == "AND" ? "selected" : ""
+                datum.operator == "AND" ? "selected" : ""
               } value="AND">AND</option>
               <option ${
-                datum.modifier == "AND NOT" ? "selected" : ""
+                datum.operator == "AND NOT" ? "selected" : ""
               } value="AND NOT">AND NOT</option>
             </select>
             </div>`;
@@ -584,7 +584,7 @@ function drawActionOptions(row, headers, signal, links, actions) {
       params["table_name"] = link.query;
       let html =
         "<button class='btn btn-primary ml-2 more-actions' onclick='loadTable(\"" +
-        "rules-table" +
+        params.table_name +
         '",' +
         JSON.stringify(params).replace(/\\"/g, "'") +
         ")'>" +
@@ -816,7 +816,7 @@ function insertRow(elem) {
       let afterRangeVal = Number(afterRange.value);
       //get query
       let query = $(this).find("[id*='signal_searchBox_']")[0].value;
-      res.push({ range: [beforeRangeVal, afterRangeVal], query: query });
+      res.push({ range: [beforeRangeVal, afterRangeVal], term: query });
       for (let i = 1; i < numElements; ++i) {
         beforeRange = $(this).find("[id*='rangeBefore']")[i];
         beforeRangeVal = Number(beforeRange.max - beforeRange.value);
@@ -828,8 +828,8 @@ function insertRow(elem) {
         query = $(this).find("[id*='signal_searchBox_']")[i].value;
         res.push({
           range: [beforeRangeVal, afterRangeVal],
-          query: query,
-          modifier: modifier,
+          term: query,
+          operator: modifier,
         });
       }
       val = JSON.stringify(res);
@@ -932,7 +932,7 @@ function updateRow(elem) {
 
         let record = {
           range: [Number(range_Left), Number(range_Right)],
-          query: query,
+          term: query,
         };
         if (i >= 4) {
           let modifier = $(inps[i - 1]).val();
@@ -1009,7 +1009,7 @@ function postUpdate(table_name, values, callback) {
 function postInsert(table_name, values, callback) {
   $.ajax({
     type: "POST",
-    url: currentURL + "api/add-rule-set",
+    url: currentURL + "api/insert/" + table_name,
     contentType: "application/json",
     data: JSON.stringify({
       table_name: table_name,
