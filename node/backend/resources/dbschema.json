@@ -1,7 +1,7 @@
 {
   "signalcategory": {
     "id": "integer",
-    "catname": "character varying",
+    "name": "character varying",
     "color": "character varying"
   },
   "signaltype": {

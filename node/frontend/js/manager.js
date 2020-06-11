@@ -400,18 +400,18 @@ function drawTableRow(headers, signal, signalID, aliases) {
             <div class="p-1" style="width:40%" >
               <ul class="list-inline">
                 <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
-                  <input type="range" innertext="0" min="0" max="10" value="${
+                  <input type="range" innertext="0" min="0" max="9" value="${
                     10 - datum.range[0]
                   }" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
                     oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}'), document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
                 </li>
                 <li class="list-inline-item align-middle m-0 p-0">
                   <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
-                    ${datum.range[0] + 1}
-                    <- Citation -> ${datum.range[1] + 1} ]</label>
+                    ${datum.range[0]}
+                    <- Citation -> ${datum.range[1]} ]</label>
                 </li>
                 <li class="list-inline-item m-0 p-0" style="width:23%;">
-                  <input type="range" innertext="0" min="0" max="10" value="${
+                  <input type="range" innertext="0" min="0" max="9" value="${
                     datum.range[1]
                   }" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
                     oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}'), document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
@@ -420,7 +420,7 @@ function drawTableRow(headers, signal, signalID, aliases) {
             </div>
             <div class="p-1 flex-fill">
               <div class=\"input-group\">
-              <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${existing}_${c}\" placeholder=\"Signal\" value="${datum.query.replace(
+              <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${existing}_${c}\" placeholder=\"Signal\" value="${datum.term.replace(
             /"/g,
             "&quot;"
           )}">
@@ -443,16 +443,16 @@ function drawTableRow(headers, signal, signalID, aliases) {
             <div class="p-1" style="width:40%" >
               <ul class="list-inline">
                 <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
-                  <input type="range" innertext="0" min="0" max="10" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}"
+                  <input type="range" innertext="0" min="0" max="9" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}"
                     oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}'), document.getElementById('rangeBefore_sig_${existing}'), document.getElementById('rangeAfter_sig_${existing}'), '', 1);">
                 </li>
                 <li class="list-inline-item align-middle m-0 p-0">
                   <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}">[
-                    ${$("#rangeBefore").attr("max") - beforeRangeVal + 1}
-                    <- Citation -> ${afterRangeVal + 1} ]</label>
+                    ${$("#rangeBefore").attr("max") - beforeRangeVal}
+                    <- Citation -> ${afterRangeVal} ]</label>
                 </li>
                 <li class="list-inline-item m-0 p-0" style="width:23%;">
-                  <input type="range" innertext="0" min="0" max="10" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}"
+                  <input type="range" innertext="0" min="0" max="9" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}"
                     oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}'), document.getElementById('rangeBefore_sig_${existing}') , document.getElementById('rangeAfter_sig_${existing}'), '', 1);">
                 </li>
               </ul>
@@ -502,16 +502,16 @@ function addToSignal(id) {
     <div class="p-1" style="width:40%" >
       <ul class="list-inline">
         <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
-          <input type="range" innertext="0" min="0" max="10" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
+          <input type="range" innertext="0" min="0" max="9" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
             oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
         </li>
         <li class="list-inline-item align-middle m-0 p-0">
           <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
-            ${$("#rangeBefore").attr("max") - beforeRangeVal + 1}
-            <- Citation -> ${afterRangeVal + 1} ]</label>
+            ${$("#rangeBefore").attr("max") - beforeRangeVal}
+            <- Citation -> ${afterRangeVal} ]</label>
         </li>
         <li class="list-inline-item m-0 p-0" style="width:23%;">
-          <input type="range" innertext="0" min="0" max="10" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
+          <input type="range" innertext="0" min="0" max="9" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
             oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
         </li>
       </ul>
@@ -544,7 +544,7 @@ function addToSignalClick(target, query, modifier = "AND") {
     <div class="p-1" style="width:40%" >
       <ul class="list-inline">
         <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
-          <input type="range" innertext="0" min="0" max="10" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
+          <input type="range" innertext="0" min="0" max="9" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
             oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
         </li>
         <li class="list-inline-item align-middle m-0 p-0">
@@ -553,7 +553,7 @@ function addToSignalClick(target, query, modifier = "AND") {
             <- Citation -> ${afterRangeVal} ]</label>
         </li>
         <li class="list-inline-item m-0 p-0" style="width:23%;">
-          <input type="range" innertext="0" min="0" max="10" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
+          <input type="range" innertext="0" min="0" max="9" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
             oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
         </li>
       </ul>

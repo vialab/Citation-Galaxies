@@ -399,65 +399,7 @@ const getPaper = async (req, res) => {
     articleyear: paperInfo.rows[0].year,
   });
 };
-/**
- *
- * @param {Request} req
- * @param {Response} res
- */
-const getRules = async (req, res) => {
-  const result = await pool.query(
-    `SELECT rules FROM user_rules WHERE user_id=$1`,
-    [req.session.user_id]
-  );
-  res.status(HTTP_CODES.SUCCESS).send(result.rows);
-};
-/*
-            "data": rows,
-            "aliases": api_schema.get("aliases", {}),
-            "links": api_schema.get("links", {}),
-            "actions": api_schema.get("actions", {}),
-            "name": table_name,
-            "schema": schema[api[table_name]["origin"]],
-            "parent": parent,*/
-/**
- *
- * @param {Request} req
- * @param {Response} res
- */
-const loadRuleSets = async (req, res) => {
-  const requireInfo = { table_name: "" };
-  let sentInfo = reqValid(requireInfo, { body: req.body.values });
-  if (!sentInfo) {
-    res.status(HTTP_CODES.INVALID_DATA_TYPE);
-    return;
-  }
-  const result = await pool.query(
-    "SELECT * FROM user_rules WHERE id=ANY(SELECT unnest(rules) FROM table_map_temp WHERE table_owner=$1)",
-    [req.session.user]
-  );
-  const isEmpty = (property) => {
-    if (!property) {
-      return {};
-    }
-    return property;
-  };
-  const tableInfo = apiSchema[sentInfo.table_name];
-  const parent_col = tableInfo["parent"];
-  const parent_id = req.body.values[parent_col];
-  let parent = {};
-  if (parent_col && parent_id) {
-    parent = { id: parent_id, col: parent_col };
-  }
-  res.status(HTTP_CODES.SUCCESS).send({
-    data: isEmpty(extrapolateRequiredData(result.rows, tableInfo.aliases)),
-    aliases: isEmpty(tableInfo.aliases),
-    links: isEmpty(tableInfo.links),
-    actions: isEmpty(tableInfo.actions),
-    name: sentInfo.table_name,
-    schema: isEmpty(dbSchema[tableInfo["origin"]]),
-    parent: isEmpty(parent),
-  });
-};
+/***************************************INDIVIDUAL RULES ***********************************/
 /**
  *
  * @param {Request} req
@@ -470,15 +412,20 @@ const loadRules = async (req, res) => {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  const result = await pool.query("SELECT * FROM user_rules WHERE id=$1", [
-    sentInfo.id,
-  ]);
+  const result = await pool.query(
+    "SELECT id, rules FROM user_rules WHERE rule_set_id=$1",
+    [sentInfo.signalcategoryid]
+  );
   const isEmpty = (property) => {
     if (!property) {
       return {};
     }
     return property;
   };
+  let rules = result.rows;
+  if (!result.rowCount) {
+    rules = [];
+  }
   const tableInfo = apiSchema[sentInfo.table_name];
   const parent_col = tableInfo["parent"];
   const parent_id = req.body.values[parent_col];
@@ -487,7 +434,7 @@ const loadRules = async (req, res) => {
     parent = { id: parent_id, col: parent_col };
   }
   res.status(HTTP_CODES.SUCCESS).send({
-    data: isEmpty(extrapolateRequiredData(result.rows, tableInfo.aliases)),
+    data: rules,
     aliases: isEmpty(tableInfo.aliases),
     links: isEmpty(tableInfo.links),
     actions: isEmpty(tableInfo.actions),
@@ -530,28 +477,53 @@ const addRule = async (req, res) => {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  let array_gen = sentInfo.rules.map((x, i) => {
-    const idx = i * 4 + 1;
-    return `(${idx},${idx + 1},${idx + 2},${idx + 3})`;
-  });
-  await pool.query(
-    `UPDATE user_rules SET rules=array_agg(rules, array[${array_gen}]::text_rule[]]) WHERE id=$1`,
-    [sentInfo.signalcategoryid, ...reduce(sentInfo.rules)]
-  );
+  await pool.query("INSERT INTO user_rules(rule_set_id, rules) VALUES($1,$2)", [
+    sentInfo.signalcategoryid,
+    JSON.stringify(sentInfo.rules),
+  ]);
+  res.status(200).send({});
+  return;
 };
+
+/************************************************************RULE SETS ************************************************************/
 /**
- *this is used to reduce the array of objects to a tuple array which can be spread for the query
- * @param {Array.<{term:string,range:[],operator:string}>} arr
+ *
+ * @param {Request} req
+ * @param {Response} res
  */
-const reduce = (arr) => {
-  let result = [];
-  for (let i = 0; i < arr.length; ++i) {
-    result.push(arr[i].term);
-    result.push(arr[i].range[0]);
-    result.push(arr[i].range[1]);
-    result.push(arr[i].operator);
+const loadRuleSets = async (req, res) => {
+  const requireInfo = { table_name: "" };
+  let sentInfo = reqValid(requireInfo, { body: req.body.values });
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
   }
-  return result;
+  const result = await pool.query(
+    "SELECT * FROM user_rule_sets WHERE table_name=$1",
+    [req.session.tableName]
+  );
+  const isEmpty = (property) => {
+    if (!property) {
+      return {};
+    }
+    return property;
+  };
+  const tableInfo = apiSchema[sentInfo.table_name];
+  const parent_col = tableInfo["parent"];
+  const parent_id = req.body.values[parent_col];
+  let parent = {};
+  if (parent_col && parent_id) {
+    parent = { id: parent_id, col: parent_col };
+  }
+  res.status(HTTP_CODES.SUCCESS).send({
+    data: isEmpty(extrapolateRequiredData(result.rows, tableInfo.aliases)),
+    aliases: isEmpty(tableInfo.aliases),
+    links: isEmpty(tableInfo.links),
+    actions: isEmpty(tableInfo.actions),
+    name: sentInfo.table_name,
+    schema: isEmpty(dbSchema[tableInfo["origin"]]),
+    parent: isEmpty(parent),
+  });
 };
 /**
  *
@@ -566,18 +538,54 @@ const addRuleSet = async (req, res) => {
     return;
   }
   const result = await pool.query(
-    "INSERT INTO user_rules(user_id, name, color) VALUES($1,$2,$3) RETURNING id",
-    [req.session.user_id, sentInfo.name, sentInfo.color]
+    "INSERT INTO user_rule_sets(user_id, name, color, table_name) VALUES($1,$2,$3,$4) RETURNING id",
+    [req.session.user_id, sentInfo.name, sentInfo.color, req.session.tableName]
   );
   if (!result.rowCount) {
     res.status(HTTP_CODES.INVALID_VALUES);
     return;
   }
-  await pool.query(
-    "UPDATE table_map_temp SET rules=array_append(rules,$1) WHERE table_owner=$2",
-    [result.rows[0].id, req.session.user]
-  );
   res.status(HTTP_CODES.SUCCESS).send();
+  return;
+};
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
+const updateRuleSet = async (req, res) => {
+  const requiredInfo = { signalcategoryid: 0, name: "", color: 0 };
+  let sentInfo = reqValid(requiredInfo, req);
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  const result = await pool.query(
+    "UPDATE INTO user_rule_sets SET name=$1, color$2 WHERE id=$3",
+    [sentInfo.name, sentInfo.color, sentInfo.signalcategoryid]
+  );
+  res.status(HTTP_CODES.SUCCESS).send({});
+};
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
+const deleteRuleSet = async (req, res) => {
+  const requiredInfo = { signalcategoryid: 0 };
+  let sentInfo = reqValid(requiredInfo, req);
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  let results = await pool.query(
+    "DELETE FROM user_rules WHERE rule_set_id=$1",
+    [sentInfo.signalcategoryid]
+  );
+  results = await pool.query("DELETE FROM user_rule_sets WHERE id=$1", [
+    sentInfo.signalcategoryid,
+  ]);
+  res.status(200).send({});
   return;
 };
 /**
@@ -613,7 +621,8 @@ module.exports = {
   getPaper,
   checkExistingWork,
   loadExistingWork,
-  getRules,
+  deleteRuleSet,
+  updateRuleSet,
   loadRuleSets,
   addRule,
   addRuleSet,
