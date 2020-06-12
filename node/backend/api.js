@@ -155,7 +155,13 @@ const citationSearch = async (req, res) => {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  //should check / get the rules here for now single search
+  if (req.session.tableName) {
+    let whereClause = await getRules(req.session.tableName, rule.term);
+    if (whereClause) {
+      //TODO
+      let shortList = await getShortList(whereClause);
+    }
+  }
   //create temp table to store results in
   await createTempTable(req);
   //assign the rules to the temp
@@ -201,12 +207,60 @@ const citationSearch = async (req, res) => {
   }
   res.status(HTTP_CODES.INVALID_VALUES);
 };
-const citationSearchWithRules = async (req, res) => {};
+/**
+ *
+ * @param {string} table_name user temp table name
+ */
+const getRules = async (tableName, searchTerm) => {
+  //get rule set ids for our instance
+  const ruleSetIds = await pool.query(
+    "SELECT id FROM user_rule_sets WHERE table_name=$1",
+    [tableName]
+  );
+  //if no rule sets return null
+  if (!ruleSetIds.rowCount) {
+    return null;
+  }
+  const ids = ruleSetIds.rows.map((x) => {
+    return x.id;
+  });
+  //get individual rules
+  const rules = await pool.query(
+    "SELECT * FROM user_rules WHERE rule_set_id=ANY($1::int[]) ORDER BY rule_set_id",
+    [ids]
+  );
+  if (!rules.rowCount) {
+    return null;
+  }
+  //comprise a filter to create a short list
+  let column = "full_text_words";
+  let whereClause = "";
+  for (let i = 0; i < rules.rows.length; ++i) {
+    const rule = rules.rows[i].rules;
+    for (let j = 0; j < rule.length; ++j) {
+      const operator = rule[j].operator != null ? rule[j].operator : "OR";
+      whereClause += `${operator} ${column} ? '${rule[j].term}' `;
+    }
+  }
+  whereClause += `OR ${column} ? ${searchTerm}`;
+  //get rid of the initial OR
+  return whereClause.slice(2);
+};
+/**
+ * this needs to be changed later
+ * @param {string} whereClause
+ */
+const getShortList = async (whereClause) => {
+  const result = await pool.query(
+    `SELECT id FROM pubmed_text WHERE ${whereClause}`
+  );
+  return result.rows.map((x) => x.id);
+};
 /**
  * @todo store the rule that hit in the temp tables for further use.
  * @param {Request} req
  * @param {Response} res
- * {papers:{content: {0: 22, 1: 21, 2: 21, 3: 18, 4: 21, 5: 21, 6: 20, 7: 18, 8: 20, 9: 17}, max: 22, year: 2005, rank: 8, total: 0}, ruleHits:{}, sentenceHits:{}}
+ *
  * papers
  */
 const getPapers = async (req, res) => {
@@ -399,7 +453,7 @@ const getPaper = async (req, res) => {
     articleyear: paperInfo.rows[0].year,
   });
 };
-/***************************************INDIVIDUAL RULES ***********************************/
+/***************************************INDIVIDUAL RULES************************************************/
 /**
  *
  * @param {Request} req
@@ -485,6 +539,41 @@ const addRule = async (req, res) => {
   return;
 };
 
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
+const updateRule = async (req, res) => {
+  const requiredInfo = { id: 0, rules: {} };
+  let sentInfo = reqValid(requiredInfo, { body: req.body.values });
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  sentInfo.rules = JSON.parse(sentInfo.rules);
+  if (!validRules(sentInfo.rules)) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  await pool.query("UPDATE user_rules SET rules=$2 WHERE id=$1", [
+    sentInfo.id,
+    JSON.stringify(sentInfo.rules),
+  ]);
+  res.status(HTTP_CODES.SUCCESS).send({});
+};
+
+const deleteRule = async (req, res) => {
+  const requiredInfo = { id: 0 };
+  let sentInfo = reqValid(requiredInfo, req);
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  await pool.query("DELETE FROM user_rules WHERE id=$1", [sentInfo.id]);
+  res.status(HTTP_CODES.SUCCESS).send({});
+};
+
 /************************************************************RULE SETS ************************************************************/
 /**
  *
@@ -554,15 +643,15 @@ const addRuleSet = async (req, res) => {
  * @param {Response} res
  */
 const updateRuleSet = async (req, res) => {
-  const requiredInfo = { signalcategoryid: 0, name: "", color: 0 };
-  let sentInfo = reqValid(requiredInfo, req);
+  const requiredInfo = { id: 0, name: "", color: 0 };
+  let sentInfo = reqValid(requiredInfo, { body: req.body.values });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
   const result = await pool.query(
-    "UPDATE INTO user_rule_sets SET name=$1, color$2 WHERE id=$3",
-    [sentInfo.name, sentInfo.color, sentInfo.signalcategoryid]
+    "UPDATE user_rule_sets SET name=$1, color=$2 WHERE id=$3",
+    [sentInfo.name, sentInfo.color, sentInfo.id]
   );
   res.status(HTTP_CODES.SUCCESS).send({});
 };
@@ -572,7 +661,7 @@ const updateRuleSet = async (req, res) => {
  * @param {Response} res
  */
 const deleteRuleSet = async (req, res) => {
-  const requiredInfo = { signalcategoryid: 0 };
+  const requiredInfo = { id: 0 };
   let sentInfo = reqValid(requiredInfo, req);
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
@@ -580,20 +669,15 @@ const deleteRuleSet = async (req, res) => {
   }
   let results = await pool.query(
     "DELETE FROM user_rules WHERE rule_set_id=$1",
-    [sentInfo.signalcategoryid]
+    [sentInfo.id]
   );
   results = await pool.query("DELETE FROM user_rule_sets WHERE id=$1", [
-    sentInfo.signalcategoryid,
+    sentInfo.id,
   ]);
   res.status(200).send({});
   return;
 };
-/**
- *
- * @param {Request} req
- * @param {Response} res
- */
-const updateRule = async (req, res) => {};
+
 /**
  *
  * @param {Request} req
@@ -625,6 +709,8 @@ module.exports = {
   updateRuleSet,
   loadRuleSets,
   addRule,
+  updateRule,
+  deleteRule,
   addRuleSet,
   loadRules,
 };

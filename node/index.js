@@ -7,6 +7,7 @@ var bodyParser = require("body-parser");
 const userRoutes = require("./backend/userRoutes");
 const apiRoutes = require("./backend/api");
 const { v4: uuidv4 } = require("uuid");
+const api = require("./backend/api");
 const port = 4000;
 
 /******path routes *******/
@@ -79,11 +80,14 @@ app.post(`/${apiPath}/papers`, apiRoutes.getPapers);
 app.get(`/${apiPath}/existing-work`, apiRoutes.checkExistingWork);
 app.get(`/${apiPath}/get-existing-work`, apiRoutes.loadExistingWork);
 app.post(`/${apiPath}/paper`, apiRoutes.getPaper);
-app.post(`/${apiPath}/rules`, apiRoutes.getRules);
 app.post(`/${apiPath}/rule-sets-table`, apiRoutes.loadRuleSets);
 app.post(`/${apiPath}/rules-table`, apiRoutes.loadRules);
+app.post(`/${apiPath}/delete/rules-table`, apiRoutes.deleteRule);
+app.post(`/${apiPath}/update/rules-table`, apiRoutes.updateRule);
 app.post(`/${apiPath}/insert/rule-sets-table`, apiRoutes.addRuleSet);
 app.post(`/${apiPath}/insert/rules-table`, apiRoutes.addRule);
+app.post(`/${apiPath}/delete/rule-sets-table`, apiRoutes.deleteRuleSet);
+app.post(`/${apiPath}/update/rule-sets-table`, apiRoutes.updateRuleSet);
 app.listen(port, () =>
   console.log(`Example app listening at http://localhost:${port}`)
 );

@@ -406,9 +406,13 @@ function drawTableRow(headers, signal, signalID, aliases) {
                     oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}'), document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
                 </li>
                 <li class="list-inline-item align-middle m-0 p-0">
-                  <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
-                    ${datum.range[0]}
-                    <- Citation -> ${datum.range[1]} ]</label>
+                  <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">
+                    <p id="left-range" style="display: inline;">[ ${
+                      datum.range[0]
+                    } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${
+            datum.range[1]
+          } ]</p>
+                    </label>
                 </li>
                 <li class="list-inline-item m-0 p-0" style="width:23%;">
                   <input type="range" innertext="0" min="0" max="9" value="${
@@ -447,9 +451,11 @@ function drawTableRow(headers, signal, signalID, aliases) {
                     oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}'), document.getElementById('rangeBefore_sig_${existing}'), document.getElementById('rangeAfter_sig_${existing}'), '', 1);">
                 </li>
                 <li class="list-inline-item align-middle m-0 p-0">
-                  <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}">[
-                    ${$("#rangeBefore").attr("max") - beforeRangeVal}
-                    <- Citation -> ${afterRangeVal} ]</label>
+                  <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}">
+                  <p id="left-range" style="display: inline;">[ ${
+                    $("#rangeBefore").attr("max") - beforeRangeVal
+                  } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
+                  </label>
                 </li>
                 <li class="list-inline-item m-0 p-0" style="width:23%;">
                   <input type="range" innertext="0" min="0" max="9" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}"
@@ -506,9 +512,11 @@ function addToSignal(id) {
             oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
         </li>
         <li class="list-inline-item align-middle m-0 p-0">
-          <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
-            ${$("#rangeBefore").attr("max") - beforeRangeVal}
-            <- Citation -> ${afterRangeVal} ]</label>
+          <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">
+          <p id="left-range" style="display: inline;">[ ${
+            $("#rangeBefore").attr("max") - beforeRangeVal
+          } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
+          </label>
         </li>
         <li class="list-inline-item m-0 p-0" style="width:23%;">
           <input type="range" innertext="0" min="0" max="9" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
@@ -548,9 +556,11 @@ function addToSignalClick(target, query, modifier = "AND") {
             oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}') , document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
         </li>
         <li class="list-inline-item align-middle m-0 p-0">
-          <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">[
-            ${$("#rangeBefore").attr("max") - beforeRangeVal}
-            <- Citation -> ${afterRangeVal} ]</label>
+          <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">
+            <p id="left-range" style="display: inline;">[ ${
+              $("#rangeBefore").attr("max") - beforeRangeVal
+            } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
+            </label>
         </li>
         <li class="list-inline-item m-0 p-0" style="width:23%;">
           <input type="range" innertext="0" min="0" max="9" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
@@ -779,7 +789,8 @@ function deleteRow(id) {
   }
   $.ajax({
     type: "POST",
-    url: currentURL + "api/delete",
+    url: "api/delete/" + loaded_table,
+    contentType: "application/json",
     data: JSON.stringify({
       table_name: loaded_table,
       id: id,
@@ -921,7 +932,7 @@ function updateRow(elem) {
     if (val == "") values[field_name] = null;
     else values[field_name] = val;
 
-    if (field_name == "signal") {
+    if (field_name == "rules") {
       val = [];
       let inps = $("select,input", this);
 
@@ -937,7 +948,7 @@ function updateRow(elem) {
         if (i >= 4) {
           let modifier = $(inps[i - 1]).val();
 
-          record["modifier"] = modifier;
+          record["operator"] = modifier;
         }
 
         val.push(record);
@@ -994,7 +1005,8 @@ function removeSignal(id, query) {
 function postUpdate(table_name, values, callback) {
   $.ajax({
     type: "POST",
-    url: currentURL + "api/update",
+    url: "api/update/" + table_name,
+    contentType: "application/json",
     data: JSON.stringify({
       table_name: table_name,
       values: values,
