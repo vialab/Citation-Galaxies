@@ -156,10 +156,17 @@ const citationSearch = async (req, res) => {
     return;
   }
   if (req.session.tableName) {
-    let whereClause = await getRules(req.session.tableName, rule.term);
-    if (whereClause) {
-      //TODO
-      let shortList = await getShortList(whereClause);
+    let rules = await getRules(req.session.tableName, rule.term);
+    if (rules) {
+      let shortList = await getShortList(rules.where);
+      //TODO need to aggregate
+      for (let i = 0; i < rules.rules.length; ++i) {
+        let query = sub_rule_query(
+          rules.rules[i].rules,
+          rules.rules[i].rule_set_id
+        );
+        let result = await pool.query(query, [shortList]);
+      }
     }
   }
   //create temp table to store results in
@@ -242,9 +249,41 @@ const getRules = async (tableName, searchTerm) => {
       whereClause += `${operator} ${column} ? '${rule[j].term}' `;
     }
   }
-  whereClause += `OR ${column} ? ${searchTerm}`;
+  whereClause += `OR ${column} ? '${searchTerm}'`;
   //get rid of the initial OR
-  return whereClause.slice(2);
+  return { where: whereClause.slice(2), rules: rules.rows };
+};
+/**
+ *
+ * @param {Array.<{}>} rules
+ * @param {int[]} shortList
+ */
+const get_rule_based_matrix = (rules, shortList) => {
+  pool.query("SELECT * FROM ()");
+};
+
+const sub_rule_query = (rule, ruleId, column = "full_text_words") => {
+  let result = `SELECT pt.id, ftc, ${ruleId} FROM (SELECT * FROM pubmed_text WHERE id=ANY($1::int[])) as pt, unnest(pt.full_text_citations) as ftc,`;
+  //just for reference this is a query that works.
+  let basicQuery =
+    "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
+  where heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0 AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
+  for (let i = 0; i < rule.length; ++i) {
+    result += `jsonb_array_elements(pt.${column}->'${rule[i].term}') as rule_${i},`;
+  }
+  //remove end comma
+  result = result.slice(0, -1);
+  result += " WHERE ";
+
+  //create where clause
+  for (let i = 0; i < rule.length; ++i) {
+    result += `${
+      rule[i].operator == undefined ? "" : rule[i].operator
+    } rule_${i}::int-ftc>=0 AND rule_${i}::int-ftc<=${
+      rule[i].range[0]
+    } OR rule_${i}::int-ftc<=0 AND rule_${i}::int-ftc>=${rule[i].range[1]} `;
+  }
+  return result;
 };
 /**
  * this needs to be changed later
@@ -698,6 +737,15 @@ const years = (req, res) => {
   res.send(result);
 };
 
+//const test = async () => {
+//  const rules = [
+//    { term: "heart", range: [0, 0] },
+//    { term: "cancer", range: [0, 0], operator: "AND" },
+//  ];
+//  let res = sub_rule_query(rules, 2);
+//  pool.query(res);
+//};
+//test();
 module.exports = {
   years,
   citationSearch,

@@ -1,13 +1,16 @@
 require("dotenv").config();
 const express = require("express");
 const app = express();
+const https = require("https");
 var session = require("express-session");
 const cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
 const userRoutes = require("./backend/userRoutes");
 const apiRoutes = require("./backend/api");
 const { v4: uuidv4 } = require("uuid");
-const api = require("./backend/api");
+const fs = require("fs");
+var privateKey = fs.readFileSync("./backend/resources/key.pem", "utf8");
+var certificate = fs.readFileSync("./backend/resources/cert.pem", "utf8");
 const port = 4000;
 
 /******path routes *******/
@@ -88,6 +91,8 @@ app.post(`/${apiPath}/insert/rule-sets-table`, apiRoutes.addRuleSet);
 app.post(`/${apiPath}/insert/rules-table`, apiRoutes.addRule);
 app.post(`/${apiPath}/delete/rule-sets-table`, apiRoutes.deleteRuleSet);
 app.post(`/${apiPath}/update/rule-sets-table`, apiRoutes.updateRuleSet);
-app.listen(port, () =>
-  console.log(`Example app listening at http://localhost:${port}`)
-);
+const credentials = { key: privateKey, cert: certificate };
+let httpsServer = https.createServer(credentials, app);
+httpsServer.listen(port, () => {
+  console.log(`Example app listening at http://localhost:${port}`);
+});
