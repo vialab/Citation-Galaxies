@@ -16,7 +16,7 @@ const RULE_OPERATORS = {
   NOT: 3,
 };
 /**********************On restart clear temporary table map **************************/
-//pool.query("SELECT clean_up_user_result_tables()"); //function is a user defined function stored in db
+pool.query("SELECT clean_up_user_result_tables()"); //function is a user defined function stored in db
 // 3 different types of queries [sentences, words, [sentences relative to citation, words relative to citation]]
 //two different datasets [erudit, pubmed]
 //regex
@@ -127,7 +127,7 @@ const createTempTable = async (req) => {
     await pool.query(
       `CREATE TABLE ${
         prefixTableName + userInfo.rows[0].id
-      }(id int, ftc int[], words int[], citation_location int[], num_ow int, num_os int, p_year int)`
+      }(id int REFERENCES pubmed_text(id) UNIQUE, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
     );
     await pool.query(
       "INSERT INTO table_map_temp(table_name,creation_date,table_owner) VALUES($1, $2, $3)",
@@ -155,32 +155,52 @@ const citationSearch = async (req, res) => {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
+  const rule_info = { queries: [], shortList: null };
   if (req.session.tableName) {
     let rules = await getRules(req.session.tableName, rule.term);
     if (rules) {
-      let shortList = await getShortList(rules.where);
+      rule_info.shortList = await getShortList(rules.where);
       //TODO need to aggregate
       for (let i = 0; i < rules.rules.length; ++i) {
         let query = sub_rule_query(
           rules.rules[i].rules,
           rules.rules[i].rule_set_id
         );
-        let result = await pool.query(query, [shortList]);
+        //let result = await pool.query(query, [shortList]);
+        //await pool.query(
+        //  `INSERT INTO ${req.session.tableName}(id, ARRAY[ftc]::int[], num_ow, num_os, p_year, ARRAY[rule_set_id]::int[]) ` +
+        //    query +
+        //    "ON CONFLICT (id) DO UPDATE SET ftc=array_append(ftc, EXCLUDED.ftc) rule_set_id=array_append(rule_set_id, EXCLUDED.rule_set_id)",
+        //  [shortList]
+        //);
+        rule_info.queries.push(
+          `INSERT INTO ${req.session.tableName}(id, citation_location, num_ow, num_os, p_year, rule_set_id) ` +
+            query +
+            `ON CONFLICT (id) DO UPDATE SET citation_location=array_cat(${req.session.tableName}.citation_location, EXCLUDED.citation_location), rule_set_id=array_cat(${req.session.tableName}.rule_set_id, EXCLUDED.rule_set_id)`
+        );
       }
     }
   }
   //create temp table to store results in
   await createTempTable(req);
-  //assign the rules to the temp
-  await pool.query(
-    "UPDATE table_map_temp SET initial_search=ROW($1,$2,$3,$4) WHERE table_owner=$5",
-    [rule.term, rule.range[0], rule.range[1], 0, req.session.user]
-  );
-  //get the result of the search and store in the user temporary table
-  await pool.query(
-    `INSERT INTO ${req.session.tableName} SELECT * FROM get_matrix($1, $2, $3);`,
-    [rule.term, rule.range[0], rule.range[1]]
-  );
+  if (rule_info.queries.length) {
+    let promises = [];
+    for (let i = 0; i < rule_info.queries.length; ++i) {
+      promises.push(pool.query(rule_info.queries[i], [rule_info.shortList]));
+    }
+    await Promise.all(promises);
+  } else {
+    //assign the rules to the temp
+    await pool.query(
+      "UPDATE table_map_temp SET initial_search=ROW($1,$2,$3,$4) WHERE table_owner=$5",
+      [rule.term, rule.range[0], rule.range[1], 0, req.session.user]
+    );
+    //get the result of the search and store in the user temporary table
+    await pool.query(
+      `INSERT INTO ${req.session.tableName} SELECT * FROM get_matrix($1, $2, $3);`,
+      [rule.term, rule.range[0], rule.range[1]]
+    );
+  }
   //once it is stored in the users temporary table we can now do subsequent manipulation to the subset py querying the req.session.tableName
   const aggResults = await pool.query(`SELECT * FROM ${req.session.tableName}`);
   let result = {};
@@ -263,7 +283,7 @@ const get_rule_based_matrix = (rules, shortList) => {
 };
 
 const sub_rule_query = (rule, ruleId, column = "full_text_words") => {
-  let result = `SELECT pt.id, ftc, ${ruleId} FROM (SELECT * FROM pubmed_text WHERE id=ANY($1::int[])) as pt, unnest(pt.full_text_citations) as ftc,`;
+  let result = `SELECT pt.id, array_agg(ftc), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT ${column},pubmed_text.id as id, pubmed_text.full_text_citations, pubmed_meta.year as year, pubmed_data.num_of_words as num_ow, pubmed_data.num_of_sentences as num_os FROM pubmed_text INNER JOIN pubmed_data ON pubmed_text.id=pubmed_data.id INNER JOIN pubmed_meta ON pubmed_text.id=pubmed_meta.id WHERE pubmed_text.id=ANY($1::int[])) as pt, unnest(pt.full_text_citations) as ftc, `;
   //just for reference this is a query that works.
   let basicQuery =
     "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
@@ -283,6 +303,7 @@ const sub_rule_query = (rule, ruleId, column = "full_text_words") => {
       rule[i].range[0]
     } OR rule_${i}::int-ftc<=0 AND rule_${i}::int-ftc>=${rule[i].range[1]} `;
   }
+  result += "GROUP BY pt.id, pt.year, pt.num_ow, pt.num_os ";
   return result;
 };
 /**

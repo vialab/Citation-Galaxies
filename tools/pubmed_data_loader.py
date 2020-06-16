@@ -124,6 +124,11 @@ async def createWordTable(conn):
     await conn.fetchrow('''SELECT loop_over_rows() ''')
     return
 
+async def vacuum():
+    conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
+    await conn.execute('''VACUUM VERBOSE ANALYZE;''')
+    return
+
 async def post_meta(pub_id, authors, title, year, journal, affiliation, conn):
     await conn.execute(
         '''INSERT INTO pubmed_meta(id, authors, title, year,journal, affiliation) VALUES($1,$2,$3,$4,$5, $6)''',
@@ -141,13 +146,16 @@ async def post_text(pub_id, abs_word, abs_sent, text_word, text_sent,
 async def post_data(pub_id, title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text, conn):
     await conn.execute('''INSERT INTO pubmed_data(id, title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING''', int(pub_id), title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text)
     return
+async def gen_index():
+    conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
+    await conn.execute('''create index index_pubmed_text on pubmed_text using gin(full_text_words)''')
 async def create_word_map():
     BATCH_SIZE=100
     conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
     #get number of rows in pubmed table
     result = await conn.fetchrow('''SELECT count(*) FROM pubmed_text''')
     print(result["count"])
-    for i in range(0, result["count"], BATCH_SIZE):
+    for i in range(16200, result["count"], BATCH_SIZE):
         print(i)
         rows = await conn.fetch('''SELECT * FROM pubmed_text INNER JOIN pubmed_meta ON pubmed_text.id=pubmed_meta.id OFFSET $1 LIMIT $2''', i, BATCH_SIZE)
         for j in range(0, len(rows)):
@@ -180,12 +188,12 @@ async def main():
             abstract_sentences = sent_tokenize(abstract)
             #await post_text(pubmed_id, wordMap, sentMap, twordMap, tsentMap,tcitWord, tcitSent, conn)
             #await post_meta(pubmed_id, authors, title, date, journal, affiliations, conn)
-            await post_data(pubmed_id,title, words, sentences, abstract_words, abstract_sentences, abstract, full_text, conn)
+            await post_data(pubmed_id, title, words, sentences, abstract_words, abstract_sentences, abstract, full_text, conn)
         except Exception as e:
             continue
 
         #print(sentMap)
 
-asyncio.get_event_loop().run_until_complete(create_word_map())
+asyncio.get_event_loop().run_until_complete(gen_index())
 
 #testEmail()
