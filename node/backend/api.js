@@ -16,7 +16,7 @@ const RULE_OPERATORS = {
   NOT: 3,
 };
 /**********************On restart clear temporary table map **************************/
-pool.query("SELECT clean_up_user_result_tables()"); //function is a user defined function stored in db
+//pool.query("SELECT clean_up_user_result_tables()"); //function is a user defined function stored in db
 // 3 different types of queries [sentences, words, [sentences relative to citation, words relative to citation]]
 //two different datasets [erudit, pubmed]
 //regex
@@ -273,21 +273,13 @@ const getRules = async (tableName, searchTerm) => {
   //get rid of the initial OR
   return { where: whereClause.slice(2), rules: rules.rows };
 };
-/**
- *
- * @param {Array.<{}>} rules
- * @param {int[]} shortList
- */
-const get_rule_based_matrix = (rules, shortList) => {
-  pool.query("SELECT * FROM ()");
-};
 
 const sub_rule_query = (rule, ruleId, column = "full_text_words") => {
   let result = `SELECT pt.id, array_agg(ftc), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT ${column},pubmed_text.id as id, pubmed_text.full_text_citations, pubmed_meta.year as year, pubmed_data.num_of_words as num_ow, pubmed_data.num_of_sentences as num_os FROM pubmed_text INNER JOIN pubmed_data ON pubmed_text.id=pubmed_data.id INNER JOIN pubmed_meta ON pubmed_text.id=pubmed_meta.id WHERE pubmed_text.id=ANY($1::int[])) as pt, unnest(pt.full_text_citations) as ftc, `;
-  //just for reference this is a query that works.
-  let basicQuery =
-    "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
+  //This is an example query left here to show the goal of this function.
+  /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
   where heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0 AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
+  */
   for (let i = 0; i < rule.length; ++i) {
     result += `jsonb_array_elements(pt.${column}->'${rule[i].term}') as rule_${i},`;
   }
@@ -303,11 +295,11 @@ const sub_rule_query = (rule, ruleId, column = "full_text_words") => {
       rule[i].range[0]
     } OR rule_${i}::int-ftc<=0 AND rule_${i}::int-ftc>=${rule[i].range[1]} `;
   }
+  //group by clause to group duplicates
   result += "GROUP BY pt.id, pt.year, pt.num_ow, pt.num_os ";
   return result;
 };
 /**
- * this needs to be changed later
  * @param {string} whereClause
  */
 const getShortList = async (whereClause) => {
@@ -337,13 +329,22 @@ const getPapers = async (req, res) => {
   let bins = convertSelection(sentInfo.selections);
   let result = {};
   let tableResults = await pool.query(
-    `SELECT citation_location, p_year as year, title, sentences, pubmed_data.id, num_os FROM ${req.session.tableName} INNER JOIN pubmed_data ON ${req.session.tableName}.id=pubmed_data.id WHERE p_year = ANY($1)`,
+    `SELECT citation_location, p_year as year, title, sentences, pubmed_data.id, num_os, rule_set_id FROM ${req.session.tableName} INNER JOIN pubmed_data ON ${req.session.tableName}.id=pubmed_data.id WHERE p_year = ANY($1)`,
     [
       bins.map((x) => {
         return x.year;
       }),
     ]
   );
+  //get rules
+  let rules = await pool.query(
+    `SELECT user_rule_sets.* FROM user_rule_sets, (SELECT DISTINCT UNNEST(rule_set_id) FROM ${req.session.tableName} WHERE p_year=ANY($1)) as rule_id WHERE id=rule_id`
+  );
+  //used to convert the rule map
+  let ruleMap = {};
+  for (let i = 0; i < rules.rows.length; ++i) {
+    ruleMap[rules.rows[i].id] = rules.rows[i];
+  }
   //check if any results were returned, there should be results at this point
   if (!tableResults.rowCount) {
     res.status(HTTP_CODES.SUCCESS).send(result);
@@ -370,7 +371,14 @@ const getPapers = async (req, res) => {
       "9": 0,
     };
     let row = tableResults.rows[i];
+    let citationRuleMap = {};
     const unique_citation = Array.from(new Set(row.citation_location));
+    unique_citation.map((x) => {
+      citationRuleMap[x] = [];
+    });
+    for (let j = 0; j < row.citation_location.length; ++j) {
+      citationRuleMap[row.citation_location[j]].push(row.rule_set_id);
+    }
     papers[row.id] = {};
     ruleHits[row.id] = [];
     //get the content hits for the paper glyph
@@ -407,7 +415,11 @@ const getPapers = async (req, res) => {
       ); // +1 due to exclusion clause
       let text = row.sentences.slice(leftIdx, rightIdx);
       sentenceHits[row.id].push(text);
-      ruleHits[row.id].push([]);
+      ruleHits[row.id].push(
+        citationRuleMap[unique_citation[j]].map((x) => {
+          return ruleMap[x];
+        })
+      );
     }
   }
   result.papers = papers;
