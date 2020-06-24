@@ -685,3 +685,44 @@ g text {
 .citation-arrow {
   width: 15%;
 }
+
+.export-container {
+  margin-top: 5%;
+}
+
+.export-box {
+  border: 1px solid #dee2e6;
+  font-size: 1.35rem;
+  margin-top: 15px;
+}
+
+.gray-background {
+  background-color: #ececec;
+}
+.box {
+  border: 1px solid #dee2e6;
+  text-align: center;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.export-btn-container {
+  margin-top: 15px;
+  float: right;
+}
+.content-box {
+  padding: 10px;
+  justify-content: space-around;
+}
+.span-title {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: normal;
+}
+.delimiter-field {
+  margin-left: 5px;
+  display: none;
+  border-top-right-radius: 0.25rem;
+  border-bottom-right-radius: 0.25rem;
+}

@@ -2,6 +2,9 @@ const pool = require("./database");
 const express = require("express");
 const apiSchema = require("./resources/apiSchema.json");
 const dbSchema = require("./resources/dbschema.json");
+const Data = require("./dataLayer");
+const mime = require("mime");
+const fs = require("fs");
 
 const HTTP_CODES = {
   SUCCESS: 200,
@@ -166,13 +169,6 @@ const citationSearch = async (req, res) => {
           rules.rules[i].rules,
           rules.rules[i].rule_set_id
         );
-        //let result = await pool.query(query, [shortList]);
-        //await pool.query(
-        //  `INSERT INTO ${req.session.tableName}(id, ARRAY[ftc]::int[], num_ow, num_os, p_year, ARRAY[rule_set_id]::int[]) ` +
-        //    query +
-        //    "ON CONFLICT (id) DO UPDATE SET ftc=array_append(ftc, EXCLUDED.ftc) rule_set_id=array_append(rule_set_id, EXCLUDED.rule_set_id)",
-        //  [shortList]
-        //);
         rule_info.queries.push(
           `INSERT INTO ${req.session.tableName}(id, citation_location, num_ow, num_os, p_year, rule_set_id) ` +
             query +
@@ -278,7 +274,7 @@ const sub_rule_query = (rule, ruleId, column = "full_text_words") => {
   let result = `SELECT pt.id, array_agg(ftc), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT ${column},pubmed_text.id as id, pubmed_text.full_text_citations, pubmed_meta.year as year, pubmed_data.num_of_words as num_ow, pubmed_data.num_of_sentences as num_os FROM pubmed_text INNER JOIN pubmed_data ON pubmed_text.id=pubmed_data.id INNER JOIN pubmed_meta ON pubmed_text.id=pubmed_meta.id WHERE pubmed_text.id=ANY($1::int[])) as pt, unnest(pt.full_text_citations) as ftc, `;
   //This is an example query left here to show the goal of this function.
   /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
-  where heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0 AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
+  where (heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0) AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
   */
   for (let i = 0; i < rule.length; ++i) {
     result += `jsonb_array_elements(pt.${column}->'${rule[i].term}') as rule_${i},`;
@@ -290,10 +286,10 @@ const sub_rule_query = (rule, ruleId, column = "full_text_words") => {
   //create where clause
   for (let i = 0; i < rule.length; ++i) {
     result += `${
-      rule[i].operator == undefined ? "" : rule[i].operator
+      rule[i].operator == undefined ? "(" : rule[i].operator + " ("
     } rule_${i}::int-ftc>=0 AND rule_${i}::int-ftc<=${
       rule[i].range[0]
-    } OR rule_${i}::int-ftc<=0 AND rule_${i}::int-ftc>=${rule[i].range[1]} `;
+    } OR rule_${i}::int-ftc<=0 AND rule_${i}::int-ftc>=${-rule[i].range[1]}) `;
   }
   //group by clause to group duplicates
   result += "GROUP BY pt.id, pt.year, pt.num_ow, pt.num_os ";
@@ -338,7 +334,12 @@ const getPapers = async (req, res) => {
   );
   //get rules
   let rules = await pool.query(
-    `SELECT user_rule_sets.* FROM user_rule_sets, (SELECT DISTINCT UNNEST(rule_set_id) FROM ${req.session.tableName} WHERE p_year=ANY($1)) as rule_id WHERE id=rule_id`
+    `SELECT user_rule_sets.*, (SELECT rules FROM user_rules WHERE rule_set_id=user_rule_sets.id) FROM user_rule_sets, (SELECT DISTINCT UNNEST(rule_set_id) as ids FROM ${req.session.tableName} WHERE p_year=ANY($1::int[])) as rule_id WHERE id=rule_id.ids`,
+    [
+      bins.map((x) => {
+        return x.year;
+      }),
+    ]
   );
   //used to convert the rule map
   let ruleMap = {};
@@ -350,6 +351,7 @@ const getPapers = async (req, res) => {
     res.status(HTTP_CODES.SUCCESS).send(result);
     return;
   }
+  let globalMax = 0;
   let papers = {};
   let ruleHits = {};
   let sentenceHits = {};
@@ -377,7 +379,7 @@ const getPapers = async (req, res) => {
       citationRuleMap[x] = [];
     });
     for (let j = 0; j < row.citation_location.length; ++j) {
-      citationRuleMap[row.citation_location[j]].push(row.rule_set_id);
+      citationRuleMap[row.citation_location[j]].push(row.rule_set_id[j]);
     }
     papers[row.id] = {};
     ruleHits[row.id] = [];
@@ -403,7 +405,7 @@ const getPapers = async (req, res) => {
     sentenceHits[row.id] = [];
     papers[row.id]["max"] = Math.max(...Object.values(content));
     papers[row.id]["total"] = Object.values(content).reduce((a, b) => a + b, 0);
-
+    globalMax = Math.max(globalMax, papers[row.id]["max"]);
     //generate the text for the vis
     for (let j = 0; j < unique_citation.length; ++j) {
       //make sure it does not go into the negative
@@ -428,6 +430,7 @@ const getPapers = async (req, res) => {
   result.years = bins.map((x) => {
     return x.year;
   });
+  result.max = globalMax;
   res.status(HTTP_CODES.SUCCESS).send(result);
   return;
 };
@@ -769,6 +772,47 @@ const years = (req, res) => {
   }
   res.send(result);
 };
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
+const exportData = async (req, res) => {
+  const requiredInfo = {
+    isJSON: true,
+    dataOptions: {},
+    meta: {},
+    ruleSets: {},
+  };
+  let sentInfo = reqValid(requiredInfo, { body: req.query });
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  const data = new Data(
+    sentInfo.isJSON,
+    req.session.tableName,
+    sentInfo.dataOptions,
+    sentInfo.meta,
+    sentInfo.ruleSets
+  );
+  const fileName = await data.export();
+  res.setHeader("Content-disposition", "attachment; filename=" + fileName);
+  let mimetype = mime.lookup(fileName);
+  res.setHeader("Content-type", mimetype);
+  let stream = fs.createReadStream(fileName);
+  stream.pipe(res);
+  let had_error = false;
+  stream.on("error", function (err) {
+    had_error = true;
+    console.error("File Export:" + err);
+  });
+  stream.on("close", function () {
+    if (!had_error) {
+      fs.unlink(fileName);
+    }
+  });
+};
 
 //const test = async () => {
 //  const rules = [
@@ -794,4 +838,5 @@ module.exports = {
   deleteRule,
   addRuleSet,
   loadRules,
+  exportData,
 };

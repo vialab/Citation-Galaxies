@@ -91,6 +91,7 @@ app.post(`/${apiPath}/insert/rule-sets-table`, apiRoutes.addRuleSet);
 app.post(`/${apiPath}/insert/rules-table`, apiRoutes.addRule);
 app.post(`/${apiPath}/delete/rule-sets-table`, apiRoutes.deleteRuleSet);
 app.post(`/${apiPath}/update/rule-sets-table`, apiRoutes.updateRuleSet);
+app.get(`/${apiPath}/export`, apiRoutes.exportData);
 const credentials = { key: privateKey, cert: certificate };
 let httpsServer = https.createServer(credentials, app);
 httpsServer.listen(port, () => {

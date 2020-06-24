@@ -1213,13 +1213,13 @@ function getPopoverContent(articleid, sentenceHits, ruleHits) {
         let full_text = "";
         let listEntry = list.append("li").attr("class", "list-group-item");
         for (let i = 0; i < ruleHits[counter].length; ++i) {
-          let tmp = JSON.parse(ruleHits[counter][i]["signals"]);
+          let tmp = ruleHits[counter][i]["rules"];
           let words = [];
-          for (let j in tmp) {
-            const rule = JSON.parse(tmp[j]);
-            const tmpWords = rule.map((x) => x.query);
-            words = words.concat(tmpWords);
-          }
+          //for (let j in tmp) {
+          //const rule = tmp[j];
+          const tmpWords = tmp.map((x) => x.term);
+          words = words.concat(tmpWords);
+          //}
           full_text += `<div class='rule-glyph' onmouseenter='glyphEnter(this);' onmouseleave='glyphExit(this);' style='background-color:${ruleHits[counter][i]["color"]}' words='${words}'></div>`;
         }
         counter++;
