@@ -5,7 +5,7 @@ import * as modal from "./modules/modal.js";
 // var vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
 
 $(document).ready((x, y, z) => {
-  console.log("newfront ready: ", x, y, z, modal.mode);
+  // console.log("newfront ready: ", x, y, z, modal.mode);
 
   // Create global width and height variables
   vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -16,7 +16,7 @@ $(document).ready((x, y, z) => {
 });
 
 $(window).on("load", function () {
-  console.log("newfront load");
+  //console.log("newfront load");
 
   // Load the year range (hooks into old code)
   getYears((_) => {
@@ -97,7 +97,7 @@ async function loadRules() {
       $("#export-rules-content").append(`
       <div>
         <label>
-          <input type="checkbox" data-toggle="toggle">
+          <input type="checkbox" data-toggle="toggle" rule-id=${result.data[i].id}>
         </label>
         <div style="display:inline-block;">
         ${result.data[i].name}
@@ -150,20 +150,33 @@ function checkExportOptions() {
     result.delimiter = $("#delimiter-field").val();
   }
   //loop through and check rulesets
+  let $rules = $("#export-rules-content input:checkbox");
+  $rules.each(function () {
+    if ($(this).is(":checked")) {
+      result.ruleSets.push($(this).attr("rule-id"));
+    }
+  });
   return result;
 }
 
-function exportData() {
+function exportData(event) {
+  event.preventDefault();
   let options = checkExportOptions();
-  $.ajax({
-    type: "GET",
-    url: "/api/export",
-    contentType: "application/json",
-    data: options,
-  });
+  let url = new URL("https://localhost:4000/api/export");
+  url.searchParams.append("query", JSON.stringify(options));
+  window.open(url.toString());
+  //$.ajax({
+  //  type: "GET",
+  //  url: "/api/export",
+  //  contentType: "application/json",
+  //  data: options,
+  //  success: function (res) {
+  //    console.log(res);
+  //  },
+  //});
 }
 function displayExistingWorkOption(result) {
-  console.log(result);
+  //console.log(result);
   if (!result.exists) {
     return;
   }

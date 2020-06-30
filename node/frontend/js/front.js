@@ -1195,32 +1195,32 @@ function getFilteredYears(
 ) {
   $("#downloadDataButton").attr("disabled", true);
   $("#changeLabelItem2").addClass("disabled");
-  $.ajax({
-    type: "POST",
-    url: currentURL + "query",
-    contentType: "application/json",
-    data: JSON.stringify({
-      query: word,
-      increment: currIncrement,
-      rangeLeft: sentenceRangeAbove,
-      rangeRight: sentenceRangeBelow,
-    }),
-    success: function (results) {
-      let data = results;
-      // loaded_articles = data["nunique"];
-      disableSearchUI(false);
-      if (draw) {
-        drawAllYears(data["agg"]);
-        if (process_signals) processAllSignals();
-        if (load_signals) {
-          loadCategories(function () {
-            loadSignals(processAllSignals);
-          });
-        }
-      }
-      if (typeof callback !== "undefined") callback(data["agg"]);
-    },
-  });
+  //$.ajax({
+  //  type: "POST",
+  //  url: currentURL + "query",
+  //  contentType: "application/json",
+  //  data: JSON.stringify({
+  //    query: word,
+  //    increment: currIncrement,
+  //    rangeLeft: sentenceRangeAbove,
+  //    rangeRight: sentenceRangeBelow,
+  //  }),
+  //  success: function (results) {
+  //    let data = results;
+  //    // loaded_articles = data["nunique"];
+  //    disableSearchUI(false);
+  //    if (draw) {
+  //      drawAllYears(data["agg"]);
+  //      if (process_signals) processAllSignals();
+  //      if (load_signals) {
+  //        loadCategories(function () {
+  //          loadSignals(processAllSignals);
+  //        });
+  //      }
+  //    }
+  //    if (typeof callback !== "undefined") callback(data["agg"]);
+  //  },
+  //});
 }
 
 // Draw all of the boxes in the prepared containers all at once using new database

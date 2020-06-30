@@ -3,7 +3,6 @@ const express = require("express");
 const apiSchema = require("./resources/apiSchema.json");
 const dbSchema = require("./resources/dbschema.json");
 const Data = require("./dataLayer");
-const mime = require("mime");
 const fs = require("fs");
 
 const HTTP_CODES = {
@@ -325,7 +324,7 @@ const getPapers = async (req, res) => {
   let bins = convertSelection(sentInfo.selections);
   let result = {};
   let tableResults = await pool.query(
-    `SELECT citation_location, p_year as year, title, sentences, pubmed_data.id, num_os, rule_set_id FROM ${req.session.tableName} INNER JOIN pubmed_data ON ${req.session.tableName}.id=pubmed_data.id WHERE p_year = ANY($1)`,
+    `SELECT citation_location, p_year as year, title, sentences, pubmed_data.id, num_os, rule_set_id FROM ${req.session.tableName} INNER JOIN pubmed_data ON ${req.session.tableName}.id=pubmed_data.id WHERE p_year = ANY($1::int[])`,
     [
       bins.map((x) => {
         return x.year;
@@ -334,7 +333,7 @@ const getPapers = async (req, res) => {
   );
   //get rules
   let rules = await pool.query(
-    `SELECT user_rule_sets.*, (SELECT rules FROM user_rules WHERE rule_set_id=user_rule_sets.id) FROM user_rule_sets, (SELECT DISTINCT UNNEST(rule_set_id) as ids FROM ${req.session.tableName} WHERE p_year=ANY($1::int[])) as rule_id WHERE id=rule_id.ids`,
+    `SELECT user_rule_sets.*, ARRAY(SELECT rules FROM user_rules WHERE rule_set_id=user_rule_sets.id) AS rules FROM user_rule_sets, (SELECT DISTINCT UNNEST(rule_set_id) AS ids FROM ${req.session.tableName} WHERE p_year=ANY($1::int[])) as rule_id WHERE id=rule_id.ids`,
     [
       bins.map((x) => {
         return x.year;
@@ -778,17 +777,20 @@ const years = (req, res) => {
  * @param {Response} res
  */
 const exportData = async (req, res) => {
+  //input validation
   const requiredInfo = {
     isJSON: true,
     dataOptions: {},
     meta: {},
     ruleSets: {},
   };
-  let sentInfo = reqValid(requiredInfo, { body: req.query });
+  const input = JSON.parse(req.query.query);
+  let sentInfo = reqValid(requiredInfo, { body: input });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
+  //create data object in charge of streaming from db to file
   const data = new Data(
     sentInfo.isJSON,
     req.session.tableName,
@@ -796,33 +798,29 @@ const exportData = async (req, res) => {
     sentInfo.meta,
     sentInfo.ruleSets
   );
+  //if delimiter assign
+  if (input.delimiter != undefined) {
+    data.delimiter = input.delimiter;
+  }
+  //returns the fileName that has the required information
   const fileName = await data.export();
-  res.setHeader("Content-disposition", "attachment; filename=" + fileName);
-  let mimetype = mime.lookup(fileName);
-  res.setHeader("Content-type", mimetype);
-  let stream = fs.createReadStream(fileName);
-  stream.pipe(res);
-  let had_error = false;
-  stream.on("error", function (err) {
-    had_error = true;
-    console.error("File Export:" + err);
-  });
-  stream.on("close", function () {
-    if (!had_error) {
-      fs.unlink(fileName);
+  //send to client
+  res.download(fileName, "data." + data.fileExtension, function (err) {
+    if (err) {
+      console.error(err);
+      //delete file there was an error
+      fs.unlink(fileName, (err) => {
+        if (err) console.error(err);
+      });
+    } else {
+      //delete file the client has received it
+      fs.unlink(fileName, (err) => {
+        if (err) console.error(err);
+      });
     }
   });
 };
 
-//const test = async () => {
-//  const rules = [
-//    { term: "heart", range: [0, 0] },
-//    { term: "cancer", range: [0, 0], operator: "AND" },
-//  ];
-//  let res = sub_rule_query(rules, 2);
-//  pool.query(res);
-//};
-//test();
 module.exports = {
   years,
   citationSearch,

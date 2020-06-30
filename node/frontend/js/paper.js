@@ -1217,8 +1217,12 @@ function getPopoverContent(articleid, sentenceHits, ruleHits) {
           let words = [];
           //for (let j in tmp) {
           //const rule = tmp[j];
-          const tmpWords = tmp.map((x) => x.term);
-          words = words.concat(tmpWords);
+          const tmpWords = tmp.map((x) =>
+            x.map((y) => {
+              return y.term;
+            })
+          );
+          words = words.concat(...new Set(tmpWords.flat()));
           //}
           full_text += `<div class='rule-glyph' onmouseenter='glyphEnter(this);' onmouseleave='glyphExit(this);' style='background-color:${ruleHits[counter][i]["color"]}' words='${words}'></div>`;
         }
@@ -1259,7 +1263,12 @@ function getPopoverContent(articleid, sentenceHits, ruleHits) {
       }
       $modal.modal("show");
       $($modal).find("#pills-admin").addClass("active show");
-      loadTable("signalcategory", undefined, true, transformCategoryData);
+      loadTable(
+        "rule-sets-table",
+        { table_name: "signalcategory" },
+        true,
+        transformCategoryData
+      );
     },
   });
 }
