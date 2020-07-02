@@ -70,8 +70,30 @@ function setupEventHandlers() {
     $("#delimiter-field").show();
   });
   $("#export-data-form").submit(exportData);
+  setupFilterSuggestions();
+  $("#sidebar-tag").on("mouseenter", openSideBar);
+  $("#sidebar").on("mouseleave", closeSideBar);
 }
-
+function setupFilterSuggestions() {
+  $("#authors-field").on("input", function () {
+    getFilterSuggestions($(this).val(), "AUTHORS", this.id);
+  });
+  $("#affiliation-field").on("input", function () {
+    getFilterSuggestions($(this).val(), "AFFILIATION", this.id);
+  });
+  $("#title-field").on("input", function () {
+    getFilterSuggestions($(this).val(), "TITLE", this.id);
+  });
+  $("#journal-field").on("input", function () {
+    getFilterSuggestions($(this).val(), "JOURNAL", this.id);
+  });
+}
+function openSideBar() {
+  $("#sidebar-content").css({ width: "500px" });
+}
+function closeSideBar() {
+  $("#sidebar-content").css({ width: "0px" });
+}
 async function exportPage() {
   //clear the page
   clearCrudTable();
@@ -165,15 +187,6 @@ function exportData(event) {
   let url = new URL("https://localhost:4000/api/export");
   url.searchParams.append("query", JSON.stringify(options));
   window.open(url.toString());
-  //$.ajax({
-  //  type: "GET",
-  //  url: "/api/export",
-  //  contentType: "application/json",
-  //  data: options,
-  //  success: function (res) {
-  //    console.log(res);
-  //  },
-  //});
 }
 function displayExistingWorkOption(result) {
   //console.log(result);
@@ -209,4 +222,14 @@ function loadExistingWork() {
       drawAllYears(data);
     },
   });
+}
+
+async function getFilterSuggestions(currentValue, filter, id) {
+  let result = await $.ajax({
+    url: "api/paper/filter-suggestions",
+    type: "GET",
+    contentType: "application/json",
+    data: { currentValue, filter },
+  });
+  $("#" + id).autocomplete({ source: result });
 }

@@ -434,7 +434,6 @@ const getPapers = async (req, res) => {
   return;
 };
 /**
- *
  * @param {Request} req
  * @param {Response} res
  */
@@ -751,7 +750,6 @@ const deleteRuleSet = async (req, res) => {
   res.status(200).send({});
   return;
 };
-
 /**
  *
  * @param {Request} req
@@ -821,6 +819,37 @@ const exportData = async (req, res) => {
   });
 };
 
+const getFilterNames = async (req, res) => {
+  const requiredInfo = { filter: "", currentValue: "" };
+  let sentInfo = reqValid(requiredInfo, { body: req.query });
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  const limit = 5;
+  const filters = {
+    JOURNAL: "journal",
+    TITLE: "title",
+    AUTHORS: "authors",
+    AFFILIATION: "affiliation",
+  };
+  let select = filters[sentInfo.filter];
+  if (!select) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  const result = await pool.query(
+    `SELECT DISTINCT ${select} FROM ${req.session.tableName} AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+    ["^" + sentInfo.currentValue, limit]
+  );
+  res.status(HTTP_CODES.SUCCESS).send(
+    result.rows.map((x) => {
+      return x[select];
+    })
+  );
+  return;
+};
+
 module.exports = {
   years,
   citationSearch,
@@ -837,4 +866,5 @@ module.exports = {
   addRuleSet,
   loadRules,
   exportData,
+  getFilterNames,
 };
