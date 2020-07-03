@@ -830,21 +830,32 @@ const getFilterNames = async (req, res) => {
   const filters = {
     JOURNAL: "journal",
     TITLE: "title",
+    AUTHORS: "meta.authors",
+    AFFILIATION: "meta.affiliation",
+  };
+  const selectStatements = {
+    JOURNAL: "journal",
+    TITLE: "title",
     AUTHORS: "authors",
     AFFILIATION: "affiliation",
   };
   let select = filters[sentInfo.filter];
+  const selectStatement = selectStatements[sentInfo.filter];
+  const queryStatements = {
+    JOURNAL: `SELECT DISTINCT ${select} FROM ${req.session.tableName} AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+    TITLE: `SELECT DISTINCT ${select} FROM ${req.session.tableName} AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+    AUTHORS: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.authors) as authors FROM ${req.session.tableName} as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+    AFFILIATION: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.affiliation) as affiliation FROM ${req.session.tableName} as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+  };
   if (!select) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  const result = await pool.query(
-    `SELECT DISTINCT ${select} FROM ${req.session.tableName} AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
-    ["^" + sentInfo.currentValue, limit]
-  );
+  let query = queryStatements[sentInfo.filter];
+  const result = await pool.query(query, ["^" + sentInfo.currentValue, limit]);
   res.status(HTTP_CODES.SUCCESS).send(
     result.rows.map((x) => {
-      return x[select];
+      return x[selectStatement];
     })
   );
   return;
