@@ -9,7 +9,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
- <!-- <link rel="manifest" href="site.webmanifest" />-->
+  <!-- <link rel="manifest" href="site.webmanifest" />-->
 
   <!--External Resources-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
@@ -154,7 +154,7 @@
       </div>
     </div>
   </nav>
-  <div id="container" class="d-flex flex-column overflow-auto">
+  <div id="container" class="d-flex flex-column">
     <div class="tab-content" id="pills-tabContent">
       <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab">
         <!-- Buttons on home pane -->
@@ -224,97 +224,62 @@
         </div>
       </div>
       <div class="tab-pane fade" id="pills-papers" role="tabpanel" aria-labelledby="pills-papers-tab">
-        
         <div id="sidebar">
-          <div id="sidebar-tag" class="nav nav-tabs tabs-left">
-            <h2>filters</h2>
-          </div>
           <div id="sidebar-content" class="sidebar">
-                <form>
-                  <div class="form-row">
-                    <div class="col">
-                    <div class="form-group">
-                      <label for="journal-field">Journal</label>
-                      <input type="text" class="form-control" id="journal-field" placeholder="journal name">
-                    </div>
+            <div class='title'>Filters</div>
+            <button type="button" id="paper-form-add-row" class="btn btn-primary">+</button>
+            <form id="paper-filter-form">
+              <div class="form-row">
+                <div class="col">
+                  <div class="form-group">
+                    <label for="journal-field">Journal</label>
+                    <input type="text" class="form-control journal-field" placeholder="journal">
                   </div>
-                  <div class="col">
-                    <div class="form-group">
-                      <label for="title-field">Title</label>
-                      <input type="text" class="form-control" id="title-field" placeholder="title">
-                    </div>
+                </div>
+                <div class="col">
+                  <div class="form-group">
+                    <label for="title-field">Title</label>
+                    <input type="text" class="form-control title-field" placeholder="title">
                   </div>
-                  <div class="col">
-                    <div class="form-group">
-                      <label for="authors-field">Authors</label>
-                      <input type="text" class="form-control" id="authors-field" placeholder="authors">
-                    </div>
+                </div>
+                <div class="col">
+                  <div class="form-group">
+                    <label for="authors-field">Author</label>
+                    <input type="text" class="form-control authors-field" placeholder="author">
                   </div>
-                  <div class="col">
-                    <div class="form-group">
-                      <label for="affiliation-field">Affiliations</label>
-                      <input type="text" class="form-control" id="affiliation-field" placeholder="affiliation">
-                    </div>
+                </div>
+                <div class="col">
+                  <div class="form-group">
+                    <label for="affiliation-field">Affiliation</label>
+                    <input type="text" class="form-control affiliation-field" placeholder="affiliation">
                   </div>
-                  </div>
-                  <button type="submit" class="btn btn-primary">Apply</button>
-                </form>
-            </div>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Apply</button>
+            </form>
           </div>
+        </div>
         <div id="paper-content">
-        <div id="sortOptions">
-          <!-- <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" id="paperSortButton" style="margin-right: 20px; display: none;" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Sort By
-            </button>
-            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-              <a class="dropdown-item paper-sort active" id="sortByYear" href="#" onclick="changePaperSort('articleyear')">Year</a>
-              <a class="dropdown-item paper-sort" id="sortByJournal" href="#" onclick="changePaperSort('journaltitle')">Journal</a>
-              <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a>
-            </div>
-          </div> -->
-        
-          <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" id="paperNormButton"
-              style="margin-right: 20px; display: none;" type="button" data-toggle="dropdown" aria-haspopup="true"
-              aria-expanded="false">
-              Normalize
-            </button>
-            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-              <a class="dropdown-item paper-norm active" id="normGlobal" href="#"
-                onclick="drawPapersByIndex(paper_data, false);">Global</a>
-              <a class="dropdown-item paper-norm" id="normLocal" href="#"
-                onclick="drawPapersByIndex(paper_data, true);">Local</a>
-              <!-- <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a> -->
-            </div>
-          </div>
-        </div>
-        <!-- <div id="papers-container" class="row transition"></div> -->
-        <div id="papers-container" class="container transition"></div>
-      </div>
-        <!-- <div id="window-divider" class="transition">
-          <ul>
-            <li onclick="maximizeDivider();">&gt;</li>
-            <li onclick="minimizeDivider();">&lt;</li>
-          </ul>
-        </div>
-        <div id="sunburst-container" class="transition">
-          <div id="sunburst" style="display: none;">
-            <div id="sequence"></div>
-            <div id="chart">
-              <div id="explanation" class="noselect">
-                <span id="percentage"></span><br />
-                of citations are matched with this set of signals
+          <div id="sortOptions">
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary dropdown-toggle" id="paperNormButton"
+                style="margin-right: 20px; display: none;" type="button" data-toggle="dropdown" aria-haspopup="true"
+                aria-expanded="false">
+                Normalize
+              </button>
+              <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                <a class="dropdown-item paper-norm active" id="normGlobal" href="#"
+                  onclick="drawPapersByIndex(paper_data, false);">Global</a>
+                <a class="dropdown-item paper-norm" id="normLocal" href="#"
+                  onclick="drawPapersByIndex(paper_data, true);">Local</a>
+                <!-- <a class="dropdown-item active" id="sortByRef" href="#" onclick="changePaperSort(-1)">References</a> -->
               </div>
             </div>
           </div>
-        </div> -->
-      <!-- <div class="tab-pane fade" id="pills-rules" role="tabpanel" aria-labelledby="pills-rules-tab">
-        <div id="vis-container">
-          <button class="btn btn-primary" onclick="processAllSignals();">Reprocess</button>
-          <button class="btn btn-primary" onclick="createVisualization(transformScores());">Redraw</button>
+
+          <div id="papers-container" class="container transition"></div>
         </div>
-      </div> -->
+      </div>
       <div class="tab-pane fade" id="pills-admin" role="tabpanel" aria-labelledby="pills-admin-tab">
         <!-- <div class="btn-group" role="group" style="float: right;">
           <button type="button" class="btn btn-outline-secondary" onclick="loadTable('signalcategory', undefined, true, transformCategoryData)">Categories</button>
@@ -592,7 +557,8 @@
           <li class="list-inline-item align-middle">
             <label class="text-center" for="formControlRange" style="margin: 0 0 10px 0; display: none;"
               id="citationRangePopOver">[ 0 <img src="arrow.png" class="citation-arrow"></img> <img src="quotes_ui.png"
-                class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img> 0 ]
+                class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img> 0
+              ]
             </label>
           </li>
           <li class="list-inline-item">

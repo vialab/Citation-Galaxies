@@ -173,7 +173,7 @@
   margin: 0px 50px;
 }
 
-#pills-papers #papers-container {
+#pills-papers {
   /* position: fixed; */
   /* right: 0px; */
   /* margin: 0 0;
@@ -184,7 +184,12 @@
   /* height: 95%; */
   /* overflow: auto; */
 }
-
+#papers-container {
+  padding-top: 15px;
+  padding-bottom: 30px;
+  width: calc(100% - 500px);
+  margin-left: 0px !important;
+}
 #papers-container .row {
   /* margin: 5px; */
   margin: auto;
@@ -385,15 +390,16 @@ a.disabled {
 #navOptions,
 #sortOptions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  padding: 15px;
 }
 
 .no-outline:focus {
   outline: none;
 }
 .sidebar {
-  height: 100%; /* 100% Full-height */
-  width: 0; /* 0 width - change this with JavaScript */
+  height: calc(100% - 72px); /* 100% Full-height */
+  width: 500px; /* 0 width - change this with JavaScript */
   position: fixed; /* Stay in place */
   z-index: 1; /* Stay on top */
   top: 70px;
@@ -755,4 +761,42 @@ g text {
 }
 #paper-content {
   transition: margin-right 0.5s; /* If you want a transition effect */
+  margin-right: 500px;
+}
+.ui-autocomplete {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  display: none;
+  float: left;
+  min-width: 160px;
+  padding: 5px;
+  margin: 2px 0 0;
+  list-style: none;
+  font-size: 14px;
+  text-align: left;
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  -webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+  background-clip: padding-box;
+}
+
+.form-row {
+  background-color: #ececec;
+  border-radius: 0.25rem;
+  margin: 15px;
+}
+.form-row > .col {
+  padding: 5px;
+}
+.title {
+  font-weight: 400;
+  font-size: 20px;
+  display: block;
+  margin: auto;
+  text-align: center;
 }

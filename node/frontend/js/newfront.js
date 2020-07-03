@@ -71,28 +71,21 @@ function setupEventHandlers() {
   });
   $("#export-data-form").submit(exportData);
   setupFilterSuggestions();
-  $("#sidebar-tag").on("mouseenter", openSideBar);
-  $("#sidebar").on("mouseleave", closeSideBar);
+  $("#paper-form-add-row").on("click", addRowToFilterForm);
 }
 function setupFilterSuggestions() {
-  $("#authors-field").on("input", function () {
-    getFilterSuggestions($(this).val(), "AUTHORS", this.id);
+  $(".authors-field").on("input", function () {
+    getFilterSuggestions($(this).val(), "AUTHORS", this);
   });
-  $("#affiliation-field").on("input", function () {
-    getFilterSuggestions($(this).val(), "AFFILIATION", this.id);
+  $(".affiliation-field").on("input", function () {
+    getFilterSuggestions($(this).val(), "AFFILIATION", this);
   });
-  $("#title-field").on("input", function () {
-    getFilterSuggestions($(this).val(), "TITLE", this.id);
+  $(".title-field").on("input", function () {
+    getFilterSuggestions($(this).val(), "TITLE", this);
   });
-  $("#journal-field").on("input", function () {
-    getFilterSuggestions($(this).val(), "JOURNAL", this.id);
+  $(".journal-field").on("input", function () {
+    getFilterSuggestions($(this).val(), "JOURNAL", this);
   });
-}
-function openSideBar() {
-  $("#sidebar-content").css({ width: "500px" });
-}
-function closeSideBar() {
-  $("#sidebar-content").css({ width: "0px" });
 }
 async function exportPage() {
   //clear the page
@@ -224,12 +217,44 @@ function loadExistingWork() {
   });
 }
 
-async function getFilterSuggestions(currentValue, filter, id) {
+async function getFilterSuggestions(currentValue, filter, element) {
   let result = await $.ajax({
     url: "api/paper/filter-suggestions",
     type: "GET",
     contentType: "application/json",
     data: { currentValue, filter },
   });
-  $("#" + id).autocomplete({ source: result });
+  $(element).autocomplete({ source: result });
+}
+
+function addRowToFilterForm() {
+  $("#paper-filter-form").prepend(
+    `<div class="form-row">
+    <div class="col">
+      <div class="form-group">
+        <label for="journal-field">Journal</label>
+        <input type="text" class="form-control journal-field" placeholder="journal">
+      </div>
+    </div>
+    <div class="col">
+      <div class="form-group">
+        <label for="title-field">Title</label>
+        <input type="text" class="form-control title-field" placeholder="title">
+      </div>
+    </div>
+    <div class="col">
+      <div class="form-group">
+        <label for="authors-field">Author</label>
+        <input type="text" class="form-control authors-field" placeholder="author">
+      </div>
+    </div>
+    <div class="col">
+      <div class="form-group">
+        <label for="affiliation-field">Affiliation</label>
+        <input type="text" class="form-control affiliation-field" placeholder="affiliation">
+      </div>
+    </div>
+  </div>`
+  );
+  setupFilterSuggestions();
 }
