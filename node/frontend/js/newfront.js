@@ -41,6 +41,8 @@ function setupEventHandlers() {
       event.preventDefault();
       return false;
     } else {
+      $("#navOptions").hide();
+      $("#db-state-container").hide();
       if ($("#pills-tabContent").find("#pills-admin").length == 0) {
         const clone = $("#pills-admin").clone();
         $("#pills-admin").remove();
@@ -72,6 +74,8 @@ function setupEventHandlers() {
   $("#export-data-form").submit(exportData);
   setupFilterSuggestions();
   $("#paper-form-add-row").on("click", addRowToFilterForm);
+  $("#paper-filter-form-submit-btn").on("click", submitFilters);
+  $("#db-state-container").on("click", dbOnClick);
 }
 function setupFilterSuggestions() {
   $(".authors-field").on("input", function () {
@@ -86,11 +90,15 @@ function setupFilterSuggestions() {
   $(".journal-field").on("input", function () {
     getFilterSuggestions($(this).val(), "JOURNAL", this);
   });
+  $(".exit-button").on("click", function () {
+    removeFilter(this);
+  });
 }
 async function exportPage() {
   //clear the page
   clearCrudTable();
   $("#navOptions").hide();
+  $("#db-state-container").hide();
   d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
 
   //Remove the paper row - append a message about the slow computation time, and run the search for the papers
@@ -118,7 +126,6 @@ async function loadRules() {
         ${result.data[i].name}
         </div>
         <div style="background-color:${result.data[i].color}; display:inline-block;">
-          ${result.data[i].color}
         </div>
       </div>
       `);
@@ -222,7 +229,7 @@ async function getFilterSuggestions(currentValue, filter, element) {
     url: "api/paper/filter-suggestions",
     type: "GET",
     contentType: "application/json",
-    data: { currentValue, filter },
+    data: { currentValue, filter, ids: Object.keys(paper_data.papers) },
   });
   $(element).autocomplete({ source: result });
 }
@@ -231,24 +238,19 @@ function addRowToFilterForm() {
   $("#paper-filter-form").prepend(
     `<div class="form-row">
     <div class="col">
+    <div class="exit-button">x</div>
       <div class="form-group">
         <label for="journal-field">Journal</label>
         <input type="text" class="form-control journal-field" placeholder="journal">
       </div>
-    </div>
-    <div class="col">
       <div class="form-group">
         <label for="title-field">Title</label>
         <input type="text" class="form-control title-field" placeholder="title">
       </div>
-    </div>
-    <div class="col">
       <div class="form-group">
         <label for="authors-field">Author</label>
         <input type="text" class="form-control authors-field" placeholder="author">
       </div>
-    </div>
-    <div class="col">
       <div class="form-group">
         <label for="affiliation-field">Affiliation</label>
         <input type="text" class="form-control affiliation-field" placeholder="affiliation">
@@ -258,3 +260,101 @@ function addRowToFilterForm() {
   );
   setupFilterSuggestions();
 }
+function removeFilter(element) {
+  $(element).parent().parent().remove();
+}
+function addIfExists(obj, key, val) {
+  if (val === "") {
+    return;
+  }
+  obj[key] = val;
+}
+function submitFilters() {
+  $("#paper-filter-form-submit-btn").attr("disabled", true);
+  //paper filter form id
+  const filterFormID = "#paper-filter-form";
+  //get all rows in the form
+  const formRows = $(filterFormID).find(".form-row");
+  //all the current field classes, add additional fields in this object
+  const formFields = {
+    journal: ".journal-field",
+    title: ".title-field",
+    author: ".authors-field",
+    affiliation: ".affiliation-field",
+  };
+  let formCollection = [];
+  //loop through each row and select the required fields
+  for (let i = 0; i < formRows.length; ++i) {
+    let formSchema = {};
+    addIfExists(
+      formSchema,
+      "journal",
+      $(formRows[i]).find(formFields.journal)[0].value
+    );
+    addIfExists(
+      formSchema,
+      "title",
+      $(formRows[i]).find(formFields.title)[0].value
+    );
+    addIfExists(
+      formSchema,
+      "author",
+      $(formRows[i]).find(formFields.author)[0].value
+    );
+    addIfExists(
+      formSchema,
+      "affiliation",
+      $(formRows[i]).find(formFields.affiliation)[0].value
+    );
+    if (Object.keys(formSchema).length) {
+      formCollection.push(formSchema);
+    }
+  }
+  getFilteredPapers(formCollection, applyFilters);
+}
+function applyFilters(ids) {
+  let filtered_paper_data = { papers: {}, ruleHits: {}, sentenceHits: {} };
+  filtered_paper_data.max = paper_data.max;
+  for (let i = 0; i < ids.length; ++i) {
+    const id = ids[i];
+    filtered_paper_data.papers[id + "_f"] = paper_data.papers[id];
+    filtered_paper_data.papers[id + "_f"].year = "Filter";
+    filtered_paper_data.ruleHits[id + "_f"] = paper_data.ruleHits[id];
+    filtered_paper_data.sentenceHits[id + "_f"] = paper_data.sentenceHits[id];
+  }
+  filtered_paper_data.years = ["Filter"];
+  drawPapersByFilter(filtered_paper_data);
+}
+
+async function getFilteredPapers(formInfo, callback) {
+  let result = await $.ajax({
+    url: "api/paper/filter",
+    type: "GET",
+    contentType: "application/json",
+    data: { fields: formInfo, ids: Object.keys(paper_data.papers) },
+  });
+  $("#paper-filter-form-submit-btn").attr("disabled", false);
+  callback(result);
+}
+
+function dbOnClick(element) {
+  const pbState = "#pubmed-state";
+  const erState = "#erudit-state";
+  const fill = "fill";
+  $(pbState).toggleClass(fill);
+  $(erState).toggleClass(fill);
+  // $("#db-graphics-container").css({ transform: "rotateY(180deg)" });
+  if ($(pbState).hasClass(fill)) {
+    $("#db-graphics").css({ transform: "rotateY(0deg)" });
+    $("#search-range-indicator").css({ opacity: 1 });
+    $("#search-range-indicator").css({ visibility: "visible" });
+  } else {
+    $("#db-graphics").css({ transform: "rotateY(180deg)" });
+    $("#search-range-indicator").css({ opacity: 0 });
+    $("#search-range-indicator").css({ visibility: "hidden" });
+  }
+}
+/**
+ * This function is the entry point for when the database switches
+ */
+function setupDataBase() {}

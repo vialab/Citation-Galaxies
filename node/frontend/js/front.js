@@ -778,6 +778,8 @@ function switchToHome() {
   d3.select("#paperSortButton").style("display", "none");
   d3.select("#paperNormButton").style("display", "none");
   d3.select("#groupByButton").style("display", "none");
+  $("#navOptions").show();
+  $("#db-state-container").show();
 }
 
 //Creates a container for the paper glpyh on the main screen, and creates containers for the columns

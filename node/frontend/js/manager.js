@@ -1128,10 +1128,10 @@ function sortTableByColumn(table, column, order) {
 
 function getTableTitle(tableName) {
   switch (tableName) {
-    case "signalcategory":
-      return "Categories";
+    case "rule-sets-table":
+      return "Rule Sets";
       break;
-    case "signalbycategory":
+    case "rules-table":
       return sentiment_categories[loaded_parent.id].name + " Rules";
       break;
     case "filter":

@@ -22,11 +22,11 @@
     "query": "-- name: signal_category\nselect id, catname, color from signalcategory where cookieid=:cookieid order by id;",
     "require_cookie": true,
     "aliases": {
-      "name": { "name": "Category Name", "nameonly": true },
+      "name": { "name": "Name", "nameonly": true },
       "color": { "name": "Color", "nameonly": true }
     },
     "links": {
-      "signals": {
+      "rules": {
         "params": { "id": "signalcategoryid" },
         "query": "rules-table"
       }

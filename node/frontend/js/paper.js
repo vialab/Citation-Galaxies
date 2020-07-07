@@ -513,35 +513,6 @@ function drawPapersByIndex(results, local_norm = false) {
   let all_max = results["max"];
   // categorize by journal then year
   if (indexToSortPapersOn == "journaltitle") {
-    // for (let jid in results.journals) {
-    //   let journalRow = paperRow
-    //     .append("div") // add a row for journal
-    //     .attr("class", "row journal-row")
-    //     .attr("id", "journal-row-" + jid);
-    //   journalRow
-    //     .append("div")
-    //     .attr("class", "row col-sm-12")
-    //     .append("h2")
-    //     .text(results.journals[jid]["title"]);
-    //   // iterate all the available years for this journal
-    //   for (let y of results.journals[jid]["years"]) {
-    //     let yearRow = journalRow
-    //       .append("div")
-    //       .attr("class", "row papers-row")
-    //       .attr("id", "papers-row-" + y);
-    //     yearRow
-    //       .append("div")
-    //       .attr("class", "row col-sm-12")
-    //       .append("h2")
-    //       .text(y);
-    //     let papers = yearRow
-    //       .append("div")
-    //       .attr("class", "row col-sm-12 papers")
-    //       .attr("data-journal-id", jid)
-    //       .attr("data-year", y);
-    //     papers.append("div").attr("class", "col partialpadding load-more");
-    //   }
-    // }
   } else {
     // only categorize by years
     active = false;
@@ -567,6 +538,94 @@ function drawPapersByIndex(results, local_norm = false) {
       //   .attr("class", "row col-sm-12")
       //   .append("h2")
       //   .text(y);
+      let papers = yearRow
+        .append("div")
+        .attr("class", "row col-sm-12 papers overflow-auto")
+        .attr("data-year", y);
+
+      $(`#papers-row-${y} > div.papers`).on("scroll", function () {
+        console.log($(this), $(this).scrollTop());
+        let el = $(this);
+        // if ($(this).scrollTop() >= $(this).offset().top + $('.div').
+        // outerHeight() - vh) {
+        if (el.scrollTop() >= el.get(0).scrollHeight - el.outerHeight()) {
+          console.log("You reached the end of the DIV");
+
+          el.find("div.load-more").click();
+        }
+      });
+    }
+  }
+  drawPaperList(
+    papers,
+    all_max,
+    results["sentenceHits"],
+    results["ruleHits"],
+    local_norm
+  );
+}
+function drawPapersByFilter(results, local_norm = false) {
+  let active = true;
+  let active2 = true;
+  if ($(`#papers-nav-tab-${results.years[0]}`).length) {
+    active = !$(`#papers-nav-tab-${results.years[0]}`).hasClass("active");
+    active2 = !$(`#papers-nav-tab-${results.years[0]}`).hasClass("active");
+    $(`#papers-nav-tab-${results.years[0]}`).parent().remove();
+    $(`#papers-nav-${results.years[0]}`).remove();
+  }
+  $(".paper-norm").removeClass("active");
+  if (local_norm) $("#normLocal").addClass("active");
+  else $("#normGlobal").addClass("active");
+
+  paperRow = d3.select("#papers-container");
+
+  let nav = d3.select("#papers-container-nav-tabs");
+
+  for (let year of results.years.sort()) {
+    let tab = nav
+      .append("li")
+      .attr("class", "nav-item")
+      .append("a")
+      .attr("class", "nav-link")
+      .attr("id", `papers-nav-tab-${year}`)
+      .attr("data-toggle", "pill")
+      .attr("href", `#papers-nav-${year}`)
+      .attr("role", "tab")
+      .attr("aria-controls", `papers-nav-${year}`);
+
+    if (!active) {
+      tab.attr("class", "nav-link active");
+      active = true;
+    }
+    tab.append("h2").text(year);
+  }
+
+  let navContent = d3.select("#papers-container-nav-content");
+
+  // minimizeDivider();
+  let papers = results["papers"];
+  let all_max = results["max"];
+  // categorize by journal then year
+  if (indexToSortPapersOn == "journaltitle") {
+  } else {
+    // only categorize by years
+    for (let y of results.years.sort()) {
+      let content = navContent
+        .append("div")
+        .attr("class", "tab-pane fade")
+        .attr("id", `papers-nav-${y}`)
+        .attr("role", "tabpanel")
+        .attr("aria-labelledby", `papers-nav-tab-${y}`);
+
+      if (!active2) {
+        content.attr("class", "tab-pane fade active show");
+        active2 = true;
+      }
+
+      let yearRow = content
+        .append("div")
+        .attr("class", "row papers-row")
+        .attr("id", "papers-row-" + y);
       let papers = yearRow
         .append("div")
         .attr("class", "row col-sm-12 papers overflow-auto")
@@ -1130,6 +1189,7 @@ function cycleVisibility(item) {
 
 function switchToPapers() {
   $("#navOptions").hide();
+  $("#db-state-container").hide();
   //Clear the previous paper requests
   clearRequests(false, true);
   //Allows the user access to the papers page once they've selected an item

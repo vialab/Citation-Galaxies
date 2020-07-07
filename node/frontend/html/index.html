@@ -72,7 +72,7 @@
         </li>
         <li class="nav-item">
           <a class="nav-link active" id="pills-home-tab" data-toggle="pill" href="#pills-home" role="tab"
-            aria-controls="pills-home" aria-selected="true" onclick="$('#navOptions').show();">Home</a>
+            aria-controls="pills-home" aria-selected="true" onclick="switchToHome();">Home</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" id="pills-papers-tab" data-toggle="pill" href="#pills-papers" role="tab"
@@ -92,6 +92,19 @@
             aria-controls="pills-export" aria-selected="false">Export</a>
         </li>
       </ul>
+      <div id="db-state-container">
+        <div style="font-size: 15px; font-weight: 400;">Current Database</div>
+        <div id="db-graphics-container" class="holder flipH">
+          <div id="db-graphics" class="card">
+            <div class="front"><img src="pubmed-icon.svg" style="width:151px; height:68px;"></div>
+            <div class="back"><img src="erudit-icon.png"></div>
+          </div>
+        </div>
+        <div class="bubble-container">
+          <div id="pubmed-state" type="button" class="bubble fill"></div>
+          <div id="erudit-state" type="button" class="bubble"></div>
+        </div>
+      </div>
       <div id="navOptions">
         <ul class="navbar-nav ml-auto">
           <li class="nav-item">
@@ -114,7 +127,7 @@
               </div>
             </div>
           </li>
-          <ul class="list-inline">
+          <ul class="list-inline" id="search-range-indicator">
             <li class="list-inline-item">
               <input type="range" innertext="0" min="0" max="9" value="9" step="1" direction="reverse"
                 class="form-control-range slider" id="rangeBefore"
@@ -228,34 +241,30 @@
           <div id="sidebar-content" class="sidebar">
             <div class='title'>Filters</div>
             <button type="button" id="paper-form-add-row" class="btn btn-primary">+</button>
+            <button type="submit" id="paper-filter-form-submit-btn" class="btn btn-primary"
+              style="float:right;">Apply</button>
             <form id="paper-filter-form">
               <div class="form-row">
                 <div class="col">
+                  <div class="exit-button">x</div>
                   <div class="form-group">
                     <label for="journal-field">Journal</label>
                     <input type="text" class="form-control journal-field" placeholder="journal">
                   </div>
-                </div>
-                <div class="col">
                   <div class="form-group">
                     <label for="title-field">Title</label>
                     <input type="text" class="form-control title-field" placeholder="title">
                   </div>
-                </div>
-                <div class="col">
                   <div class="form-group">
                     <label for="authors-field">Author</label>
                     <input type="text" class="form-control authors-field" placeholder="author">
                   </div>
-                </div>
-                <div class="col">
                   <div class="form-group">
                     <label for="affiliation-field">Affiliation</label>
                     <input type="text" class="form-control affiliation-field" placeholder="affiliation">
                   </div>
                 </div>
               </div>
-              <button type="submit" class="btn btn-primary">Apply</button>
             </form>
           </div>
         </div>
@@ -291,10 +300,7 @@
             &lt; Categories
           </h4>
           <h2 id="rule-table-title">Categories</h2>
-          <button class="btn btn-primary filter-option" id="downloadDataButton" type="button"
-            style="margin: 1.25rem 0 1.25rem 0;" onclick="requestSignalExport();">
-            Download
-          </button>
+          <div></div>
         </div>
         <!-- <div style="clear:both;">
           <h4 id="last-table-title" onclick="loadPreviousTable();"></h4>
@@ -330,7 +336,7 @@
                 <span class="span-title">Meta</span>
               </div>
               <div class="col-sm content-box" id="export-meta-content">
-                <div class="checkbox">
+                <div class="checkbox" style="display:flex; justify-content:space-between;">
                   <label>
                     <input type="checkbox" name="title" group="meta" data-toggle="toggle" id="export-meta-title">
                     Title

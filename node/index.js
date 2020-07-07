@@ -93,6 +93,7 @@ app.post(`/${apiPath}/delete/rule-sets-table`, apiRoutes.deleteRuleSet);
 app.post(`/${apiPath}/update/rule-sets-table`, apiRoutes.updateRuleSet);
 app.get(`/${apiPath}/export`, apiRoutes.exportData);
 app.get(`/${apiPath}/paper/filter-suggestions`, apiRoutes.getFilterNames);
+app.get(`/${apiPath}/paper/filter`, apiRoutes.getFilteredIDs);
 const credentials = { key: privateKey, cert: certificate };
 let httpsServer = https.createServer(credentials, app);
 httpsServer.listen(port, () => {

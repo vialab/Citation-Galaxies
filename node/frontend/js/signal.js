@@ -208,7 +208,7 @@ function transformCategoryData(results, replace_all = false) {
   }
   for (let cat of results) {
     sentiment_categories[cat.id] = {
-      name: cat.catname,
+      name: cat.name,
       // value: cat.score,
       color: cat.color,
     };

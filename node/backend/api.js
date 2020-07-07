@@ -820,7 +820,7 @@ const exportData = async (req, res) => {
 };
 
 const getFilterNames = async (req, res) => {
-  const requiredInfo = { filter: "", currentValue: "" };
+  const requiredInfo = { filter: "", currentValue: "", ids: [] };
   let sentInfo = reqValid(requiredInfo, { body: req.query });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
@@ -842,23 +842,63 @@ const getFilterNames = async (req, res) => {
   let select = filters[sentInfo.filter];
   const selectStatement = selectStatements[sentInfo.filter];
   const queryStatements = {
-    JOURNAL: `SELECT DISTINCT ${select} FROM ${req.session.tableName} AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
-    TITLE: `SELECT DISTINCT ${select} FROM ${req.session.tableName} AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
-    AUTHORS: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.authors) as authors FROM ${req.session.tableName} as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
-    AFFILIATION: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.affiliation) as affiliation FROM ${req.session.tableName} as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+    JOURNAL: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+    TITLE: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+    AUTHORS: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.authors) as authors FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+    AFFILIATION: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.affiliation) as affiliation FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
   };
   if (!select) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
   let query = queryStatements[sentInfo.filter];
-  const result = await pool.query(query, ["^" + sentInfo.currentValue, limit]);
+  const result = await pool.query(query, [
+    "^" + sentInfo.currentValue,
+    limit,
+    sentInfo.ids,
+  ]);
   res.status(HTTP_CODES.SUCCESS).send(
     result.rows.map((x) => {
       return x[selectStatement];
     })
   );
   return;
+};
+
+const getFilteredIDs = async (req, res) => {
+  const requiredInfo = { fields: [], ids: [] };
+  let sentInfo = reqValid(requiredInfo, { body: req.query });
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  let journals = [];
+  let titles = [];
+  let affiliations = [];
+  let authors = [];
+  sentInfo.fields.forEach((x) => {
+    if ("journal" in x) {
+      journals.push(x.journal);
+    }
+    if ("title" in x) {
+      titles.push(x.title);
+    }
+    if ("affiliation" in x) {
+      affiliations.push(x.affiliation);
+    }
+    if ("author" in x) {
+      authors.push(x.author);
+    }
+  });
+  const result = await pool.query(
+    `SELECT utt.id FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($1::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE journal=ANY($2::text[]) OR title=ANY($3::text[]) OR authors && $4::text[] OR affiliation && $5::text[]`,
+    [sentInfo.ids, journals, titles, authors, affiliations]
+  );
+  res.status(200).send(
+    result.rows.map((x) => {
+      return x.id;
+    })
+  );
 };
 
 module.exports = {
@@ -878,4 +918,5 @@ module.exports = {
   loadRules,
   exportData,
   getFilterNames,
+  getFilteredIDs,
 };
