@@ -348,10 +348,12 @@ function dbOnClick(element) {
     $("#db-graphics").css({ transform: "rotateY(0deg)" });
     $("#search-range-indicator").css({ opacity: 1 });
     $("#search-range-indicator").css({ visibility: "visible" });
+    CURRENT_DATABASE = DB.Pubmed;
   } else {
     $("#db-graphics").css({ transform: "rotateY(180deg)" });
     $("#search-range-indicator").css({ opacity: 0 });
     $("#search-range-indicator").css({ visibility: "hidden" });
+    CURRENT_DATABASE = DB.Erudit;
   }
 }
 /**

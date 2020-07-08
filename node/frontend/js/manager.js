@@ -310,24 +310,26 @@ function showAddRow() {
   if (rowLength >= 1 && $row.is(":visible")) {
     $row = $row.clone();
     if ($($row).find(".aliased").length > 0) {
-      const rangeBefore = "rangeBefore_sig_" + rowLength;
-      const rangeAfter = "rangeAfter_sig_" + rowLength;
-      const citRange = "citationRange_sig_" + rowLength;
-      $($row).find("#rangeBefore_sig_0").attr("id", rangeBefore);
-      $($row).find("#rangeAfter_sig_0").attr("id", rangeAfter);
-      $($row).find("#citationRange_sig_0").attr("id", citRange);
-      $($row)
-        .find("#" + rangeBefore)
-        .attr(
-          "oninput",
-          `updateTextInput(document.getElementById('${citRange}'), document.getElementById('${rangeBefore}') , document.getElementById('${rangeAfter}'), '', 1);`
-        );
-      $($row)
-        .find("#" + rangeAfter)
-        .attr(
-          "oninput",
-          `updateTextInput(document.getElementById('${citRange}'), document.getElementById('${rangeBefore}') , document.getElementById('${rangeAfter}'), '', 1);`
-        );
+      if (CURRENT_DATABASE.isPubmed) {
+        const rangeBefore = "rangeBefore_sig_" + rowLength;
+        const rangeAfter = "rangeAfter_sig_" + rowLength;
+        const citRange = "citationRange_sig_" + rowLength;
+        $($row).find("#rangeBefore_sig_0").attr("id", rangeBefore);
+        $($row).find("#rangeAfter_sig_0").attr("id", rangeAfter);
+        $($row).find("#citationRange_sig_0").attr("id", citRange);
+        $($row)
+          .find("#" + rangeBefore)
+          .attr(
+            "oninput",
+            `updateTextInput(document.getElementById('${citRange}'), document.getElementById('${rangeBefore}') , document.getElementById('${rangeAfter}'), '', 1);`
+          );
+        $($row)
+          .find("#" + rangeAfter)
+          .attr(
+            "oninput",
+            `updateTextInput(document.getElementById('${citRange}'), document.getElementById('${rangeBefore}') , document.getElementById('${rangeAfter}'), '', 1);`
+          );
+      }
     }
     $row.insertBefore($("#start-add-row"));
   }
@@ -337,8 +339,8 @@ function showAddRow() {
   setTimeout(function () {
     $row.removeClass("showing");
   }, 500);
-  $row.find("#catname").click();
-  $row.find("#catname").focus();
+  $row.find("#name").click();
+  $row.find("#name").focus();
 }
 
 // create a single row marked up for our edit table
@@ -395,7 +397,8 @@ function drawTableRow(headers, signal, signalID, aliases) {
             </select>
             </div>`;
           }
-          html += `
+          if (CURRENT_DATABASE.isPubmed) {
+            html += `
           <div class="d-flex flex-row">
             <div class="p-1" style="width:40%" >
               <ul class="list-inline">
@@ -410,8 +413,8 @@ function drawTableRow(headers, signal, signalID, aliases) {
                     <p id="left-range" style="display: inline;">[ ${
                       datum.range[0]
                     } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${
-            datum.range[1]
-          } ]</p>
+              datum.range[1]
+            } ]</p>
                     </label>
                 </li>
                 <li class="list-inline-item m-0 p-0" style="width:23%;">
@@ -425,12 +428,64 @@ function drawTableRow(headers, signal, signalID, aliases) {
             <div class="p-1 flex-fill">
               <div class=\"input-group\">
               <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${existing}_${c}\" placeholder=\"Signal\" value="${datum.term.replace(
-            /"/g,
-            "&quot;"
-          )}">
+              /"/g,
+              "&quot;"
+            )}">
               </div>
             </div>
           </div>`;
+          } else {
+            if (c > 1) {
+              html += `
+              <div class="d-flex flex-row">
+                <div class="p-1" style="width:40%" >
+                  <ul class="list-inline">
+                    <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
+                      <input type="range" innertext="0" min="0" max="9" value="${
+                        10 - datum.range[0]
+                      }" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}_${c}"
+                        oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}'), document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
+                    </li>
+                    <li class="list-inline-item align-middle m-0 p-0">
+                      <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">
+                        <p id="left-range" style="display: inline;">[ ${
+                          datum.range[0]
+                        } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${
+                datum.range[1]
+              } ]</p>
+                        </label>
+                    </li>
+                    <li class="list-inline-item m-0 p-0" style="width:23%;">
+                      <input type="range" innertext="0" min="0" max="9" value="${
+                        datum.range[1]
+                      }" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}_${c}"
+                        oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}_${c}'), document.getElementById('rangeBefore_sig_${existing}_${c}'), document.getElementById('rangeAfter_sig_${existing}_${c}'), '', 1);">
+                    </li>
+                  </ul>
+                </div>
+                <div class="p-1 flex-fill">
+                  <div class=\"input-group\">
+                  <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${existing}_${c}\" placeholder=\"Signal\" value="${datum.term.replace(
+                /"/g,
+                "&quot;"
+              )}">
+                  </div>
+                </div>
+              </div>`;
+            } else {
+              html += `<div class="d-flex flex-row">
+              <div class="p-1" style="width:40%; height:49px;"></div>
+              <div class="p-1 flex-fill">
+              <div class=\"input-group\">
+              <input type=\"text\" class=\"form-control\" id=\"signal_searchBox_${existing}_${c}\" placeholder=\"Signal\" value="${datum.term.replace(
+                /"/g,
+                "&quot;"
+              )}">
+              </div>
+              </div>
+            </div>`;
+            }
+          }
         }
         html += `<div id="add_signal_${signal.id}" class="d-flex flex-row justify-content-center" ondragover="allowDrop(event)" ondrop="onDrop(event,this)" onclick="addToSignal('#add_signal_${signal.id}')">
                   <h1 class="flex-fill signal-add-button">+</h1>
@@ -445,23 +500,11 @@ function drawTableRow(headers, signal, signalID, aliases) {
         html += `
           <div class="d-flex flex-row">
             <div class="p-1" style="width:40%" >
-              <ul class="list-inline">
-                <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
-                  <input type="range" innertext="0" min="0" max="9" value="${beforeRangeVal}" step="1" class="form-control-range slider" id="rangeBefore_sig_${existing}"
-                    oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}'), document.getElementById('rangeBefore_sig_${existing}'), document.getElementById('rangeAfter_sig_${existing}'), '', 1);">
-                </li>
-                <li class="list-inline-item align-middle m-0 p-0">
-                  <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}">
-                  <p id="left-range" style="display: inline;">[ ${
-                    $("#rangeBefore").attr("max") - beforeRangeVal
-                  } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
-                  </label>
-                </li>
-                <li class="list-inline-item m-0 p-0" style="width:23%;">
-                  <input type="range" innertext="0" min="0" max="9" value="${afterRangeVal}" step="1" class="form-control-range slider" id="rangeAfter_sig_${existing}"
-                    oninput="updateTextInput(document.getElementById('citationRange_sig_${existing}'), document.getElementById('rangeBefore_sig_${existing}') , document.getElementById('rangeAfter_sig_${existing}'), '', 1);">
-                </li>
-              </ul>
+              ${CURRENT_DATABASE.ruleSource(
+                beforeRangeVal,
+                afterRangeVal,
+                existing
+              )}
             </div>
             <div class="p-1 flex-fill">
               <div class=\"input-group\">
@@ -821,27 +864,54 @@ function insertRow(elem) {
       const res = [];
       const numElements = $(this).find("[id*='signal_searchBox']").length;
       //get range
-      let beforeRange = $(this).find("[id*='rangeBefore']")[0];
-      let beforeRangeVal = beforeRange.max - beforeRange.value;
-      let afterRange = $(this).find("[id*='rangeAfter']")[0];
-      let afterRangeVal = Number(afterRange.value);
-      //get query
-      let query = $(this).find("[id*='signal_searchBox_']")[0].value;
-      res.push({ range: [beforeRangeVal, afterRangeVal], term: query });
-      for (let i = 1; i < numElements; ++i) {
-        beforeRange = $(this).find("[id*='rangeBefore']")[i];
-        beforeRangeVal = Number(beforeRange.max - beforeRange.value);
-        afterRange = $(this).find("[id*='rangeAfter']")[i];
-        afterRangeVal = Number(afterRange.value);
-        //get modifier
-        const modifier = $(this).find("[id*='signal_mod_']")[i - 1].value;
-        //get query
-        query = $(this).find("[id*='signal_searchBox_']")[i].value;
-        res.push({
-          range: [beforeRangeVal, afterRangeVal],
-          term: query,
-          operator: modifier,
-        });
+      if (CURRENT_DATABASE.isPubmed) {
+        let beforeRange = $(this).find("[id*='rangeBefore']")[0];
+        let beforeRangeVal = beforeRange.max - beforeRange.value;
+        let afterRange = $(this).find("[id*='rangeAfter']")[0];
+        let afterRangeVal = Number(afterRange.value);
+        let query = $(this).find("[id*='signal_searchBox_']")[0].value;
+        res.push({ range: [beforeRangeVal, afterRangeVal], term: query });
+      } else {
+        //get query;
+        let query = $(this).find("[id*='signal_searchBox_']")[0].value;
+        res.push({ term: query });
+      }
+      if (CURRENT_DATABASE.isPubmed) {
+        for (let i = CURRENT_DATABASE.ruleIndex; i < numElements; ++i) {
+          beforeRange = $(this).find("[id*='rangeBefore']")[i];
+          beforeRangeVal = Number(beforeRange.max - beforeRange.value);
+          afterRange = $(this).find("[id*='rangeAfter']")[i];
+          afterRangeVal = Number(afterRange.value);
+          //get modifier
+          const modifier = $(this).find("[id*='signal_mod_']")[
+            i - CURRENT_DATABASE.ruleIndex
+          ].value;
+          //get query
+          query = $(this).find("[id*='signal_searchBox_']")[i].value;
+          res.push({
+            range: [beforeRangeVal, afterRangeVal],
+            term: query,
+            operator: modifier,
+          });
+        }
+      } else {
+        for (let i = CURRENT_DATABASE.ruleIndex; i < numElements - 1; ++i) {
+          beforeRange = $(this).find("[id*='rangeBefore']")[i];
+          beforeRangeVal = Number(beforeRange.max - beforeRange.value);
+          afterRange = $(this).find("[id*='rangeAfter']")[i];
+          afterRangeVal = Number(afterRange.value);
+          //get modifier
+          const modifier = $(this).find("[id*='signal_mod_']")[
+            i - CURRENT_DATABASE.ruleIndex
+          ].value;
+          //get query
+          query = $(this).find("[id*='signal_searchBox_']")[i + 1].value;
+          res.push({
+            range: [beforeRangeVal, afterRangeVal],
+            term: query,
+            operator: modifier,
+          });
+        }
       }
       val = JSON.stringify(res);
     } else {
@@ -933,25 +1003,45 @@ function updateRow(elem) {
     else values[field_name] = val;
 
     if (field_name == "rules") {
-      val = [];
-      let inps = $("select,input", this);
+      if (CURRENT_DATABASE.isPubmed) {
+        val = [];
+        let inps = $("select,input", this);
 
-      for (let i = 0; i < inps.length; i += 4) {
-        let range_Left = parseInt(inps[i].max - $(inps[i]).val());
-        let range_Right = parseInt($(inps[i + 1]).val());
-        let query = $(inps[i + 2]).val();
+        for (let i = 0; i < inps.length; i += 4) {
+          let range_Left = parseInt(inps[i].max - $(inps[i]).val());
+          let range_Right = parseInt($(inps[i + 1]).val());
+          let query = $(inps[i + 2]).val();
 
-        let record = {
-          range: [Number(range_Left), Number(range_Right)],
-          term: query,
-        };
-        if (i >= 4) {
-          let modifier = $(inps[i - 1]).val();
+          let record = {
+            range: [Number(range_Left), Number(range_Right)],
+            term: query,
+          };
+          if (i >= 4) {
+            let modifier = $(inps[i - 1]).val();
 
-          record["operator"] = modifier;
+            record["operator"] = modifier;
+          }
+
+          val.push(record);
         }
-
-        val.push(record);
+      } else {
+        val = [];
+        let inps = $("select,input", this);
+        let record = {};
+        for (let i = 0; i < inps.length; ++i) {
+          if (inps[i].id.includes("signal_searchBox")) {
+            record.term = inps[i].value;
+            val.push(record);
+            record = {};
+          } else if (inps[i].id.includes("signal_mod")) {
+            record.operator = inps[i].value;
+          } else if (inps[i].id.includes("rangeBefore")) {
+            record.range = [];
+            record.range.push(parseInt(inps[i].max - $(inps[i]).val()));
+          } else if (inps[i].id.includes("rangeAfter")) {
+            record.range.push(parseInt($(inps[i]).val()));
+          }
+        }
       }
       values[field_name] = JSON.stringify(val);
     }

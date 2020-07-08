@@ -23,7 +23,7 @@ fs.WriteStream.prototype.writeSync = async function (data) {
   });
 };
 
-class Data {
+class DataExport {
   /**
    *
    * @param {boolean} isJSON
@@ -200,4 +200,131 @@ class Data {
   compress() {}
 }
 
-module.exports = Data;
+class Rules {
+  /**
+   *
+   * @param {number} id
+   * @param {{}} rules
+   */
+  async create(ruleSetId, rules) {
+    await pool.query(
+      "INSERT INTO user_rules(rule_set_id, rules) VALUES($1,$2)",
+      [ruleSetId, JSON.stringify(rules)]
+    );
+  }
+  /**
+   *
+   * @param {number} id
+   * @param {{}} rules
+   */
+  async update(id, rules) {
+    await pool.query("UPDATE user_rules SET rules=$2 WHERE id=$1", [
+      ruleId,
+      JSON.stringify(rules),
+    ]);
+  }
+  /**
+   *
+   * @param {number} id
+   * @param {Array.<string>} columns
+   */
+  async read(id, columns = ["*"]) {
+    const escapeSelectStart = 2;
+    const selectStatement = columns.map((x, idx) => {
+      return `$${idx + escapeSelectStart}`;
+    });
+    let result = await pool.query(
+      `SELECT ${selectStatement} FROM user_rules WHERE id=$1`,
+      [id, ...columns]
+    );
+    return result.rows;
+  }
+  /**
+   *
+   * @param {number} id
+   */
+  async delete(id) {
+    await pool.query("DELETE FROM user_rules WHERE id=$1", [id]);
+  }
+}
+class RuleSets {
+  /**
+   * @param {number} userId
+   * @param {string} name
+   * @param {string} color
+   * @param {string} tableName
+   */
+  async create(userId, name, color, tableName) {
+    const result = await pool.query(
+      "INSERT INTO user_rule_sets(user_id, name, color, table_name) VALUES($1,$2,$3,$4) RETURNING id",
+      [userId, name, color, tableName]
+    );
+    return result.rowCount;
+  }
+  async update(id, name, color) {
+    const result = await pool.query(
+      "UPDATE user_rule_sets SET name=$1, color=$2 WHERE id=$3",
+      [id, name, color]
+    );
+    return result.rowCount;
+  }
+  /**
+   * @param {string} tableName
+   */
+  async read(tableName) {
+    let result = await pool.query(
+      "SELECT * FROM user_rule_sets WHERE table_name=$1",
+      [tableName]
+    );
+    return result.rows;
+  }
+  /**
+   *
+   * @param {number} id
+   */
+  async delete(id) {
+    await pool.query("DELETE FROM user_rules WHERE rule_set_id=$1", [id]);
+    await pool.query("DELETE FROM user_rule_sets WHERE id=$1", [id]);
+  }
+}
+class UserTable {
+  async create(email, userId) {
+    const prefixTableName = "user_temp_table_";
+    const result = await pool.query(
+      "SELECT * FROM table_map_temp WHERE table_owner=$1",
+      [email]
+    );
+    if (result.rowCount) {
+      return false;
+    }
+    await pool.query(
+      `CREATE TABLE ${
+        prefixTableName + userId
+      }(id int REFERENCES pubmed_text(id) UNIQUE, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
+    );
+    await pool.query(
+      "INSERT INTO table_map_temp(table_name,creation_date,table_owner) VALUES($1, $2, $3)",
+      [prefixTableName + userId, new Date(), email]
+    );
+  }
+  async update() {}
+  async read(tableName, columns) {}
+  async delete() {}
+  async truncate(tableName) {
+    await pool.query(`TRUNCATE ${tableName}`);
+  }
+}
+
+class DataLayer {
+  constructor() {
+    this.rules = new Rules();
+    this.ruleSets = new RuleSets();
+    this.userTable = new UserTable();
+  }
+  searchPubmed() {}
+  searchErudit() {}
+  getGridVisualization() {}
+  getPapers() {}
+}
+
+module.exports = DataExport;

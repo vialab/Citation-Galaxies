@@ -750,12 +750,7 @@ const deleteRuleSet = async (req, res) => {
   res.status(200).send({});
   return;
 };
-/**
- *
- * @param {Request} req
- * @param {Response} res
- */
-const addRuleToQuery = async (req, res) => {};
+
 /*************************misc api ******************/
 /**
  *
@@ -789,7 +784,7 @@ const exportData = async (req, res) => {
     return;
   }
   //create data object in charge of streaming from db to file
-  const data = new Data(
+  const data = new DataExport(
     sentInfo.isJSON,
     req.session.tableName,
     sentInfo.dataOptions,
