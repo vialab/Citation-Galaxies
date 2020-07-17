@@ -421,6 +421,7 @@ function drawPapers(signal_id, signal_cat_id) {
     nrank: nPaperLoad,
     signals: {},
     journalid: "",
+    isPubmed: CURRENT_DATABASE.isPubmed,
   };
 
   // add a set of signals based on their category
@@ -1190,6 +1191,7 @@ function cycleVisibility(item) {
 function switchToPapers() {
   $("#navOptions").hide();
   $("#db-state-container").hide();
+  $("#paper-filter-form").find(".title-field").attr("disabled", true);
   //Clear the previous paper requests
   clearRequests(false, true);
   //Allows the user access to the papers page once they've selected an item
@@ -1242,7 +1244,10 @@ function getPopoverContent(articleid, sentenceHits, ruleHits) {
     type: "POST",
     url: "api/paper/",
     contentType: "application/json",
-    data: JSON.stringify({ paper_id: articleid }),
+    data: JSON.stringify({
+      paper_id: articleid,
+      isPubmed: CURRENT_DATABASE.isPubmed,
+    }),
 
     success: function (results) {
       // let data = JSON.parse(results);

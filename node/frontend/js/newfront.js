@@ -11,6 +11,7 @@ $(document).ready((x, y, z) => {
   vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
   $("#load-existing-work").on("click", loadExistingWork);
+  $("#delete-existing-work").on("click", deleteExistingWork);
   //check if previous work is available
   checkExistingWork();
 });
@@ -223,13 +224,28 @@ function loadExistingWork() {
     },
   });
 }
-
+function deleteExistingWork() {
+  $("#existing-work").modal("toggle");
+  disableSearchUI(true); // disables the search UI to prevent another search while searching
+  $.ajax({
+    type: "POST",
+    url: "/api/delete-existing-work",
+    success: function (results) {
+      disableSearchUI(false);
+    },
+  });
+}
 async function getFilterSuggestions(currentValue, filter, element) {
   let result = await $.ajax({
     url: "api/paper/filter-suggestions",
     type: "GET",
     contentType: "application/json",
-    data: { currentValue, filter, ids: Object.keys(paper_data.papers) },
+    data: {
+      currentValue,
+      filter,
+      ids: Object.keys(paper_data.papers),
+      isPubmed: CURRENT_DATABASE.isPubmed,
+    },
   });
   $(element).autocomplete({ source: result });
 }
@@ -245,7 +261,9 @@ function addRowToFilterForm() {
       </div>
       <div class="form-group">
         <label for="title-field">Title</label>
-        <input type="text" class="form-control title-field" placeholder="title">
+        <input type="text" class="form-control title-field" placeholder="title" ${
+          !CURRENT_DATABASE.isPubmed ? "disabled" : ""
+        }>
       </div>
       <div class="form-group">
         <label for="authors-field">Author</label>
@@ -331,7 +349,11 @@ async function getFilteredPapers(formInfo, callback) {
     url: "api/paper/filter",
     type: "GET",
     contentType: "application/json",
-    data: { fields: formInfo, ids: Object.keys(paper_data.papers) },
+    data: {
+      fields: formInfo,
+      ids: Object.keys(paper_data.papers),
+      isPubmed: CURRENT_DATABASE.isPubmed,
+    },
   });
   $("#paper-filter-form-submit-btn").attr("disabled", false);
   callback(result);

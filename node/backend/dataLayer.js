@@ -247,6 +247,7 @@ class Rules {
     await pool.query("DELETE FROM user_rules WHERE id=$1", [id]);
   }
 }
+
 class RuleSets {
   /**
    * @param {number} userId
@@ -287,31 +288,741 @@ class RuleSets {
     await pool.query("DELETE FROM user_rule_sets WHERE id=$1", [id]);
   }
 }
+
 class UserTable {
-  async create(email, userId) {
+  async create(email, userId, isPubmed = true) {
+    //create table name that uses the unique user id
     const prefixTableName = "user_temp_table_";
+    const tableName = prefixTableName + userId;
+    //check tio see if the user table manager "table_map_temp" contains a table for the user
     const result = await pool.query(
-      "SELECT * FROM table_map_temp WHERE table_owner=$1",
+      "SELECT table_type FROM table_map_temp WHERE table_owner=$1",
       [email]
     );
+
     if (result.rowCount) {
-      return false;
+      //there are two type of user tables one that is for pubmed data another for erudit
+      //if the table does not match the data the user wats delete it
+      if (result.rows[0].table_type != isPubmed) {
+        await this.delete(tableName);
+      } else {
+        await this.truncate(tableName);
+        return;
+      }
     }
-    await pool.query(
-      `CREATE TABLE ${
-        prefixTableName + userId
-      }(id int REFERENCES pubmed_text(id) UNIQUE, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
-    );
-    await pool.query(
-      "INSERT INTO table_map_temp(table_name,creation_date,table_owner) VALUES($1, $2, $3)",
-      [prefixTableName + userId, new Date(), email]
-    );
+
+    if (isPubmed) {
+      await pool.query(
+        `CREATE TABLE ${tableName}(id int, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
+      );
+      await pool.query(
+        "INSERT INTO table_map_temp(table_name,creation_date,table_owner, table_type) VALUES($1, $2, $3, $4)",
+        [tableName, new Date(), email, isPubmed]
+      );
+      return true;
+    } else {
+      await pool.query(
+        `CREATE TABLE ${tableName}(id varchar(30) REFERENCES erudit_text(id) UNIQUE, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
+      );
+      await pool.query(
+        "INSERT INTO table_map_temp(table_name,creation_date,table_owner, table_type) VALUES($1, $2, $3, $4)",
+        [tableName, new Date(), email, isPubmed]
+      );
+    }
   }
+
   async update() {}
-  async read(tableName, columns) {}
-  async delete() {}
+  /**
+   * @param {string} tableName
+   */
+  async read(tableName) {
+    const result = await pool.query(
+      "SELECT * FROM table_map_temp WHERE table_name=$1",
+      [tableName]
+    );
+    if (result.rowCount) {
+      return result.rows[0];
+    }
+    return null;
+  }
+  /**
+   * @param {string} tableName
+   */
+  async delete(tableName) {
+    await pool.query(`DROP TABLE IF EXISTS ${tableName}`);
+    await pool.query(`DELETE FROM table_map_temp WHERE table_name=$1`, [
+      tableName,
+    ]);
+  }
+  /**
+   * @param {string} tableName
+   */
   async truncate(tableName) {
     await pool.query(`TRUNCATE ${tableName}`);
+  }
+}
+
+class Pubmed {
+  /**
+   *
+   * @param {string} term
+   * @param {Array.<number>} range
+   */
+  async search(tableName, term, range, session) {
+    const userTable = new UserTable();
+    let tableInfo = await userTable.read(tableName);
+    if (!tableInfo) {
+      await userTable.create(session.email, session.userId, true);
+    } else if (!tableInfo.table_type) {
+      await userTable.delete(tableName);
+      await userTable.create(session.email, session.userId, true);
+    } else {
+      await userTable.truncate(tableName);
+    }
+    const result = await pool.query(
+      `INSERT INTO ${tableName} SELECT * FROM get_matrix($1,$2,$3)`,
+      [term, range[0], range[1]]
+    );
+    return result.rows;
+  }
+  /**
+   *
+   * @param {string} tableName
+   * @param {{}} bins
+   * @param {Array.<int>} years
+   * @param {Session} session
+   */
+  async getGridVisualization(tableName, bins, years) {
+    const binLength = Object.keys(bins).length;
+    let tableResults = await pool.query(
+      `SELECT ARRAY(SELECT floor(UNNEST(citation_location)::real / num_os::real * $1::real)::int) as cl, p_year as year FROM ${tableName}  WHERE p_year = ANY($2::int[])`,
+      [binLength, years]
+    );
+    let result = {};
+    for (let i = 0; i < years.length; ++i) {
+      result[years[i]] = {
+        content: JSON.parse(JSON.stringify(bins)),
+        max: 0,
+      };
+    }
+    for (let i = 0; i < tableResults.rows.length; ++i) {
+      const row = tableResults.rows[i];
+      for (let j = 0; j < row.cl.length; ++j) {
+        result[row.year].content[row.cl[j]] += 1;
+      }
+    }
+    for (let i = 0; i < years.length; ++i) {
+      const year = years[i];
+      result[year].max = Object.values(result[year].content).reduce(
+        (a, b) => a + b,
+        0
+      );
+    }
+    return result;
+  }
+  /**
+   *
+   * @param {string} tableName
+   * @param {number} rangeLeft
+   * @param {number} rangeRight
+   * @param {Array.<{start:number, year:number}>} bins
+   */
+  async getPapers(tableName, rangeLeft, rangeRight, bins) {
+    let result = {};
+    let tableResults = await pool.query(
+      `SELECT citation_location, p_year as year, title, sentences, pubmed_data.id, num_os, rule_set_id FROM ${tableName} INNER JOIN pubmed_data ON ${tableName}.id=pubmed_data.id WHERE p_year = ANY($1::int[])`,
+      [
+        bins.map((x) => {
+          return x.year;
+        }),
+      ]
+    );
+    //get rules
+    let rules = await pool.query(
+      `SELECT user_rule_sets.*, ARRAY(SELECT rules FROM user_rules WHERE rule_set_id=user_rule_sets.id) AS rules FROM user_rule_sets, (SELECT DISTINCT UNNEST(rule_set_id) AS ids FROM ${tableName} WHERE p_year=ANY($1::int[])) as rule_id WHERE id=rule_id.ids`,
+      [
+        bins.map((x) => {
+          return x.year;
+        }),
+      ]
+    );
+    //used to convert the rule map
+    let ruleMap = {};
+    for (let i = 0; i < rules.rows.length; ++i) {
+      ruleMap[rules.rows[i].id] = rules.rows[i];
+    }
+    //check if any results were returned, there should be results at this point
+    if (!tableResults.rowCount) {
+      return result;
+    }
+    let globalMax = 0;
+    let papers = {};
+    let ruleHits = {};
+    let sentenceHits = {};
+    const numOfBins = 9;
+    const selectedBins = bins.map((x) => {
+      return x.start / (numOfBins + 1);
+    });
+    for (let i = 0; i < tableResults.rows.length; ++i) {
+      let content = {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+      };
+      let row = tableResults.rows[i];
+      let citationRuleMap = {};
+      const unique_citation = Array.from(new Set(row.citation_location));
+      unique_citation.map((x) => {
+        citationRuleMap[x] = [];
+      });
+      for (let j = 0; j < row.citation_location.length; ++j) {
+        citationRuleMap[row.citation_location[j]].push(row.rule_set_id[j]);
+      }
+      papers[row.id] = {};
+      ruleHits[row.id] = [];
+      //get the content hits for the paper glyph
+      for (let k = 0; k < row.citation_location.length; ++k) {
+        content[
+          Math.floor((row.citation_location[k] / row.num_os) * numOfBins)
+        ] += 1;
+      }
+      let correctBin = false;
+      for (let l = 0; l < selectedBins.length; ++l) {
+        if (content[selectedBins[l]]) {
+          correctBin = true;
+          break;
+        }
+      }
+      if (!correctBin) {
+        delete papers[row.id];
+        continue;
+      }
+      papers[row.id]["content"] = content;
+      papers[row.id]["year"] = row.year;
+      sentenceHits[row.id] = [];
+      papers[row.id]["max"] = Math.max(...Object.values(content));
+      papers[row.id]["total"] = Object.values(content).reduce(
+        (a, b) => a + b,
+        0
+      );
+      globalMax = Math.max(globalMax, papers[row.id]["max"]);
+      //generate the text for the vis
+      for (let j = 0; j < unique_citation.length; ++j) {
+        //make sure it does not go into the negative
+        const leftIdx = Math.max(0, unique_citation[j] - rangeLeft);
+        //make sure it does not index outside of the array
+        const rightIdx = Math.min(
+          row.sentences.length,
+          unique_citation[j] + rangeRight + 1
+        ); // +1 due to exclusion clause
+        let text = row.sentences.slice(leftIdx, rightIdx);
+        sentenceHits[row.id].push(text);
+        ruleHits[row.id].push(
+          citationRuleMap[unique_citation[j]].map((x) => {
+            return ruleMap[x];
+          })
+        );
+      }
+    }
+    result.papers = papers;
+    result.ruleHits = ruleHits;
+    result.sentenceHits = sentenceHits;
+    result.years = bins.map((x) => {
+      return x.year;
+    });
+    result.max = globalMax;
+    return result;
+  }
+  async getPaper(paperId) {
+    return await pool.query(
+      "SELECT * FROM pubmed_data INNER JOIN pubmed_meta ON pubmed_data.id=pubmed_meta.id INNER JOIN pubmed_text ON pubmed_data.id=pubmed_text.id WHERE pubmed_data.id=$1",
+      [paperId]
+    );
+  }
+  /**
+   *
+   * @param {string} select
+   * @param {string} currentValue
+   * @param {Array.<int>} ids
+   */
+  async getFilteredNames(filter, currentValue, ids) {
+    const LIMIT = 5;
+    const filters = {
+      JOURNAL: "journal",
+      TITLE: "title",
+      AUTHORS: "meta.authors",
+      AFFILIATION: "meta.affiliation",
+    };
+    let select = filters[filter];
+    const selectStatements = {
+      JOURNAL: "journal",
+      TITLE: "title",
+      AUTHORS: "authors",
+      AFFILIATION: "affiliation",
+    };
+    const selectStatement = selectStatements[filter];
+    const queryStatements = {
+      JOURNAL: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+      TITLE: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+      AUTHORS: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.authors) as authors FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+      AFFILIATION: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.affiliation) as affiliation FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+    };
+    let query = queryStatements[filter];
+    const result = await pool.query(query, ["^" + currentValue, LIMIT, ids]);
+    return result.rows.map((x) => {
+      return x[selectStatement];
+    });
+  }
+  /**
+   *
+   * @param {{}} fields
+   * @param {string} tableName
+   * @param {Array.<number>} ids
+   */
+  async getFilteredIDs(fields, tableName, ids) {
+    let journals = [];
+    let titles = [];
+    let affiliations = [];
+    let authors = [];
+    fields.forEach((x) => {
+      if ("journal" in x) {
+        journals.push(x.journal);
+      }
+      if ("title" in x) {
+        titles.push(x.title);
+      }
+      if ("affiliation" in x) {
+        affiliations.push(x.affiliation);
+      }
+      if ("author" in x) {
+        authors.push(x.author);
+      }
+    });
+    const result = await pool.query(
+      `SELECT utt.id FROM (SELECT * FROM ${tableName} WHERE id=ANY($1::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE journal=ANY($2::text[]) OR title=ANY($3::text[]) OR authors && $4::text[] OR affiliation && $5::text[]`,
+      [ids, journals, titles, authors, affiliations]
+    );
+    return result.rows.map((x) => x.id);
+  }
+  /**
+   *
+   * @param {string} tableName
+   * @param {string} searchTerm
+   */
+  async getRuleWhereClause(tableName, searchTerm) {
+    //get rule set ids for our instance
+    const ruleSetIds = await pool.query(
+      "SELECT id FROM user_rule_sets WHERE table_name=$1",
+      [tableName]
+    );
+    //if no rule sets return null
+    if (!ruleSetIds.rowCount) {
+      return null;
+    }
+    const ids = ruleSetIds.rows.map((x) => {
+      return x.id;
+    });
+    //get individual rules
+    const rules = await pool.query(
+      "SELECT * FROM user_rules WHERE rule_set_id=ANY($1::int[]) ORDER BY rule_set_id",
+      [ids]
+    );
+    if (!rules.rowCount) {
+      return null;
+    }
+    //comprise a filter to create a short list
+    let column = "full_text_words";
+    let whereClause = "";
+    for (let i = 0; i < rules.rows.length; ++i) {
+      const rule = rules.rows[i].rules;
+      for (let j = 0; j < rule.length; ++j) {
+        const operator = rule[j].operator != null ? rule[j].operator : "OR";
+        whereClause += `${operator} ${column} ? '${rule[j].term}' `;
+      }
+    }
+    whereClause += `OR ${column} ? '${searchTerm}'`;
+    //get rid of the initial OR
+    return { where: whereClause.slice(2), rules: rules.rows };
+  }
+  /**
+   *
+   * @param {string} whereClause this should come from getRuleWhereClause
+   */
+  async getShortList(whereClause) {
+    const result = await pool.query(
+      `SELECT id FROM pubmed_text WHERE ${whereClause}`
+    );
+    return result.rows.map((x) => x.id);
+  }
+
+  subRuleQuery(rule, ruleId) {
+    const column = "full_text_words";
+    let result = `SELECT pt.id, array_agg(ftc), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT ${column},pubmed_text.id as id, pubmed_text.full_text_citations, pubmed_meta.year as year, pubmed_data.num_of_words as num_ow, pubmed_data.num_of_sentences as num_os FROM pubmed_text INNER JOIN pubmed_data ON pubmed_text.id=pubmed_data.id INNER JOIN pubmed_meta ON pubmed_text.id=pubmed_meta.id WHERE pubmed_text.id=ANY($1::int[])) as pt, unnest(pt.full_text_citations) as ftc, `;
+    //This is an example query left here to show the goal of this function.
+    /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
+  where (heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0) AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
+  */
+    for (let i = 0; i < rule.length; ++i) {
+      result += `jsonb_array_elements(pt.${column}->'${rule[i].term}') as rule_${i},`;
+    }
+    //remove end comma
+    result = result.slice(0, -1);
+    result += " WHERE ";
+
+    //create where clause
+    for (let i = 0; i < rule.length; ++i) {
+      result += `${
+        rule[i].operator == undefined ? "(" : rule[i].operator + " ("
+      } rule_${i}::int-ftc>=0 AND rule_${i}::int-ftc<=${
+        rule[i].range[0]
+      } OR rule_${i}::int-ftc<=0 AND rule_${i}::int-ftc>=${-rule[i]
+        .range[1]}) `;
+    }
+    //group by clause to group duplicates
+    result += "GROUP BY pt.id, pt.year, pt.num_ow, pt.num_os ";
+    return result;
+  }
+}
+
+class Erudit {
+  async search(term, tableName, session) {
+    const userTable = new UserTable();
+    let tableInfo = await userTable.read(tableName);
+    if (!tableInfo) {
+      await userTable.create(session.email, session.userId, false);
+    } else if (tableInfo.table_type) {
+      await userTable.delete(tableName);
+      await userTable.create(session.email, session.userId, false);
+    } else {
+      await userTable.truncate(tableName);
+    }
+    const result = await pool.query(
+      `INSERT INTO ${tableName} SELECT erudit_text.id, array(select jsonb_array_elements(erudit_text.sent_map->$1)::int), erudit_text.word_length, erudit_text.sent_length, erudit_meta.year, array[]::int[] FROM erudit_text INNER JOIN erudit_meta ON erudit_text.id = erudit_meta.id WHERE erudit_text.sent_map ? $1`,
+      [term]
+    );
+    return result.row;
+  }
+  async searchEruditRules(tableName, ruleId, column = "sent_map") {
+    const result = await pool.query(
+      `INSERT INTO ${tableName} SELECT et.id, et.num_ow, et.num_os, array_agg(${ruleId}) FROM ()`
+    );
+  }
+  /**
+   *
+   * @param {string} tableName
+   * @param {{}} bins
+   * @param {Array.<int>} years
+   * @param {Session} session
+   */
+  async getGridVisualization(tableName, bins, years) {
+    const binLength = Object.keys(bins).length;
+    let tableResults = await pool.query(
+      `SELECT ARRAY(SELECT floor(UNNEST(citation_location)::real / num_os::real * $1::real)::int) as cl, p_year as year FROM ${tableName}  WHERE p_year = ANY($2::int[])`,
+      [binLength, years]
+    );
+    let result = {};
+    for (let i = 0; i < years.length; ++i) {
+      result[years[i]] = {
+        content: JSON.parse(JSON.stringify(bins)),
+        max: 0,
+      };
+    }
+    for (let i = 0; i < tableResults.rows.length; ++i) {
+      const row = tableResults.rows[i];
+      for (let j = 0; j < row.cl.length; ++j) {
+        result[row.year].content[row.cl[j]] += 1;
+      }
+    }
+    for (let i = 0; i < years.length; ++i) {
+      const year = years[i];
+      result[year].max = Object.values(result[year].content).reduce(
+        (a, b) => a + b,
+        0
+      );
+    }
+    return result;
+  }
+  async getPapers(tableName, bins) {
+    let result = {};
+    let tableResults = await pool.query(
+      `SELECT citation_location, p_year as year, sentences, utt.id, num_os, rule_set_id FROM ${tableName} AS utt INNER JOIN erudit_data ON utt.id=erudit_data.id WHERE p_year = ANY($1::int[])`,
+      [
+        bins.map((x) => {
+          return x.year;
+        }),
+      ]
+    );
+    //get rules
+    let rules = await pool.query(
+      `SELECT user_rule_sets.*, ARRAY(SELECT rules FROM user_rules WHERE rule_set_id=user_rule_sets.id) AS rules FROM user_rule_sets, (SELECT DISTINCT UNNEST(rule_set_id) AS ids FROM ${tableName} WHERE p_year=ANY($1::int[])) as rule_id WHERE id=rule_id.ids`,
+      [
+        bins.map((x) => {
+          return x.year;
+        }),
+      ]
+    );
+    //used to convert the rule map
+    let ruleMap = {};
+    for (let i = 0; i < rules.rows.length; ++i) {
+      ruleMap[rules.rows[i].id] = rules.rows[i];
+    }
+    const ruleCheck = rules.rows.length;
+    //check if any results were returned, there should be results at this point
+    let globalMax = 0;
+    let papers = {};
+    let ruleHits = {};
+    let sentenceHits = {};
+    const numOfBins = 9;
+    const selectedBins = bins.map((x) => {
+      return x.start / (numOfBins + 1);
+    });
+    for (let i = 0; i < tableResults.rows.length; ++i) {
+      let content = {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+      };
+      let row = tableResults.rows[i];
+      let citationRuleMap = {};
+      const unique_citation = Array.from(new Set(row.citation_location));
+      unique_citation.map((x) => {
+        citationRuleMap[x] = [];
+      });
+      for (let j = 0; j < row.citation_location.length; ++j) {
+        citationRuleMap[row.citation_location[j]].push(row.rule_set_id[j]);
+      }
+      papers[row.id] = {};
+      ruleHits[row.id] = [];
+      //get the content hits for the paper glyph
+      for (let k = 0; k < row.citation_location.length; ++k) {
+        content[
+          Math.floor((row.citation_location[k] / row.num_os) * numOfBins)
+        ] += 1;
+      }
+      let correctBin = false;
+      for (let l = 0; l < selectedBins.length; ++l) {
+        if (content[selectedBins[l]]) {
+          correctBin = true;
+          break;
+        }
+      }
+      if (!correctBin) {
+        delete papers[row.id];
+        continue;
+      }
+      papers[row.id]["content"] = content;
+      papers[row.id]["year"] = row.year;
+      sentenceHits[row.id] = [];
+      papers[row.id]["max"] = Math.max(...Object.values(content));
+      papers[row.id]["total"] = Object.values(content).reduce(
+        (a, b) => a + b,
+        0
+      );
+      globalMax = Math.max(globalMax, papers[row.id]["max"]);
+      //generate the text for the vis
+      for (let j = 0; j < unique_citation.length; ++j) {
+        //make sure it does not go into the negative
+        const leftIdx = Math.max(0, unique_citation[j] - 0);
+        //make sure it does not index outside of the array
+        const rightIdx = Math.min(
+          row.sentences.length,
+          unique_citation[j] + 0 + 1
+        ); // +1 due to exclusion clause
+        let text = row.sentences.slice(leftIdx, rightIdx);
+        sentenceHits[row.id].push(text);
+        if (ruleCheck) {
+          ruleHits[row.id].push(
+            citationRuleMap[unique_citation[j]].map((x) => {
+              return ruleMap[x];
+            })
+          );
+        } else {
+          ruleHits[row.id].push([]);
+        }
+      }
+    }
+    result.papers = papers;
+    result.ruleHits = ruleHits;
+    result.sentenceHits = sentenceHits;
+    result.years = bins.map((x) => {
+      return x.year;
+    });
+    result.max = globalMax;
+    return result;
+  }
+  /**
+   *
+   * @param {string} paperId
+   */
+  async getPaper(paperId) {
+    return await pool.query(
+      "SELECT * FROM erudit_meta WHERE erudit_meta.id=$1",
+      [paperId]
+    );
+  }
+  /**
+   *
+   * @param {string} select
+   * @param {string} currentValue
+   * @param {Array.<int>} ids
+   */
+  async getFilteredNames(filter, currentValue, ids, tableName) {
+    const LIMIT = 5;
+    const filters = {
+      JOURNAL: "journal",
+      TITLE: "title",
+      AUTHORS: "meta.authors",
+      AFFILIATION: "meta.affiliation",
+    };
+    let select = filters[filter];
+    const selectStatements = {
+      JOURNAL: "journal",
+      TITLE: "title",
+      AUTHORS: "authors",
+      AFFILIATION: "affiliation",
+    };
+    const selectStatement = selectStatements[filter];
+    const QUERY_OPTIONS = {
+      JOURNAL: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${tableName} WHERE id=ANY($3)) AS utt INNER JOIN erudit_meta ON utt.id=erudit_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+      AUTHORS: `SELECT ${select} FROM (SELECT UNNEST(erudit_meta.authors) as authors FROM (SELECT * FROM ${tableName} WHERE id=ANY($3)) as utt INNER JOIN erudit_meta ON utt.id=erudit_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+      AFFILIATION: `SELECT ${select} FROM (SELECT UNNEST(erudit_meta.affiliation) as affiliation FROM (SELECT * FROM ${tableName} WHERE id=ANY($3)) as utt INNER JOIN erudit_meta ON utt.id=erudit_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+    };
+    let query = QUERY_OPTIONS[filter];
+    const result = await pool.query(query, ["^" + currentValue, LIMIT, ids]);
+    return result.rows.map((x) => {
+      return x[selectStatement];
+    });
+  }
+  /**
+   *
+   * @param {{}} fields
+   * @param {string} tableName
+   * @param {Array.<number>} ids
+   */
+  async getFilteredIDs(fields, tableName, ids) {
+    let journals = [];
+    let titles = [];
+    let affiliations = [];
+    let authors = [];
+    fields.forEach((x) => {
+      if ("journal" in x) {
+        journals.push(x.journal);
+      }
+      if ("title" in x) {
+        titles.push(x.title);
+      }
+      if ("affiliation" in x) {
+        affiliations.push(x.affiliation);
+      }
+      if ("author" in x) {
+        authors.push(x.author);
+      }
+    });
+    const result = await pool.query(
+      `SELECT utt.id FROM (SELECT * FROM ${tableName} WHERE id=ANY($1)) as utt INNER JOIN erudit_meta ON utt.id=erudit_meta.id WHERE journal=ANY($2::text[]) OR authors && $3::text[] OR affiliation && $4::text[]`,
+      [ids, journals, authors, affiliations]
+    );
+    return result.rows.map((x) => {
+      return x.id;
+    });
+  }
+  /**
+   *
+   * @param {string} tableName
+   * @param {string} searchTerm
+   */
+  async getRuleWhereClause(tableName, searchTerm) {
+    //get rule set ids for our instance
+    const ruleSetIds = await pool.query(
+      "SELECT id FROM user_rule_sets WHERE table_name=$1",
+      [tableName]
+    );
+    //if no rule sets return null
+    if (!ruleSetIds.rowCount) {
+      return null;
+    }
+    const ids = ruleSetIds.rows.map((x) => {
+      return x.id;
+    });
+    //get individual rules
+    const rules = await pool.query(
+      "SELECT * FROM user_rules WHERE rule_set_id=ANY($1::int[]) ORDER BY rule_set_id",
+      [ids]
+    );
+    if (!rules.rowCount) {
+      return null;
+    }
+    //comprise a filter to create a short list
+    let column = "sent_map";
+    let whereClause = "";
+    for (let i = 0; i < rules.rows.length; ++i) {
+      const rule = rules.rows[i].rules;
+      for (let j = 0; j < rule.length; ++j) {
+        const operator = rule[j].operator != null ? rule[j].operator : "OR";
+        whereClause += `${operator} (${column} ? '${rule[j].term}' AND ${column} ? '${rule[0].term}') `;
+      }
+    }
+    whereClause += `OR ${column} ? '${searchTerm}'`;
+    //get rid of the initial OR
+    return { where: whereClause.slice(2), rules: rules.rows };
+  }
+  /**
+   *
+   * @param {string} whereClause this should come from getRuleWhereClause
+   */
+  async getShortList(whereClause) {
+    const result = await pool.query(
+      `SELECT id FROM erudit_text WHERE ${whereClause}`
+    );
+    return result.rows.map((x) => x.id);
+  }
+  /**
+   *
+   * @param {Array.<{range:Array.<number>, operator:string, term:string}>} rule
+   * @param {number} ruleId
+   */
+  subRuleQuery(rule, ruleId) {
+    let result = `SELECT pt.id, array_agg(rule_0::int), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT sent_map, erudit_text.id as id, erudit_meta.year as year, erudit_text.word_length as num_ow, erudit_text.sent_length as num_os FROM erudit_text INNER JOIN erudit_meta ON erudit_text.id=erudit_meta.id WHERE erudit_text.id=ANY($1)) as pt, `;
+    //This is an example query left here to show the goal of this function.
+    /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
+    where (heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0) AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
+    */
+    for (let i = 0; i < rule.length; ++i) {
+      result += `jsonb_array_elements(pt.sent_map->'${rule[i].term}') as rule_${i},`;
+    }
+    //remove end comma
+    result = result.slice(0, -1);
+    result += " WHERE ";
+
+    //create where clause
+    for (let i = 1; i < rule.length; ++i) {
+      result += `${
+        rule[i].operator == undefined || i == 1 ? "(" : rule[i].operator + " ("
+      } rule_${i}::int-rule_0::int>=0 AND rule_${i}::int-rule_0::int<=${
+        rule[i].range[0]
+      } OR rule_${i}::int-rule_0::int<=0 AND rule_${i}::int-rule_0::int>=${-rule[
+        i
+      ].range[1]}) `;
+    }
+    //whereClause += `OR sent_map ? '${searchTerm}'`;
+
+    //group by clause to group duplicates
+    result += "GROUP BY pt.id, pt.year, pt.num_ow, pt.num_os ";
+    return result;
   }
 }
 
@@ -320,11 +1031,9 @@ class DataLayer {
     this.rules = new Rules();
     this.ruleSets = new RuleSets();
     this.userTable = new UserTable();
+    this.pubmed = new Pubmed();
+    this.erudit = new Erudit();
   }
-  searchPubmed() {}
-  searchErudit() {}
-  getGridVisualization() {}
-  getPapers() {}
 }
 
-module.exports = DataExport;
+module.exports = { DataExport, DataLayer };

@@ -181,8 +181,9 @@ const authUser = async (req, res) => {
   );
 
   if (match) {
-    req.session.user = sentInfo.email;
-    req.session.user_id = result.rows[0].id;
+    req.session.email = sentInfo.email;
+    req.session.userId = result.rows[0].id;
+    req.session.tableName = "user_temp_table_" + req.session.userId;
     res.redirect("/dashboard");
     return;
   }

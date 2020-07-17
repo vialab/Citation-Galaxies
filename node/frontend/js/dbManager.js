@@ -4,7 +4,8 @@
 const DB = {
   Pubmed: {
     searchRangeIndicator: "display:none;",
-    rangeIconSrc: "",
+    rangeIconSrc: "quotes_ui.png",
+    rangeIconClass: "citation-quote",
     ruleSource: (beforeRangeVal, afterRangeVal, existing) => {
       return `<ul class="list-inline">
     <li class="list-inline-item col-2 m-0 p-0" style="width:23%;">
@@ -15,7 +16,11 @@ const DB = {
       <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}">
       <p id="left-range" style="display: inline;">[ ${
         $("#rangeBefore").attr("max") - beforeRangeVal
-      } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
+      } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src=${
+        CURRENT_DATABASE.rangeIconSrc
+      } class=${
+        CURRENT_DATABASE.rangeIconClass
+      }></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
       </label>
     </li>
     <li class="list-inline-item m-0 p-0" style="width:23%;">
@@ -29,7 +34,8 @@ const DB = {
   },
   Erudit: {
     searchRangeIndicator: "display:block;",
-    rangeIconSrc: "quotes_ui.png",
+    rangeIconSrc: "text-icon.svg",
+    rangeIconClass: "text-icon",
     ruleSource: () => {
       return "";
     },

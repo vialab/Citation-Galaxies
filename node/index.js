@@ -40,7 +40,7 @@ app.all("*", (req, res, next) => {
   if (req.path === "/") {
     return next();
   }
-  if (!(req.session.id && req.session.user)) {
+  if (!(req.session.id && req.session.email)) {
     res.redirect("/");
     return;
   }
@@ -69,7 +69,7 @@ app.get("/", (req, res) =>
 //dash board
 app.get("/dashboard", (req, res) => {
   console.log(req.session);
-  if (req.session.user && req.session.id) {
+  if (req.session.email && req.session.id) {
     res.sendFile(__dirname + "/frontend/html/index.html");
   } else {
     console.log("issue");
@@ -78,9 +78,10 @@ app.get("/dashboard", (req, res) => {
 });
 /*************api routes *****************************/
 app.get(`/${apiPath}/years`, apiRoutes.years);
-app.post(`/${apiPath}/search`, apiRoutes.citationSearch);
+app.post(`/${apiPath}/search`, apiRoutes.search);
 app.post(`/${apiPath}/papers`, apiRoutes.getPapers);
 app.get(`/${apiPath}/existing-work`, apiRoutes.checkExistingWork);
+app.post(`/${apiPath}/delete-existing-work`, apiRoutes.deleteExistingWork);
 app.get(`/${apiPath}/get-existing-work`, apiRoutes.loadExistingWork);
 app.post(`/${apiPath}/paper`, apiRoutes.getPaper);
 app.post(`/${apiPath}/rule-sets-table`, apiRoutes.loadRuleSets);

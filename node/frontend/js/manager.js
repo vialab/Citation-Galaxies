@@ -412,7 +412,11 @@ function drawTableRow(headers, signal, signalID, aliases) {
                   <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">
                     <p id="left-range" style="display: inline;">[ ${
                       datum.range[0]
-                    } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${
+                    } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src=${
+              CURRENT_DATABASE.rangeIconSrc
+            } class=${
+              CURRENT_DATABASE.rangeIconClass
+            }></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${
               datum.range[1]
             } ]</p>
                     </label>
@@ -450,7 +454,11 @@ function drawTableRow(headers, signal, signalID, aliases) {
                       <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">
                         <p id="left-range" style="display: inline;">[ ${
                           datum.range[0]
-                        } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${
+                        } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src=${
+                CURRENT_DATABASE.rangeIconSrc
+              } class=${
+                CURRENT_DATABASE.rangeIconClass
+              }></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${
                 datum.range[1]
               } ]</p>
                         </label>

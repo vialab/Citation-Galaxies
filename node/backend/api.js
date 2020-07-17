@@ -2,9 +2,9 @@ const pool = require("./database");
 const express = require("express");
 const apiSchema = require("./resources/apiSchema.json");
 const dbSchema = require("./resources/dbschema.json");
-const Data = require("./dataLayer");
+const { DataExport, DataLayer } = require("./dataLayer");
 const fs = require("fs");
-
+const DATA_LAYER = new DataLayer();
 const HTTP_CODES = {
   SUCCESS: 200,
   INVALID_DATA_TYPE: 400,
@@ -118,29 +118,29 @@ const createTempTable = async (req) => {
   //check if user has their own temp table
   const result = await pool.query(
     "SELECT * FROM table_map_temp WHERE table_owner=$1",
-    [req.session.user]
+    [req.session.email]
   );
   //get user id
   const userInfo = await pool.query("SELECT id FROM users WHERE email=$1", [
-    req.session.user,
+    req.session.email,
   ]);
   if (!result.rowCount) {
     //create user temp table to store their query result in for subset manipulation
     await pool.query(
       `CREATE TABLE ${
         prefixTableName + userInfo.rows[0].id
-      }(id int REFERENCES pubmed_text(id) UNIQUE, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
+      }(id int, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
     );
     await pool.query(
       "INSERT INTO table_map_temp(table_name,creation_date,table_owner) VALUES($1, $2, $3)",
-      [prefixTableName + userInfo.rows[0].id, new Date(), req.session.user]
+      [prefixTableName + userInfo.rows[0].id, new Date(), req.session.email]
     );
   } else {
     //temp user table already exists, clear the table for new data and update the table_map_temp table to reflect the new date
     await pool.query(`TRUNCATE ${result.rows[0].table_name}`);
     await pool.query(
       "UPDATE table_map_temp SET creation_date=$1 WHERE table_owner=$2",
-      [new Date(), req.session.user]
+      [new Date(), req.session.email]
     );
   }
   req.session.tableName = prefixTableName + userInfo.rows[0].id;
@@ -188,11 +188,12 @@ const citationSearch = async (req, res) => {
     //assign the rules to the temp
     await pool.query(
       "UPDATE table_map_temp SET initial_search=ROW($1,$2,$3,$4) WHERE table_owner=$5",
-      [rule.term, rule.range[0], rule.range[1], 0, req.session.user]
+      [rule.term, rule.range[0], rule.range[1], 0, req.session.email]
     );
+
     //get the result of the search and store in the user temporary table
     await pool.query(
-      `INSERT INTO ${req.session.tableName} SELECT * FROM get_matrix($1, $2, $3);`,
+      `INSERT INTO ${req.session.tableName} select get_matrix($1,$2,$3)`,
       [rule.term, rule.range[0], rule.range[1]]
     );
   }
@@ -312,126 +313,33 @@ const getShortList = async (whereClause) => {
  */
 const getPapers = async (req, res) => {
   //check if we have a tablename stored in the session data
-  if (!req.session.tableName) {
-    res.status(HTTP_CODES.INVALID_DATA_TYPE).send("not logged in");
-    return;
-  }
-  const requiredInfo = { selections: [], rangeLeft: 0, rangeRight: 0 };
+  const requiredInfo = {
+    selections: [],
+    rangeLeft: 0,
+    rangeRight: 0,
+    isPubmed: false,
+  };
   let sentInfo = reqValid(requiredInfo, req);
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE).send("not logged in");
   }
   let bins = convertSelection(sentInfo.selections);
-  let result = {};
-  let tableResults = await pool.query(
-    `SELECT citation_location, p_year as year, title, sentences, pubmed_data.id, num_os, rule_set_id FROM ${req.session.tableName} INNER JOIN pubmed_data ON ${req.session.tableName}.id=pubmed_data.id WHERE p_year = ANY($1::int[])`,
-    [
-      bins.map((x) => {
-        return x.year;
-      }),
-    ]
-  );
-  //get rules
-  let rules = await pool.query(
-    `SELECT user_rule_sets.*, ARRAY(SELECT rules FROM user_rules WHERE rule_set_id=user_rule_sets.id) AS rules FROM user_rule_sets, (SELECT DISTINCT UNNEST(rule_set_id) AS ids FROM ${req.session.tableName} WHERE p_year=ANY($1::int[])) as rule_id WHERE id=rule_id.ids`,
-    [
-      bins.map((x) => {
-        return x.year;
-      }),
-    ]
-  );
-  //used to convert the rule map
-  let ruleMap = {};
-  for (let i = 0; i < rules.rows.length; ++i) {
-    ruleMap[rules.rows[i].id] = rules.rows[i];
-  }
-  //check if any results were returned, there should be results at this point
-  if (!tableResults.rowCount) {
-    res.status(HTTP_CODES.SUCCESS).send(result);
-    return;
-  }
-  let globalMax = 0;
-  let papers = {};
-  let ruleHits = {};
-  let sentenceHits = {};
-  const numOfBins = 9;
-  const selectedBins = bins.map((x) => {
-    return x.start / (numOfBins + 1);
-  });
-  for (let i = 0; i < tableResults.rows.length; ++i) {
-    let content = {
-      "0": 0,
-      "1": 0,
-      "2": 0,
-      "3": 0,
-      "4": 0,
-      "5": 0,
-      "6": 0,
-      "7": 0,
-      "8": 0,
-      "9": 0,
-    };
-    let row = tableResults.rows[i];
-    let citationRuleMap = {};
-    const unique_citation = Array.from(new Set(row.citation_location));
-    unique_citation.map((x) => {
-      citationRuleMap[x] = [];
-    });
-    for (let j = 0; j < row.citation_location.length; ++j) {
-      citationRuleMap[row.citation_location[j]].push(row.rule_set_id[j]);
-    }
-    papers[row.id] = {};
-    ruleHits[row.id] = [];
-    //get the content hits for the paper glyph
-    for (let k = 0; k < row.citation_location.length; ++k) {
-      content[
-        Math.floor((row.citation_location[k] / row.num_os) * numOfBins)
-      ] += 1;
-    }
-    let correctBin = false;
-    for (let l = 0; l < selectedBins.length; ++l) {
-      if (content[selectedBins[l]]) {
-        correctBin = true;
-        break;
-      }
-    }
-    if (!correctBin) {
-      delete papers[row.id];
-      continue;
-    }
-    papers[row.id]["content"] = content;
-    papers[row.id]["year"] = row.year;
-    sentenceHits[row.id] = [];
-    papers[row.id]["max"] = Math.max(...Object.values(content));
-    papers[row.id]["total"] = Object.values(content).reduce((a, b) => a + b, 0);
-    globalMax = Math.max(globalMax, papers[row.id]["max"]);
-    //generate the text for the vis
-    for (let j = 0; j < unique_citation.length; ++j) {
-      //make sure it does not go into the negative
-      const leftIdx = Math.max(0, unique_citation[j] - sentInfo.rangeLeft);
-      //make sure it does not index outside of the array
-      const rightIdx = Math.min(
-        row.sentences.length,
-        unique_citation[j] + sentInfo.rangeRight + 1
-      ); // +1 due to exclusion clause
-      let text = row.sentences.slice(leftIdx, rightIdx);
-      sentenceHits[row.id].push(text);
-      ruleHits[row.id].push(
-        citationRuleMap[unique_citation[j]].map((x) => {
-          return ruleMap[x];
-        })
+  if (!sentInfo.isPubmed) {
+    res
+      .status(HTTP_CODES.SUCCESS)
+      .send(await DATA_LAYER.erudit.getPapers(req.session.tableName, bins));
+  } else {
+    res
+      .status(HTTP_CODES.SUCCESS)
+      .send(
+        await DATA_LAYER.pubmed.getPapers(
+          req.session.tableName,
+          sentInfo.rangeLeft,
+          sentInfo.rangeRight,
+          bins
+        )
       );
-    }
   }
-  result.papers = papers;
-  result.ruleHits = ruleHits;
-  result.sentenceHits = sentenceHits;
-  result.years = bins.map((x) => {
-    return x.year;
-  });
-  result.max = globalMax;
-  res.status(HTTP_CODES.SUCCESS).send(result);
-  return;
 };
 /**
  * @param {Request} req
@@ -440,7 +348,7 @@ const getPapers = async (req, res) => {
 const checkExistingWork = async (req, res) => {
   const queryResult = await pool.query(
     "SELECT table_name FROM table_map_temp WHERE table_owner=$1",
-    [req.session.user]
+    [req.session.email]
   );
   if (!queryResult.rowCount) {
     //does not exist
@@ -458,7 +366,7 @@ const loadExistingWork = async (req, res) => {
   //check if table exists
   const queryResult = await pool.query(
     "SELECT table_name, jsonb_build_object('term', (initial_search).term, 'range_left', (initial_search).range_left, 'range_right', (initial_search).range_right, 'operator', (initial_search).operator) as info FROM table_map_temp WHERE table_owner=$1",
-    [req.session.user]
+    [req.session.email]
   );
   if (!queryResult.rowCount) {
     res.status(HTTP_CODES.INVALID_VALUES);
@@ -500,31 +408,49 @@ const loadExistingWork = async (req, res) => {
     return;
   }
 };
+const deleteExistingWork = async (req, res) => {
+  const result = await DATA_LAYER.ruleSets.read(req.session.tableName);
+  if (result.length) {
+    await DATA_LAYER.ruleSets.delete(result[0].id);
+  }
+  await DATA_LAYER.userTable.delete(req.session.tableName);
+  res.status(200).send({});
+};
 /**
  *
  * @param {Request} req
  * @param {Response} res
  */
 const getPaper = async (req, res) => {
-  const requiredInfo = { paper_id: 0 };
+  let requiredInfo = { paper_id: 0, isPubmed: false };
   let sentInfo = reqValid(requiredInfo, req);
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  const paperInfo = await pool.query(
-    "SELECT * FROM pubmed_data INNER JOIN pubmed_meta ON pubmed_data.id=pubmed_meta.id INNER JOIN pubmed_text ON pubmed_data.id=pubmed_text.id WHERE pubmed_data.id=$1",
-    [sentInfo.paper_id]
-  );
-  if (!paperInfo.rowCount) {
-    res.status(HTTP_CODES.SUCCESS).send(null);
-    return;
+  if (!sentInfo.isPubmed) {
+    const result = await DATA_LAYER.erudit.getPaper(sentInfo.paper_id);
+    if (!result.rowCount) {
+      res.status(HTTP_CODES.SUCCESS).send(null);
+      return;
+    }
+    res.status(HTTP_CODES.SUCCESS).send({
+      articletitle: "",
+      journaltitle: result.rows[0].journal,
+      articleyear: result.rows[0].year,
+    });
+  } else {
+    const result = await DATA_LAYER.pubmed.getPaper(sentInfo.paper_id);
+    if (!result.rowCount) {
+      res.status(HTTP_CODES.SUCCESS).send(null);
+      return;
+    }
+    res.status(HTTP_CODES.SUCCESS).send({
+      articletitle: result.rows[0].title,
+      journaltitle: result.rows[0].journal,
+      articleyear: result.rows[0].year,
+    });
   }
-  res.status(HTTP_CODES.SUCCESS).send({
-    articletitle: paperInfo.rows[0].title,
-    journaltitle: paperInfo.rows[0].journal,
-    articleyear: paperInfo.rows[0].year,
-  });
 };
 /***************************************INDIVIDUAL RULES************************************************/
 /**
@@ -701,7 +627,7 @@ const addRuleSet = async (req, res) => {
   }
   const result = await pool.query(
     "INSERT INTO user_rule_sets(user_id, name, color, table_name) VALUES($1,$2,$3,$4) RETURNING id",
-    [req.session.user_id, sentInfo.name, sentInfo.color, req.session.tableName]
+    [req.session.userId, sentInfo.name, sentInfo.color, req.session.tableName]
   );
   if (!result.rowCount) {
     res.status(HTTP_CODES.INVALID_VALUES);
@@ -815,85 +741,147 @@ const exportData = async (req, res) => {
 };
 
 const getFilterNames = async (req, res) => {
-  const requiredInfo = { filter: "", currentValue: "", ids: [] };
+  const requiredInfo = {
+    filter: "",
+    currentValue: "",
+    ids: [],
+    isPubmed: false,
+  };
   let sentInfo = reqValid(requiredInfo, { body: req.query });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  const limit = 5;
-  const filters = {
-    JOURNAL: "journal",
-    TITLE: "title",
-    AUTHORS: "meta.authors",
-    AFFILIATION: "meta.affiliation",
-  };
-  const selectStatements = {
-    JOURNAL: "journal",
-    TITLE: "title",
-    AUTHORS: "authors",
-    AFFILIATION: "affiliation",
-  };
-  let select = filters[sentInfo.filter];
-  const selectStatement = selectStatements[sentInfo.filter];
-  const queryStatements = {
-    JOURNAL: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
-    TITLE: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
-    AUTHORS: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.authors) as authors FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
-    AFFILIATION: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.affiliation) as affiliation FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
-  };
-  if (!select) {
-    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+
+  if (sentInfo.isPubmed === "false") {
+    let result = await DATA_LAYER.erudit.getFilteredNames(
+      sentInfo.filter,
+      sentInfo.currentValue,
+      sentInfo.ids,
+      req.session.tableName
+    );
+    res.status(HTTP_CODES.SUCCESS).send(result);
+    return;
+  } else {
+    let result = await DATA_LAYER.pubmed.getFilteredNames(
+      sentInfo.filter,
+      sentInfo.currentValue,
+      sentInfo.ids,
+      req.session.tableName
+    );
+    res.status(HTTP_CODES.SUCCESS).send(result);
     return;
   }
-  let query = queryStatements[sentInfo.filter];
-  const result = await pool.query(query, [
-    "^" + sentInfo.currentValue,
-    limit,
-    sentInfo.ids,
-  ]);
-  res.status(HTTP_CODES.SUCCESS).send(
-    result.rows.map((x) => {
-      return x[selectStatement];
-    })
-  );
-  return;
 };
 
 const getFilteredIDs = async (req, res) => {
-  const requiredInfo = { fields: [], ids: [] };
+  const requiredInfo = { fields: [], ids: [], isPubmed: false };
   let sentInfo = reqValid(requiredInfo, { body: req.query });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  let journals = [];
-  let titles = [];
-  let affiliations = [];
-  let authors = [];
-  sentInfo.fields.forEach((x) => {
-    if ("journal" in x) {
-      journals.push(x.journal);
-    }
-    if ("title" in x) {
-      titles.push(x.title);
-    }
-    if ("affiliation" in x) {
-      affiliations.push(x.affiliation);
-    }
-    if ("author" in x) {
-      authors.push(x.author);
-    }
-  });
-  const result = await pool.query(
-    `SELECT utt.id FROM (SELECT * FROM ${req.session.tableName} WHERE id=ANY($1::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE journal=ANY($2::text[]) OR title=ANY($3::text[]) OR authors && $4::text[] OR affiliation && $5::text[]`,
-    [sentInfo.ids, journals, titles, authors, affiliations]
+  let result = null;
+  if (sentInfo.isPubmed === "true") {
+    result = await DATA_LAYER.pubmed.getFilteredIDs(
+      sentInfo.fields,
+      req.session.tableName,
+      sentInfo.ids
+    );
+  } else {
+    result = await DATA_LAYER.erudit.getFilteredIDs(
+      sentInfo.fields,
+      req.session.tableName,
+      sentInfo.ids
+    );
+  }
+  res.status(200).send(result);
+};
+const search = async function (req, res) {
+  const requireInfo = {
+    rule: {},
+    bins: {},
+    years: [],
+    term: "",
+    isPubmed: false,
+  };
+  let sentInfo = reqValid(requireInfo, req);
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  await DATA_LAYER.userTable.create(
+    req.session.email,
+    req.session.userId,
+    sentInfo.isPubmed
   );
-  res.status(200).send(
-    result.rows.map((x) => {
-      return x.id;
-    })
-  );
+  //checks if rules exist
+  let ruleCheck = await DATA_LAYER.ruleSets.read(req.session.tableName);
+
+  const bins = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
+  const db = sentInfo.isPubmed ? DATA_LAYER.pubmed : DATA_LAYER.erudit;
+  const rule_info = { queries: [], shortList: null };
+  if (ruleCheck.length) {
+    let rules = await db.getRuleWhereClause(
+      req.session.tableName,
+      sentInfo.term
+    );
+    rule_info.shortList = await db.getShortList(rules.where);
+    //TODO need to aggregate
+    for (let i = 0; i < rules.rules.length; ++i) {
+      let query = db.subRuleQuery(
+        rules.rules[i].rules,
+        rules.rules[i].rule_set_id
+      );
+      rule_info.queries.push(
+        `INSERT INTO ${req.session.tableName}(id, citation_location, num_ow, num_os, p_year, rule_set_id) ` +
+          query +
+          `ON CONFLICT (id) DO UPDATE SET citation_location=array_cat(${req.session.tableName}.citation_location, EXCLUDED.citation_location), rule_set_id=array_cat(${req.session.tableName}.rule_set_id, EXCLUDED.rule_set_id)`
+      );
+    }
+  }
+  if (rule_info.queries.length) {
+    let promises = [];
+    for (let i = 0; i < rule_info.queries.length; ++i) {
+      promises.push(pool.query(rule_info.queries[i], [rule_info.shortList]));
+    }
+    await Promise.all(promises);
+    let result = await db.getGridVisualization(
+      req.session.tableName,
+      bins,
+      sentInfo.years
+    );
+    res.status(HTTP_CODES.SUCCESS).send(result);
+    return;
+  }
+  //check which dataset to search
+  if (!sentInfo.isPubmed) {
+    //should check for rules
+    await DATA_LAYER.erudit.search(
+      sentInfo.term,
+      req.session.tableName,
+      req.session
+    );
+    let result = await DATA_LAYER.erudit.getGridVisualization(
+      req.session.tableName,
+      bins,
+      sentInfo.years
+    );
+    res.status(HTTP_CODES.SUCCESS).send(result);
+  } else {
+    await DATA_LAYER.pubmed.search(
+      req.session.tableName,
+      sentInfo.term,
+      sentInfo.rule.range,
+      req.session
+    );
+    let result = await DATA_LAYER.pubmed.getGridVisualization(
+      req.session.tableName,
+      bins,
+      sentInfo.years
+    );
+    res.status(HTTP_CODES.SUCCESS).send(result);
+  }
 };
 
 module.exports = {
@@ -903,6 +891,7 @@ module.exports = {
   getPaper,
   checkExistingWork,
   loadExistingWork,
+  deleteExistingWork,
   deleteRuleSet,
   updateRuleSet,
   loadRuleSets,
@@ -914,4 +903,5 @@ module.exports = {
   exportData,
   getFilterNames,
   getFilteredIDs,
+  search,
 };

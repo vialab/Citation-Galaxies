@@ -1361,7 +1361,15 @@ function searchForQuery(query) {
   indexToSortPapersOn = -1;
   // drawHome(currIncrement);
   disableSearchUI(true); // disables the search UI to prevent another search while searching
-  console.log({ term: query, range: [sentenceRangeAbove, sentenceRangeBelow] });
+  console.log({
+    term: query,
+    range: [sentenceRangeAbove, sentenceRangeBelow],
+    isPubmed: CURRENT_DATABASE.isPubmed,
+  });
+  let yearsToQuery = [];
+  for (let i = 2003; i < 2021; ++i) {
+    yearsToQuery.push(i);
+  }
   //call api
   $.ajax({
     type: "POST",
@@ -1369,6 +1377,10 @@ function searchForQuery(query) {
     contentType: "application/json",
     data: JSON.stringify({
       rule: { term: query, range: [sentenceRangeAbove, sentenceRangeBelow] },
+      term: query,
+      bins: {},
+      years: yearsToQuery,
+      isPubmed: CURRENT_DATABASE.isPubmed,
     }),
     success: function (results) {
       let data = results;
