@@ -7,6 +7,9 @@ let MOVE_BRUSH;
 $(document).ready((x, y, z) => {
   // console.log("newfront ready: ", x, y, z, modal.mode);
   const socket = io("https://localhost:4000");
+  socket.on("progress", (msg) => {
+    console.log(msg);
+  });
   // Create global width and height variables
   vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);

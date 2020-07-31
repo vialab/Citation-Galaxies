@@ -2,36 +2,36 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const https = require("https");
-var session = require("express-session");
+const session = require("express-session");
+const sharedsession = require("express-socket.io-session");
 const cookieParser = require("cookie-parser");
-var bodyParser = require("body-parser");
+const bodyParser = require("body-parser");
 const userRoutes = require("./backend/userRoutes");
 const apiRoutes = require("./backend/api");
 const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
-var privateKey = fs.readFileSync("./backend/resources/key.pem", "utf8");
-var certificate = fs.readFileSync("./backend/resources/cert.pem", "utf8");
+const privateKey = fs.readFileSync("./backend/resources/key.pem", "utf8");
+const certificate = fs.readFileSync("./backend/resources/cert.pem", "utf8");
 const port = 4000;
 
 /******path routes *******/
 const apiPath = "api";
 const userPath = "user";
 /**********initialize app***********/
+const sessionMiddleware = session({
+  genid: (req) => {
+    const id = uuidv4();
+    return id;
+  },
+  secret: process.env.SECRET,
+  resave: true,
+  saveUninitialized: true,
+  cookie: { secure: true, expires: 6000000 },
+});
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser(process.env.SECRET));
-app.use(
-  session({
-    genid: (req) => {
-      const id = uuidv4();
-      return id;
-    },
-    secret: process.env.SECRET,
-    resave: true,
-    saveUninitialized: true,
-    cookie: { secure: false, expires: 6000000 },
-  })
-);
+app.use(sessionMiddleware);
 //middleware to check that user has logged in. disregards any paths that include /${userPath}/
 app.all("*", (req, res, next) => {
   if (req.path.includes(`/${userPath}/`)) {
@@ -99,9 +99,15 @@ app.get(`/${apiPath}/overview`, apiRoutes.getOverview);
 app.get(`/${apiPath}/update/grid`, apiRoutes.updateGrid);
 const credentials = { key: privateKey, cert: certificate };
 let httpsServer = https.createServer(credentials, app);
-const io = require("socket.io")(httpsServer);
-io.on("connection", (socket) => {
-  console.log("client", "connection");
+//setup socket manager for server. this is used to communicate the progress of the complex queries.
+const socketManager = require("./backend/socketManager");
+socketManager.setServer(httpsServer);
+socketManager.setMiddleware(
+  sharedsession(sessionMiddleware, cookieParser(process.env.SECRET))
+);
+//bind the clients socket id to the express-session this allows us to send messages from any http request
+socketManager.on("connection", (socket) => {
+  socket.handshake.session.socketId = socket.id;
 });
 httpsServer.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
