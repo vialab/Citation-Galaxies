@@ -95,8 +95,14 @@ app.post(`/${apiPath}/update/rule-sets-table`, apiRoutes.updateRuleSet);
 app.get(`/${apiPath}/export`, apiRoutes.exportData);
 app.get(`/${apiPath}/paper/filter-suggestions`, apiRoutes.getFilterNames);
 app.get(`/${apiPath}/paper/filter`, apiRoutes.getFilteredIDs);
+app.get(`/${apiPath}/overview`, apiRoutes.getOverview);
+app.get(`/${apiPath}/update/grid`, apiRoutes.updateGrid);
 const credentials = { key: privateKey, cert: certificate };
 let httpsServer = https.createServer(credentials, app);
+const io = require("socket.io")(httpsServer);
+io.on("connection", (socket) => {
+  console.log("client", "connection");
+});
 httpsServer.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });

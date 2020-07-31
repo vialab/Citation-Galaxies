@@ -598,7 +598,6 @@ span.query-text {
 #add-new-row.edit-row.showing {
   height: auto;
   border: 1px solid rgba(255, 193, 7, 0.5) !important;
-  background-color: rgba(255, 193, 7, 0.2) !important;
 }
 
 #add-new-row.edit-row .action-cell .btn-danger {
@@ -908,4 +907,32 @@ g text {
   width: 15%;
   position: relative;
   top: 2px;
+}
+.selection {
+  fill: #0079fb;
+  opacity: 0.3;
+}
+.handle {
+  display: none;
+}
+.overlay {
+  display: none;
+}
+#timeline-svg {
+  float: right;
+  visibility: hidden;
+  transition-duration: 0.7s;
+  opacity: 0;
+}
+.unselectable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.bar-timeline {
+  pointer-events: none;
 }

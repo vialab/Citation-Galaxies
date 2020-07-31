@@ -589,15 +589,17 @@ function drawColumnSquare(
 
 //Draws or removes a border around a object
 function drawBorder(object, remove) {
+  const id = $(object._groups[0]).attr("id");
+  const selector = `#${id}.minsqr`;
   if (remove == true) {
-    object.style("stroke", "none");
+    d3.select(selector).style("stroke", "none");
   } else {
     var percentLabelColor = "rgb(108,117,125)";
     //if(tinycolor(object.style("fill")).isDark()){
     //	percentLabelColor = "#FFFFFF";
     //}
-    object.style("stroke", percentLabelColor);
-    object.style("stroke-width", 2);
+    d3.select(selector).style("stroke", percentLabelColor);
+    d3.select(selector).style("stroke-width", 2);
   }
 }
 
@@ -684,6 +686,7 @@ function removeAllSelections() {
   for (var i = 0; i < selectionObjects.length; i++) {
     drawBorder(selectionObjects[i], true);
   }
+  d3.selectAll(".bar-timeline").attr("fill", "#007BFF");
   selectionObjects = [];
 }
 
@@ -741,14 +744,20 @@ function multipleSelection(currSelection, column, shiftPressed, object) {
     //Push the current selection to the list of selections
     selections.push(currSelection);
     //Draw a border around the object clicked and add it to the array of objects selected
+
     drawBorder(object, false);
+    const year = currSelection.split("-")[0];
+    d3.select(`#timeline-${year}`).attr("fill", "rgb(108,117,125)");
     selectionObjects.push(object);
   } else if (shiftPressed == true) {
     //If is in the array already, remove it and remove the border/object
     var i = selections.indexOf(currSelection);
     selections.splice(i, 1);
-
+    const year = currSelection.split("-")[0];
     drawBorder(selectionObjects[i], true);
+    if (!isHighlighted(`#svg-${year}`)) {
+      d3.select(`#timeline-${year}`).attr("fill", "#007BFF");
+    }
     selectionObjects.splice(i, 1);
   }
 }
@@ -1309,7 +1318,15 @@ function drawAllYears(data = front_data) {
     }
   });
 }
-
+function isHighlighted(id) {
+  const boxes = $(id).find(".minsqr");
+  let result = false;
+  for (let i = 0; i < boxes.length; ++i) {
+    const check = $(boxes[i]).css("stroke");
+    result |= check != "none";
+  }
+  return result;
+}
 //Show toast notification
 function toast(title, text, duration = 5000) {
   $(".toast").toast("dispose");
@@ -1351,7 +1368,10 @@ function searchForQuery(query) {
       .replace(" and ", " ")
       .replace(/[^\w\s]|_/g, "")
       .replace(/\s+/g, " ");
-    d3.select("#searchQueryLabel").html(currSearchQuery.toString());
+    d3.select("#searchQueryLabel")
+      .select(".col-sm-3")
+      .select("p")
+      .text(currSearchQuery.toString());
   }
 
   for (var key in boundariesByPaper) {
@@ -1387,6 +1407,15 @@ function searchForQuery(query) {
       // loaded_articles = data["nunique"];
       disableSearchUI(false);
       drawAllYears(data);
+      if (!CURRENT_DATABASE.isPubmed) {
+        const min = $("#timeline-selection").attr("min-year");
+        const max = $("#timeline-selection").attr("max-year");
+        let years = [];
+        for (let i = min; i <= max; ++i) {
+          years.push(i);
+        }
+        getOverview(years, populateTimeline);
+      }
     },
   });
   //getFilteredYears(query, true);
@@ -1540,3 +1569,69 @@ var vh = Math.max(
   document.documentElement.clientHeight,
   window.innerHeight || 0
 );
+/**
+ *
+ * @param {Array.<{p_year:number, sum:number}>} data
+ */
+function populateTimeline(data) {
+  const max = Math.max(
+    ...data.map((x) => {
+      return x.sum;
+    })
+  );
+  data.sort(function (a, b) {
+    return a.p_year - b.p_year;
+  });
+  let svg = d3.select("#timeline-svg").select("g");
+  const svgBox = d3.select("#timeline-svg").node().getBoundingClientRect();
+  const minYearInErudit = d3.select("#timeline-selection").attr("min-year");
+  const currentYear = d3.select("#timeline-selection").attr("max-year");
+  const height = svgBox.height - 40;
+  const width = svgBox.width - 90;
+  let x = d3
+    .scaleLinear()
+    .range([0, width])
+    .domain([minYearInErudit, currentYear]);
+  const y = d3.scaleLinear().domain([0, max]).range([height, 0]);
+
+  //let yAxis = svg.append("g").call(d3.axisLeft(y));
+  const bandWidth = x(2001) - x(2000);
+  // append the rectangles for the bar chart
+  let bars = svg.selectAll(".bar-timeline").remove().exit().data(data);
+  bars
+    .enter()
+    .append("rect")
+    .attr("class", "bar-timeline")
+    .attr("fill", "#007BFF")
+    .attr("id", function (d) {
+      return "timeline-" + d.p_year;
+    })
+    .attr("x", function (d) {
+      return x(d.p_year) - bandWidth;
+    })
+    .attr("width", bandWidth)
+    .attr("y", function (d) {
+      return y(d.sum);
+    })
+    .attr("height", function (d) {
+      return height - y(d.sum);
+    });
+}
+
+/**
+ *
+ * @param {Array.<number>} years - gets the overview for each year supplied for the given search
+ * @param {function(Array.<{year:number, sum:number}>)} callback - callback to receive data
+ */
+async function getOverview(years, callback) {
+  let result = await $.ajax({
+    url: "api/overview",
+    type: "GET",
+    contentType: "application/json",
+    data: {
+      years,
+    },
+  });
+
+  callback(result);
+}

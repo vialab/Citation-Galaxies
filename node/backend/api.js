@@ -4,7 +4,15 @@ const apiSchema = require("./resources/apiSchema.json");
 const dbSchema = require("./resources/dbschema.json");
 const { DataExport, DataLayer } = require("./dataLayer");
 const fs = require("fs");
+const { query } = require("./database");
 const DATA_LAYER = new DataLayer();
+function generate(min, max) {
+  let result = [];
+  for (let i = min; i <= max; ++i) {
+    result.push(i);
+  }
+  return result;
+}
 const HTTP_CODES = {
   SUCCESS: 200,
   INVALID_DATA_TYPE: 400,
@@ -145,91 +153,7 @@ const createTempTable = async (req) => {
   }
   req.session.tableName = prefixTableName + userInfo.rows[0].id;
 };
-/**
- *
- * @param {Request} req
- * @param {Response} res
- * @todo fix the static years for the returned result
- */
-const citationSearch = async (req, res) => {
-  const rule = req.body.rule;
-  if (!validRule(rule)) {
-    res.status(HTTP_CODES.INVALID_DATA_TYPE);
-    return;
-  }
-  const rule_info = { queries: [], shortList: null };
-  if (req.session.tableName) {
-    let rules = await getRules(req.session.tableName, rule.term);
-    if (rules) {
-      rule_info.shortList = await getShortList(rules.where);
-      //TODO need to aggregate
-      for (let i = 0; i < rules.rules.length; ++i) {
-        let query = sub_rule_query(
-          rules.rules[i].rules,
-          rules.rules[i].rule_set_id
-        );
-        rule_info.queries.push(
-          `INSERT INTO ${req.session.tableName}(id, citation_location, num_ow, num_os, p_year, rule_set_id) ` +
-            query +
-            `ON CONFLICT (id) DO UPDATE SET citation_location=array_cat(${req.session.tableName}.citation_location, EXCLUDED.citation_location), rule_set_id=array_cat(${req.session.tableName}.rule_set_id, EXCLUDED.rule_set_id)`
-        );
-      }
-    }
-  }
-  //create temp table to store results in
-  await createTempTable(req);
-  if (rule_info.queries.length) {
-    let promises = [];
-    for (let i = 0; i < rule_info.queries.length; ++i) {
-      promises.push(pool.query(rule_info.queries[i], [rule_info.shortList]));
-    }
-    await Promise.all(promises);
-  } else {
-    //assign the rules to the temp
-    await pool.query(
-      "UPDATE table_map_temp SET initial_search=ROW($1,$2,$3,$4) WHERE table_owner=$5",
-      [rule.term, rule.range[0], rule.range[1], 0, req.session.email]
-    );
 
-    //get the result of the search and store in the user temporary table
-    await pool.query(
-      `INSERT INTO ${req.session.tableName} select get_matrix($1,$2,$3)`,
-      [rule.term, rule.range[0], rule.range[1]]
-    );
-  }
-  //once it is stored in the users temporary table we can now do subsequent manipulation to the subset py querying the req.session.tableName
-  const aggResults = await pool.query(`SELECT * FROM ${req.session.tableName}`);
-  let result = {};
-  for (let i = 2003; i <= 2020; ++i) {
-    result[i] = {
-      content: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 },
-      max: 0,
-    };
-  }
-  if (aggResults.rowCount) {
-    //move the results of the query into an object. The object is legacy format to support the frontend
-    const numOfBins = 10;
-    for (let i = 0; i < aggResults.rows.length; ++i) {
-      for (let j = 0; j < aggResults.rows[i].citation_location.length; ++j) {
-        const idx = Math.floor(
-          (aggResults.rows[i].citation_location[j] /
-            aggResults.rows[i].num_os) *
-            numOfBins
-        );
-        result[aggResults.rows[i].p_year]["content"][idx] += 1;
-      }
-    }
-    for (let i = 2003; i <= 2020; ++i) {
-      result[i].max = Object.values(result[i]["content"]).reduce(
-        (a, b) => a + b,
-        0
-      );
-    }
-    res.status(HTTP_CODES.SUCCESS).send(result);
-    return;
-  }
-  res.status(HTTP_CODES.INVALID_VALUES);
-};
 /**
  *
  * @param {string} table_name user temp table name
@@ -365,7 +289,7 @@ const checkExistingWork = async (req, res) => {
 const loadExistingWork = async (req, res) => {
   //check if table exists
   const queryResult = await pool.query(
-    "SELECT table_name, jsonb_build_object('term', (initial_search).term, 'range_left', (initial_search).range_left, 'range_right', (initial_search).range_right, 'operator', (initial_search).operator) as info FROM table_map_temp WHERE table_owner=$1",
+    "SELECT table_name, table_type, jsonb_build_object('term', (initial_search).term, 'range_left', (initial_search).range_left, 'range_right', (initial_search).range_right, 'operator', (initial_search).operator) as info FROM table_map_temp WHERE table_owner=$1",
     [req.session.email]
   );
   if (!queryResult.rowCount) {
@@ -375,8 +299,10 @@ const loadExistingWork = async (req, res) => {
   let row = queryResult.rows[0];
   //set the table name for the session
   req.session.tableName = row.table_name;
-
-  const aggResults = await pool.query(`SELECT * FROM ${req.session.tableName}`);
+  const aggResults = await pool.query(
+    `SELECT * FROM ${req.session.tableName} WHERE p_year=ANY($1::int[])`,
+    [generate(2003, 2020)]
+  );
   let result = {};
   const queryInfo = queryResult.rows[0].info;
   for (let i = 2003; i <= 2020; ++i) {
@@ -404,7 +330,11 @@ const loadExistingWork = async (req, res) => {
         0
       );
     }
-    res.status(HTTP_CODES.SUCCESS).send({ info: queryInfo, result: result });
+    res.status(HTTP_CODES.SUCCESS).send({
+      info: queryInfo,
+      result: result,
+      db: queryResult.rows[0].table_type,
+    });
     return;
   }
 };
@@ -709,18 +639,21 @@ const exportData = async (req, res) => {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
+  let isPubmed = true;
+  if (!(await DATA_LAYER.userTable.isPubmed(req.session.tableName))) {
+    isPubmed = false;
+  }
   //create data object in charge of streaming from db to file
   const data = new DataExport(
     sentInfo.isJSON,
     req.session.tableName,
+    isPubmed,
     sentInfo.dataOptions,
     sentInfo.meta,
     sentInfo.ruleSets
   );
   //if delimiter assign
-  if (input.delimiter != undefined) {
-    data.delimiter = input.delimiter;
-  }
+  data.delimiter = input.delimiter || data.delimiter;
   //returns the fileName that has the required information
   const fileName = await data.export();
   //send to client
@@ -797,6 +730,7 @@ const getFilteredIDs = async (req, res) => {
   }
   res.status(200).send(result);
 };
+
 const search = async function (req, res) {
   const requireInfo = {
     rule: {},
@@ -810,11 +744,20 @@ const search = async function (req, res) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  await DATA_LAYER.userTable.create(
-    req.session.email,
-    req.session.userId,
+  if (
+    ((await DATA_LAYER.userTable.exists(req.session.tableName)) &&
+      (await DATA_LAYER.userTable.isPubmed(req.session.tableName))) !=
     sentInfo.isPubmed
-  );
+  ) {
+    let ruleCheck = await DATA_LAYER.ruleSets.read(req.session.tableName);
+    if (ruleCheck.length) {
+      await Promise.all(
+        ruleCheck.map((x) => {
+          return DATA_LAYER.ruleSets.delete(x.id);
+        })
+      );
+    }
+  }
   //checks if rules exist
   let ruleCheck = await DATA_LAYER.ruleSets.read(req.session.tableName);
 
@@ -883,10 +826,53 @@ const search = async function (req, res) {
     res.status(HTTP_CODES.SUCCESS).send(result);
   }
 };
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ */
+const getOverview = async (req, res) => {
+  const requiredInfo = { years: [] };
+  let sentInfo = reqValid(requiredInfo, { body: req.query });
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  let result = await DATA_LAYER.userTable.overview(
+    req.session.tableName,
+    sentInfo.years
+  );
+  res.status(HTTP_CODES.SUCCESS).send(result);
+};
+
+const updateGrid = async (req, res) => {
+  const requiredInfo = { years: [] };
+  let sentInfo = reqValid(requiredInfo, { body: req.query });
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  const bins = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
+  if (!(await DATA_LAYER.userTable.exists(req.session.tableName))) {
+    const end = sentInfo.years.length - 1;
+    let result = {};
+    for (let i = sentInfo.years[0]; i <= sentInfo.years[end]; ++i) {
+      result[i] = {};
+      result[i].content = bins;
+    }
+    res.status(HTTP_CODES.SUCCESS).send(result);
+    return;
+  }
+  let result = await DATA_LAYER.erudit.getGridVisualization(
+    req.session.tableName,
+    bins,
+    sentInfo.years
+  );
+  res.status(HTTP_CODES.SUCCESS).send(result);
+};
 
 module.exports = {
   years,
-  citationSearch,
   getPapers,
   getPaper,
   checkExistingWork,
@@ -904,4 +890,6 @@ module.exports = {
   getFilterNames,
   getFilteredIDs,
   search,
+  getOverview,
+  updateGrid,
 };

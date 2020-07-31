@@ -12,6 +12,7 @@
   <!-- <link rel="manifest" href="site.webmanifest" />-->
 
   <!--External Resources-->
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2/dist/socket.io.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
   <!-- <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script> -->
@@ -175,7 +176,19 @@
         <!-- Buttons on home pane -->
         <div class="container-fluid">
           <div class="row" style="padding: 0 0 10px 0;">
-            <div id="searchQueryLabel" class="col-sm-6" style="color: #6c757d; opacity: 0.9; font: 33px Roboto;"></div>
+            <div id="searchQueryLabel" class="col-sm-6" style="color: #6c757d; opacity: 0.9; font: 33px Roboto;">
+              <div class="container">
+                <div class="row">
+                  <div class="col-sm-3">
+                    <p></p>
+                  </div>
+                  <div class="col-lg">
+                    <div id="timeline-selection">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="col-sm-6 btn-row">
               <div class="row filter-query-options">
                 <div class="dropdown filter-option">
@@ -363,7 +376,7 @@
                   <label>
                     <input type="checkbox" name="pubmed id" group="meta" data-toggle="toggle"
                       id="export-meta-pubmed-id">
-                    Pubmed ID
+                    ID
                   </label>
                 </div>
               </div>

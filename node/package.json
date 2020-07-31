@@ -25,6 +25,10 @@
     "nodemailer": "^6.4.6",
     "pg": "^8.0.3",
     "pg-cursor": "^2.2.1",
+    "socket.io": "^2.3.0",
     "uuid": "^8.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
   }
 }

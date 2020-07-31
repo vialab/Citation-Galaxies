@@ -3,10 +3,10 @@ import * as modal from "./modules/modal.js";
 // var vw,vh;
 // var vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
 // var vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-
+let MOVE_BRUSH;
 $(document).ready((x, y, z) => {
   // console.log("newfront ready: ", x, y, z, modal.mode);
-
+  const socket = io("https://localhost:4000");
   // Create global width and height variables
   vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
   vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
@@ -14,6 +14,7 @@ $(document).ready((x, y, z) => {
   $("#delete-existing-work").on("click", deleteExistingWork);
   //check if previous work is available
   checkExistingWork();
+  createTimeLine();
 });
 
 $(window).on("load", function () {
@@ -206,6 +207,25 @@ function loadExistingWork() {
     success: function (results) {
       let data = results.result;
       const max = Number($("#rangeBefore").attr("max"));
+      spinIconDb(results.db);
+      if (results.db) {
+        if (!$("#pubmed-state").hasClass("fill")) {
+          $("#pubmed-state").toggleClass("fill");
+          $("#erudit-state").toggleClass("fill");
+        }
+      } else {
+        if (!$("#erudit-state").hasClass("fill")) {
+          $("#pubmed-state").toggleClass("fill");
+          $("#erudit-state").toggleClass("fill");
+        }
+        const min = $("#timeline-selection").attr("min-year");
+        const max = $("#timeline-selection").attr("max-year");
+        let years = [];
+        for (let i = min; i <= max; ++i) {
+          years.push(i);
+        }
+        getOverview(years, populateTimeline);
+      }
       $("#rangeBefore").val(max - results.info.range_left);
       $("#rangeAfter").val(results.info.range_right);
       $("#searchBox").val(results.info.term);
@@ -365,20 +385,119 @@ function dbOnClick(element) {
   const fill = "fill";
   $(pbState).toggleClass(fill);
   $(erState).toggleClass(fill);
-  // $("#db-graphics-container").css({ transform: "rotateY(180deg)" });
-  if ($(pbState).hasClass(fill)) {
+  spinIconDb($(pbState).hasClass(fill));
+}
+function spinIconDb(isPubmed) {
+  if (isPubmed) {
     $("#db-graphics").css({ transform: "rotateY(0deg)" });
     $("#search-range-indicator").css({ opacity: 1 });
     $("#search-range-indicator").css({ visibility: "visible" });
     CURRENT_DATABASE = DB.Pubmed;
+    $("#timeline-svg").css({ visibility: "hidden", opacity: 0 });
+    years = [];
+    for (let i = 2005; i <= 2020; ++i) {
+      years.push({ articleyear: i });
+    }
+    prepContainers(10);
   } else {
     $("#db-graphics").css({ transform: "rotateY(180deg)" });
     $("#search-range-indicator").css({ opacity: 0 });
     $("#search-range-indicator").css({ visibility: "hidden" });
     CURRENT_DATABASE = DB.Erudit;
+    $("#timeline-svg").css({ visibility: "visible", opacity: 1 });
+    MOVE_BRUSH([2005, 2020]);
   }
 }
-/**
- * This function is the entry point for when the database switches
- */
-function setupDataBase() {}
+
+function createTimeLine() {
+  const margin = { top: 10, right: 30, bottom: 30, left: 60 };
+
+  // append the svg object to the body of the page
+  let svg = d3
+    .select("#timeline-selection")
+    .append("svg")
+    .attr("id", "timeline-svg")
+    .attr("width", "80%")
+    .attr("height", "80%")
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  const svgBox = d3.select("#timeline-svg").node().getBoundingClientRect();
+  const width = svgBox.width - margin.left - margin.right;
+  const height = svgBox.height - margin.top - margin.bottom;
+  console.log(svgBox);
+  const minYearInErudit = 1945;
+  const currentYear = 2020;
+  //this is necessary getting the overview data
+  d3.select("#timeline-selection")
+    .attr("min-year", minYearInErudit)
+    .attr("max-year", currentYear);
+
+  let x = d3
+    .scaleLinear()
+    .range([0, width])
+    .domain([minYearInErudit, currentYear]);
+  let xAxis = svg
+    .append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+  const brushed = function () {
+    if (d3.event.sourceEvent === null) return;
+    if (d3.event.sourceEvent.type === "brush") return;
+    const d0 = d3.event.selection.map(x.invert);
+    d3.select(this).call(brush.move, [
+      x(Math.round(d0[0])),
+      x(Math.round(d0[1])),
+    ]);
+  };
+
+  const brushend = async () => {
+    //check if there is a keyword in the searchbox
+    if ($("#searchBox").val() === "") {
+      return;
+    }
+    let selection = d3.event.selection;
+    selection = selection.map((d) => x.invert(d));
+    years = [];
+    for (let i = selection[0]; i <= selection[1]; ++i) {
+      years.push({ articleyear: i });
+    }
+    let result = await $.ajax({
+      url: "api/update/grid",
+      type: "GET",
+      contentType: "application/json",
+      data: {
+        years: years.map((x) => {
+          return x.articleyear;
+        }),
+      },
+    });
+    prepContainers(10);
+    drawAllYears(result);
+    //highlight selected
+    //console.log(selectionObjects);
+    selectionObjects.forEach((x) => {
+      const id = $(x._groups[0]).attr("id");
+      const selector = `#${id}.minsqr`;
+      if ($(selector).length) {
+        d3.select(selector).style("stroke", "rgb(108,117,125)");
+        d3.select(selector).style("stroke-width", 2);
+      }
+    });
+  };
+  let brush = d3
+    .brushX() // Add the brush feature using the d3.brush function
+    .extent([
+      [0, 0],
+      [width, height],
+    ]) // initialise the brush area: start at 0,0 and finishes at width,height: it means I select the whole graph area
+    .on("brush", brushed)
+    .on("end", brushend);
+  let brush_group = svg
+    .append("g")
+    .attr("class", "brush")
+    .call(brush)
+    .call(brush.move, [2005, 2020].map(x));
+  MOVE_BRUSH = (pos) => {
+    brush_group.call(brush.move, [x(pos[0]), x(pos[1])]);
+  };
+}

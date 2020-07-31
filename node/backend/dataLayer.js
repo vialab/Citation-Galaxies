@@ -1,7 +1,6 @@
 const fs = require("fs");
 const pool = require("./database");
 const Cursor = require("pg-cursor");
-const { promisify } = require("util");
 const { parseAsync } = require("json2csv");
 
 Cursor.prototype.readAsync = async function (batchSize) {
@@ -33,6 +32,7 @@ class DataExport {
   constructor(
     isJSON,
     userTableName,
+    isPubmed,
     dataOptions = {},
     meta = {},
     ruleSets = {},
@@ -66,6 +66,7 @@ class DataExport {
     this.fileName = this.tableName + "." + this.fileExtension;
     this.checkSchema(this.dataSchema, this.suppliedDataOptions);
     this.checkSchema(this.metaSchema, this.suppliedMeta);
+    this.export = isPubmed ? this.pubmedExport : this.eruditExport;
   }
   checkSchema(schema, supplied) {
     const keys = Object.keys(schema);
@@ -89,7 +90,7 @@ class DataExport {
     }
     return selection;
   }
-  async export(batchSize = 100) {
+  async pubmedExport(batchSize = 100) {
     //create client for this we need to use the pg cursor to stream rather than load everything into memory
     //select max(urr->'range'->>0) as left, max(urr->'range'->>1) as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id;
     //select res from (select cl-rinfo.left, cl+rinfo.right, utt3.id from pubmed_data,user_temp_table_3 as utt3,unnest(utt3.citation_location) as cl, unnest(utt3.rule_set_id) as rsd, (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id) as res
@@ -111,6 +112,69 @@ class DataExport {
     }.id=pubmed_data.id INNER JOIN pubmed_meta ON ${
       this.tableName
     }.id=pubmed_meta.id WHERE rule_set_id && $1::int[]`;
+    //use cursor
+    const cursor = await client.query(
+      new Cursor(queryString, [this.suppliedRuleSets])
+    );
+    try {
+      const ws = fs.createWriteStream(this.fileName, { encoding: "utf8" });
+      let result = null;
+      if (this.isJSON) {
+        //manually writing each object into a json array
+        //as far as I am aware streaming a json array to file is not a thing
+        ws.write("[");
+        do {
+          //read the batchsize of rows
+          result = await cursor.readAsync(batchSize);
+          //write to file
+          for (let i = 0; i < result.length; ++i) {
+            const encodedData = this.encode(result[i]);
+            await ws.writeSync(encodedData + ",");
+          }
+        } while (result.length);
+        await ws.writeSync("]");
+      } else {
+        do {
+          //read the batchsize of rows
+          result = await cursor.readAsync(batchSize);
+          //write to file
+          for (let i = 0; i < result.length; ++i) {
+            const encodedData = await this.encode(result[i]);
+            await ws.writeSync(encodedData);
+          }
+        } while (result.length);
+      }
+      //clean up
+      ws.end();
+    } catch (err) {
+      console.error("Export Error:" + err.message);
+      ws.end();
+      fs.unlink(this.fileName);
+    }
+    cursor.close(() => {
+      client.release();
+    });
+    //return pipe to send to user
+    return this.fileName;
+  }
+  async eruditExport(batchSize = 100) {
+    const client = await pool.connect();
+    const queryString = `SELECT ${this.buildSelection(
+      this.dataSchema
+    )}${this.buildSelection(this.metaSchema, "erudit_meta").slice(
+      0,
+      -2
+    )} FROM ${
+      this.tableName
+    } INNER JOIN (select array_agg((cl-rinfo.left, cl+rinfo.right)) as idx, utt3.id from ${
+      this.tableName
+    } as utt3 cross join unnest(utt3.citation_location) as cl cross join unnest(utt3.rule_set_id) as rsd cross join (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id group by utt3.id) as snippets ON ${
+      this.tableName
+    }.id=snippets.id INNER JOIN erudit_data ON ${
+      this.tableName
+    }.id=erudit_data.id INNER JOIN erudit_meta ON ${
+      this.tableName
+    }.id=erudit_meta.id WHERE rule_set_id && $1::int[]`;
     //use cursor
     const cursor = await client.query(
       new Cursor(queryString, [this.suppliedRuleSets])
@@ -290,11 +354,18 @@ class RuleSets {
 }
 
 class UserTable {
-  async create(email, userId, isPubmed = true) {
+  async create(
+    email,
+    userId,
+    term,
+    leftRange = 0,
+    rightRange = 0,
+    isPubmed = true
+  ) {
     //create table name that uses the unique user id
     const prefixTableName = "user_temp_table_";
     const tableName = prefixTableName + userId;
-    //check tio see if the user table manager "table_map_temp" contains a table for the user
+    //check to see if the user table manager "table_map_temp" contains a table for the user
     const result = await pool.query(
       "SELECT table_type FROM table_map_temp WHERE table_owner=$1",
       [email]
@@ -307,6 +378,10 @@ class UserTable {
         await this.delete(tableName);
       } else {
         await this.truncate(tableName);
+        await pool.query(
+          "UPDATE table_map_temp SET initial_search=ROW($1,$2,$3,$4)",
+          [rule.term, rule.range[0], rule.range[1], 0]
+        );
         return;
       }
     }
@@ -316,8 +391,8 @@ class UserTable {
         `CREATE TABLE ${tableName}(id int, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
       );
       await pool.query(
-        "INSERT INTO table_map_temp(table_name,creation_date,table_owner, table_type) VALUES($1, $2, $3, $4)",
-        [tableName, new Date(), email, isPubmed]
+        "INSERT INTO table_map_temp(table_name, creation_date, table_owner, table_type, initial_search) VALUES($1, $2, $3, $4, ($5,$6,$7, 0)::text_rule)",
+        [tableName, new Date(), email, isPubmed, term, leftRange, rightRange]
       );
       return true;
     } else {
@@ -325,8 +400,8 @@ class UserTable {
         `CREATE TABLE ${tableName}(id varchar(30) REFERENCES erudit_text(id) UNIQUE, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
       );
       await pool.query(
-        "INSERT INTO table_map_temp(table_name,creation_date,table_owner, table_type) VALUES($1, $2, $3, $4)",
-        [tableName, new Date(), email, isPubmed]
+        "INSERT INTO table_map_temp(table_name,creation_date,table_owner, table_type, initial_search) VALUES($1, $2, $3, $4, ($5,$6,$7,0)::text_rule)",
+        [tableName, new Date(), email, isPubmed, term, leftRange, rightRange]
       );
     }
   }
@@ -360,30 +435,85 @@ class UserTable {
   async truncate(tableName) {
     await pool.query(`TRUNCATE ${tableName}`);
   }
-}
-
-class Pubmed {
   /**
    *
+   * @param {string} tableName
+   * @param {Array.<number>} years
+   */
+  async overview(tableName, years) {
+    let result = await pool.query(
+      `SELECT p_year, SUM(array_length(citation_location,1)) FROM ${tableName} WHERE p_year=ANY($1::int[]) GROUP BY p_year`,
+      [years]
+    );
+    return result.rows;
+  }
+  /**
+   *
+   * @param {string} tableName
+   */
+  async exists(tableName) {
+    const result = await pool.query("SELECT to_regclass($1)", [tableName]);
+    return result.rows[0].to_regclass;
+  }
+  /**
+   *
+   * @param {string} tableName
+   */
+  async isPubmed(tableName) {
+    const result = await pool.query(
+      "SELECT table_type FROM table_map_temp WHERE table_name =$1",
+      [tableName]
+    );
+    return result.rows[0].table_type;
+  }
+}
+//handles pubmed data layer
+class Pubmed {
+  constructor() {
+    this.minYear = 2003;
+    this.maxYear = 2020;
+  }
+  /**
    * @param {string} term
    * @param {Array.<number>} range
    */
   async search(tableName, term, range, session) {
     const userTable = new UserTable();
-    let tableInfo = await userTable.read(tableName);
-    if (!tableInfo) {
-      await userTable.create(session.email, session.userId, true);
-    } else if (!tableInfo.table_type) {
-      await userTable.delete(tableName);
-      await userTable.create(session.email, session.userId, true);
-    } else {
-      await userTable.truncate(tableName);
+    try {
+      let tableInfo = await userTable.read(tableName);
+      if (!tableInfo) {
+        await userTable.create(
+          session.email,
+          session.userId,
+          term,
+          range[0],
+          range[1],
+          true
+        );
+      } else {
+        await userTable.delete(tableName);
+        await userTable.create(
+          session.email,
+          session.userId,
+          term,
+          range[0],
+          range[1],
+          true
+        );
+      }
+      let promises = [];
+      for (let i = this.minYear; i <= this.maxYear; ++i) {
+        promises.push(
+          pool.query(
+            `INSERT INTO ${tableName} SELECT * FROM get_matrix($1,$2,$3,$4)`,
+            [term, range[0], range[1], `${i}`]
+          )
+        );
+      }
+      await Promise.all(promises);
+    } catch (e) {
+      console.log(e);
     }
-    const result = await pool.query(
-      `INSERT INTO ${tableName} SELECT * FROM get_matrix($1,$2,$3)`,
-      [term, range[0], range[1]]
-    );
-    return result.rows;
   }
   /**
    *
@@ -690,21 +820,19 @@ class Pubmed {
     return result;
   }
 }
-
+//erudit data layer
 class Erudit {
   async search(term, tableName, session) {
     const userTable = new UserTable();
     let tableInfo = await userTable.read(tableName);
     if (!tableInfo) {
-      await userTable.create(session.email, session.userId, false);
-    } else if (tableInfo.table_type) {
-      await userTable.delete(tableName);
-      await userTable.create(session.email, session.userId, false);
+      await userTable.create(session.email, session.userId, term, 0, 0, false);
     } else {
-      await userTable.truncate(tableName);
+      await userTable.delete(tableName);
+      await userTable.create(session.email, session.userId, term, 0, 0, false);
     }
     const result = await pool.query(
-      `INSERT INTO ${tableName} SELECT erudit_text.id, array(select jsonb_array_elements(erudit_text.sent_map->$1)::int), erudit_text.word_length, erudit_text.sent_length, erudit_meta.year, array[]::int[] FROM erudit_text INNER JOIN erudit_meta ON erudit_text.id = erudit_meta.id WHERE erudit_text.sent_map ? $1`,
+      `INSERT INTO ${tableName} SELECT erudit_text.id, array(select jsonb_array_elements(erudit_text.sent_map->$1)::int), erudit_text.word_length, erudit_text.sent_length, erudit_meta.year, array_fill(-1, array[jsonb_array_length(erudit_text.sent_map->$1)]) FROM erudit_text INNER JOIN erudit_meta ON erudit_text.id = erudit_meta.id WHERE erudit_text.sent_map ? $1`,
       [term]
     );
     return result.row;
@@ -1026,6 +1154,7 @@ class Erudit {
   }
 }
 
+//overall data layer. Should use this to add any new functionality to the data layer.
 class DataLayer {
   constructor() {
     this.rules = new Rules();

@@ -279,7 +279,7 @@ function bindRowFunctions() {
   $("input[type='color']").change(function (event) {
     $(this).attr("value", $(this).val());
     $(this).parent().css("background-color", $(this).val());
-    $(this).parent().find("label").html($(this).val());
+    // $(this).parent().find("label").html($(this).val());
   });
 
   $(".edit-cell").click(function (event) {
@@ -366,17 +366,11 @@ function drawTableRow(headers, signal, signalID, aliases) {
     ) {
       html += "'>" + loaded_parent.id;
     } else if (headers[i] == "color") {
-      let c = signal[headers[i]] ? signal[headers[i]] : "#FFFFFF";
-      html +=
-        "' style='background-color:" +
-        c +
-        ";box-shadow: inset 0 0 0 5px " +
-        c +
-        ";'><input type='color' value='" +
-        c +
-        "'/><label contenteditable='false' class='noclick noselect'>" +
-        c +
-        "</label>";
+      let c = signal[headers[i]] ? signal[headers[i]] : "#ff0000";
+      html += `' style="background-color: ${c}; box-shadow: inset 0 0 0 5px #ffffff;">
+      <img class="unselectable" src="dropper.svg" style="width:30px; height:30px;"/>
+        <input type='color' value="${c}"/>
+        <label contenteditable='false' class='noclick noselect'></label>`;
     } else if (headers[i] == "rules") {
       if (signal[headers[i]]) {
         let existing = $(".edit-row").length;
@@ -566,7 +560,11 @@ function addToSignal(id) {
           <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">
           <p id="left-range" style="display: inline;">[ ${
             $("#rangeBefore").attr("max") - beforeRangeVal
-          } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
+          } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src=${
+    CURRENT_DATABASE.rangeIconSrc
+  } class=${
+    CURRENT_DATABASE.rangeIconClass
+  }></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
           </label>
         </li>
         <li class="list-inline-item m-0 p-0" style="width:23%;">
@@ -610,7 +608,11 @@ function addToSignalClick(target, query, modifier = "AND") {
           <label class="text-center align-middle p-0" for="formControlRange" style="margin: 0 auto 10px auto; width:158px" id="citationRange_sig_${existing}_${c}">
             <p id="left-range" style="display: inline;">[ ${
               $("#rangeBefore").attr("max") - beforeRangeVal
-            } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src="quotes_ui.png" class="citation-quote"></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
+            } </p><img src="arrow.png" style="transform:scaleX(-1);" class="citation-arrow"></img> <img src=${
+    CURRENT_DATABASE.rangeIconSrc
+  } class=${
+    CURRENT_DATABASE.rangeIconClass
+  }></img> <img src="arrow.png" class="citation-arrow"></img><p id="right-range" style="display:inline;"> ${afterRangeVal} ]</p>
             </label>
         </li>
         <li class="list-inline-item m-0 p-0" style="width:23%;">
@@ -1136,15 +1138,15 @@ function postInsert(table_name, values, callback) {
  * @param {function({suggestions:Array.<string>})} callback
  */
 function postSuggestions(words, callback) {
-  $.ajax({
-    type: "POST",
-    url: currentURL + "api/get-recommended-word",
-    data: JSON.stringify(words),
-    success: function (results) {
-      console.log(results);
-      callback(results);
-    },
-  });
+  //$.ajax({
+  //  type: "POST",
+  //  url: currentURL + "api/get-recommended-word",
+  //  data: JSON.stringify(words),
+  //  success: function (results) {
+  //    console.log(results);
+  //    callback(results);
+  //  },
+  //});
 }
 
 function validateDataType(data, type) {
