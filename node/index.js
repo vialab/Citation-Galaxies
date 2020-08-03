@@ -108,6 +108,7 @@ socketManager.setMiddleware(
 //bind the clients socket id to the express-session this allows us to send messages from any http request
 socketManager.on("connection", (socket) => {
   socket.handshake.session.socketId = socket.id;
+  socket.handshake.session.save();
 });
 httpsServer.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);

@@ -391,6 +391,7 @@ a.disabled {
 #sortOptions {
   display: flex;
   justify-content: flex-start;
+  align-items: center;
   padding: 15px;
 }
 
@@ -935,4 +936,10 @@ g text {
 
 .bar-timeline {
   pointer-events: none;
+}
+
+.progress {
+  width: 100vw;
+  margin-bottom: 2vh;
+  visibility: hidden;
 }

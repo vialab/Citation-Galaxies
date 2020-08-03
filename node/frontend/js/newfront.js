@@ -8,7 +8,7 @@ $(document).ready((x, y, z) => {
   // console.log("newfront ready: ", x, y, z, modal.mode);
   const socket = io("https://localhost:4000");
   socket.on("progress", (msg) => {
-    console.log(msg);
+    onProgress(msg);
   });
   // Create global width and height variables
   vw = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -503,4 +503,13 @@ function createTimeLine() {
   MOVE_BRUSH = (pos) => {
     brush_group.call(brush.move, [x(pos[0]), x(pos[1])]);
   };
+}
+/**
+ *
+ * @param {number} val 0-100
+ */
+function onProgress(val) {
+  const progressBarId = "progress-bar";
+  $(".progress").css({ visibility: "visible", opacity: "1.0" });
+  $(".progress-bar-animated").css({ width: `${val}%` });
 }

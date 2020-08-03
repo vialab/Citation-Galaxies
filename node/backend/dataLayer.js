@@ -2,7 +2,7 @@ const fs = require("fs");
 const pool = require("./database");
 const Cursor = require("pg-cursor");
 const { parseAsync } = require("json2csv");
-
+const socketManager = require("./socketManager");
 Cursor.prototype.readAsync = async function (batchSize) {
   return new Promise((resolve, reject) => {
     this.read(batchSize, (err, rows) => {
@@ -22,6 +22,18 @@ fs.WriteStream.prototype.writeSync = async function (data) {
   });
 };
 
+const progressAll = async (promises, socketId) => {
+  let idx = 0;
+  promises.forEach((p) => {
+    p.then(() => {
+      const end = promises.length - 1;
+      const progressVal = Math.floor((idx / end) * 100);
+      socketManager.send("progress", progressVal, socketId);
+      ++idx;
+    });
+  });
+  await Promise.all(promises);
+};
 class DataExport {
   /**
    *
@@ -510,7 +522,7 @@ class Pubmed {
           )
         );
       }
-      await Promise.all(promises);
+      await progressAll(promises, session.socketId);
     } catch (e) {
       console.log(e);
     }

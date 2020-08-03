@@ -1,10 +1,8 @@
 const pool = require("./database");
-const express = require("express");
 const apiSchema = require("./resources/apiSchema.json");
 const dbSchema = require("./resources/dbschema.json");
 const { DataExport, DataLayer } = require("./dataLayer");
 const fs = require("fs");
-const { query } = require("./database");
 const DATA_LAYER = new DataLayer();
 function generate(min, max) {
   let result = [];
@@ -117,117 +115,6 @@ const convertSelection = (selection) => {
   return result;
 };
 /***************************basic query functions **********************/
-/**
- * this is called before a new search, the temporary table will house all results. The table is necessary for filtering on the paper views page.
- * @param {Request} req
- */
-const createTempTable = async (req) => {
-  const prefixTableName = "user_temp_table_";
-  //check if user has their own temp table
-  const result = await pool.query(
-    "SELECT * FROM table_map_temp WHERE table_owner=$1",
-    [req.session.email]
-  );
-  //get user id
-  const userInfo = await pool.query("SELECT id FROM users WHERE email=$1", [
-    req.session.email,
-  ]);
-  if (!result.rowCount) {
-    //create user temp table to store their query result in for subset manipulation
-    await pool.query(
-      `CREATE TABLE ${
-        prefixTableName + userInfo.rows[0].id
-      }(id int, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
-    );
-    await pool.query(
-      "INSERT INTO table_map_temp(table_name,creation_date,table_owner) VALUES($1, $2, $3)",
-      [prefixTableName + userInfo.rows[0].id, new Date(), req.session.email]
-    );
-  } else {
-    //temp user table already exists, clear the table for new data and update the table_map_temp table to reflect the new date
-    await pool.query(`TRUNCATE ${result.rows[0].table_name}`);
-    await pool.query(
-      "UPDATE table_map_temp SET creation_date=$1 WHERE table_owner=$2",
-      [new Date(), req.session.email]
-    );
-  }
-  req.session.tableName = prefixTableName + userInfo.rows[0].id;
-};
-
-/**
- *
- * @param {string} table_name user temp table name
- */
-const getRules = async (tableName, searchTerm) => {
-  //get rule set ids for our instance
-  const ruleSetIds = await pool.query(
-    "SELECT id FROM user_rule_sets WHERE table_name=$1",
-    [tableName]
-  );
-  //if no rule sets return null
-  if (!ruleSetIds.rowCount) {
-    return null;
-  }
-  const ids = ruleSetIds.rows.map((x) => {
-    return x.id;
-  });
-  //get individual rules
-  const rules = await pool.query(
-    "SELECT * FROM user_rules WHERE rule_set_id=ANY($1::int[]) ORDER BY rule_set_id",
-    [ids]
-  );
-  if (!rules.rowCount) {
-    return null;
-  }
-  //comprise a filter to create a short list
-  let column = "full_text_words";
-  let whereClause = "";
-  for (let i = 0; i < rules.rows.length; ++i) {
-    const rule = rules.rows[i].rules;
-    for (let j = 0; j < rule.length; ++j) {
-      const operator = rule[j].operator != null ? rule[j].operator : "OR";
-      whereClause += `${operator} ${column} ? '${rule[j].term}' `;
-    }
-  }
-  whereClause += `OR ${column} ? '${searchTerm}'`;
-  //get rid of the initial OR
-  return { where: whereClause.slice(2), rules: rules.rows };
-};
-
-const sub_rule_query = (rule, ruleId, column = "full_text_words") => {
-  let result = `SELECT pt.id, array_agg(ftc), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT ${column},pubmed_text.id as id, pubmed_text.full_text_citations, pubmed_meta.year as year, pubmed_data.num_of_words as num_ow, pubmed_data.num_of_sentences as num_os FROM pubmed_text INNER JOIN pubmed_data ON pubmed_text.id=pubmed_data.id INNER JOIN pubmed_meta ON pubmed_text.id=pubmed_meta.id WHERE pubmed_text.id=ANY($1::int[])) as pt, unnest(pt.full_text_citations) as ftc, `;
-  //This is an example query left here to show the goal of this function.
-  /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
-  where (heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0) AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
-  */
-  for (let i = 0; i < rule.length; ++i) {
-    result += `jsonb_array_elements(pt.${column}->'${rule[i].term}') as rule_${i},`;
-  }
-  //remove end comma
-  result = result.slice(0, -1);
-  result += " WHERE ";
-
-  //create where clause
-  for (let i = 0; i < rule.length; ++i) {
-    result += `${
-      rule[i].operator == undefined ? "(" : rule[i].operator + " ("
-    } rule_${i}::int-ftc>=0 AND rule_${i}::int-ftc<=${
-      rule[i].range[0]
-    } OR rule_${i}::int-ftc<=0 AND rule_${i}::int-ftc>=${-rule[i].range[1]}) `;
-  }
-  //group by clause to group duplicates
-  result += "GROUP BY pt.id, pt.year, pt.num_ow, pt.num_os ";
-  return result;
-};
-/**
- * @param {string} whereClause
- */
-const getShortList = async (whereClause) => {
-  const result = await pool.query(
-    `SELECT id FROM pubmed_text WHERE ${whereClause}`
-  );
-  return result.rows.map((x) => x.id);
-};
 /**
  * @todo store the rule that hit in the temp tables for further use.
  * @param {Request} req
@@ -761,7 +648,7 @@ const search = async function (req, res) {
   //checks if rules exist
   let ruleCheck = await DATA_LAYER.ruleSets.read(req.session.tableName);
 
-  const bins = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
+  const bins = sentInfo.bins;
   const db = sentInfo.isPubmed ? DATA_LAYER.pubmed : DATA_LAYER.erudit;
   const rule_info = { queries: [], shortList: null };
   if (ruleCheck.length) {

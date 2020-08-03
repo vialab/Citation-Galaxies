@@ -1390,6 +1390,14 @@ function searchForQuery(query) {
   for (let i = 2003; i < 2021; ++i) {
     yearsToQuery.push(i);
   }
+  const genBins = (increment) => {
+    const segments = Math.floor(100 / increment);
+    let result = {};
+    for (let i = 0; i < segments; ++i) {
+      result[i] = 0;
+    }
+    return result;
+  };
   //call api
   $.ajax({
     type: "POST",
@@ -1398,12 +1406,16 @@ function searchForQuery(query) {
     data: JSON.stringify({
       rule: { term: query, range: [sentenceRangeAbove, sentenceRangeBelow] },
       term: query,
-      bins: {},
+      bins: genBins(currIncrement),
       years: yearsToQuery,
       isPubmed: CURRENT_DATABASE.isPubmed,
     }),
     success: function (results) {
       let data = results;
+      $(".progress").animate({ opacity: 0 }, 700, () => {
+        $(".progress").css({ visibility: "hidden" });
+        $(".progress-bar-animated").css({ width: `0%` });
+      });
       // loaded_articles = data["nunique"];
       disableSearchUI(false);
       drawAllYears(data);
