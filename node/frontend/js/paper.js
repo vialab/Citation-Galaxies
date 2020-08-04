@@ -452,6 +452,10 @@ function drawPapers(signal_id, signal_cat_id) {
       data: JSON.stringify(values),
       success: function (data) {
         // paper_data = JSON.parse(data);
+        $(".progress").animate({ opacity: 0 }, 700, () => {
+          $(".progress").css({ visibility: "hidden" });
+          $(".progress-bar-animated").css({ width: `0%` });
+        });
         paper_data = data;
         drawPapersByIndex(paper_data);
       },
@@ -978,12 +982,13 @@ function drawPaper(
   var locationXStart = 3 + sizex * 0.1;
   var locationXEnd = sizex * 0.9 + 3;
   var locationY = 4 + minLinePadding;
-
+  const minColorClamp = 0.05;
   for (var i = 0; i < activeLines.length; i++) {
     //Change color if they should be selected
     var color = d3.rgb(248, 249, 250);
     if (activeLines[i] == true) {
-      color = colors(activeLinesPercents[i]);
+      const colorVal = Math.max(minColorClamp, activeLinesPercents[i]);
+      color = colors(colorVal);
     }
 
     var line = svgContainer
@@ -1191,7 +1196,11 @@ function cycleVisibility(item) {
 function switchToPapers() {
   $("#navOptions").hide();
   $("#db-state-container").hide();
-  $("#paper-filter-form").find(".title-field").attr("disabled", true);
+  if (!CURRENT_DATABASE.isPubmed) {
+    $("#paper-filter-form").find(".title-field").attr("disabled", true);
+  } else {
+    $("#paper-filter-form").find(".title-field").attr("disabled", false);
+  }
   //Clear the previous paper requests
   clearRequests(false, true);
   //Allows the user access to the papers page once they've selected an item

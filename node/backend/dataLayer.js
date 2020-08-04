@@ -3,6 +3,7 @@ const pool = require("./database");
 const Cursor = require("pg-cursor");
 const { parseAsync } = require("json2csv");
 const socketManager = require("./socketManager");
+const { years } = require("./api");
 Cursor.prototype.readAsync = async function (batchSize) {
   return new Promise((resolve, reject) => {
     this.read(batchSize, (err, rows) => {
@@ -23,16 +24,16 @@ fs.WriteStream.prototype.writeSync = async function (data) {
 };
 
 const progressAll = async (promises, socketId) => {
-  let idx = 0;
+  let idx = 1;
   promises.forEach((p) => {
     p.then(() => {
-      const end = promises.length - 1;
+      const end = promises.length;
       const progressVal = Math.floor((idx / end) * 100);
       socketManager.send("progress", progressVal, socketId);
       ++idx;
     });
   });
-  await Promise.all(promises);
+  return Promise.all(promises);
 };
 class DataExport {
   /**
@@ -569,25 +570,42 @@ class Pubmed {
    * @param {number} rangeRight
    * @param {Array.<{start:number, year:number}>} bins
    */
-  async getPapers(tableName, rangeLeft, rangeRight, bins) {
+  async getPapers(tableName, rangeLeft, rangeRight, bins, session) {
     let result = {};
-    let tableResults = await pool.query(
-      `SELECT citation_location, p_year as year, title, sentences, pubmed_data.id, num_os, rule_set_id FROM ${tableName} INNER JOIN pubmed_data ON ${tableName}.id=pubmed_data.id WHERE p_year = ANY($1::int[])`,
-      [
-        bins.map((x) => {
-          return x.year;
-        }),
-      ]
+    const selectedYears = bins.map((x) => {
+      return x.year;
+    });
+    if (selectedYears.length == 1) {
+      socketManager.send("progress", 50, session.socketId);
+    }
+    let promises = [];
+    for (let i = 0; i < selectedYears.length; ++i) {
+      if (typeof selectedYears[i] != "number") {
+        throw new Error("Cannot get papers due to type error");
+      }
+      const pubmed = `pubmed_data_${selectedYears[i]}`;
+      promises.push(
+        pool.query(
+          `SELECT citation_location, p_year as year, title, sentences, pm.id, num_os, rule_set_id FROM ${tableName} INNER JOIN ${pubmed} as pm ON ${tableName}.id = pm.id WHERE p_year = ANY($1::int[])`,
+          [selectedYears]
+        )
+      );
+    }
+    let aggResult = await progressAll(promises, session.socketId);
+    let tableResults = {};
+    tableResults.rows = [].concat.apply(
+      [],
+      aggResult.map((x) => {
+        return x.rows;
+      })
     );
+    tableResults.rowCount = tableResults.rows.length;
     //get rules
     let rules = await pool.query(
       `SELECT user_rule_sets.*, ARRAY(SELECT rules FROM user_rules WHERE rule_set_id=user_rule_sets.id) AS rules FROM user_rule_sets, (SELECT DISTINCT UNNEST(rule_set_id) AS ids FROM ${tableName} WHERE p_year=ANY($1::int[])) as rule_id WHERE id=rule_id.ids`,
-      [
-        bins.map((x) => {
-          return x.year;
-        }),
-      ]
+      [selectedYears]
     );
+    const ruleCheck = rules.rows.length;
     //used to convert the rule map
     let ruleMap = {};
     for (let i = 0; i < rules.rows.length; ++i) {
@@ -666,19 +684,21 @@ class Pubmed {
         ); // +1 due to exclusion clause
         let text = row.sentences.slice(leftIdx, rightIdx);
         sentenceHits[row.id].push(text);
-        ruleHits[row.id].push(
-          citationRuleMap[unique_citation[j]].map((x) => {
-            return ruleMap[x];
-          })
-        );
+        if (ruleCheck) {
+          ruleHits[row.id].push(
+            citationRuleMap[unique_citation[j]].map((x) => {
+              return ruleMap[x];
+            })
+          );
+        } else {
+          ruleHits[row.id].push([]);
+        }
       }
     }
     result.papers = papers;
     result.ruleHits = ruleHits;
     result.sentenceHits = sentenceHits;
-    result.years = bins.map((x) => {
-      return x.year;
-    });
+    result.years = selectedYears;
     result.max = globalMax;
     return result;
   }

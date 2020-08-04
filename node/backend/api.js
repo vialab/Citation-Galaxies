@@ -147,7 +147,8 @@ const getPapers = async (req, res) => {
           req.session.tableName,
           sentInfo.rangeLeft,
           sentInfo.rangeRight,
-          bins
+          bins,
+          req.session
         )
       );
   }

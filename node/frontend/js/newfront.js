@@ -285,7 +285,7 @@ function addRowToFilterForm() {
       <div class="form-group">
         <label for="title-field">Title</label>
         <input type="text" class="form-control title-field" placeholder="title" ${
-          !CURRENT_DATABASE.isPubmed ? "disabled" : ""
+          !CURRENT_DATABASE.isPubmed ? "disabled" : "enabled"
         }>
       </div>
       <div class="form-group">
