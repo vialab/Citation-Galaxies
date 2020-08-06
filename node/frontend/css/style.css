@@ -692,7 +692,7 @@ g text {
   top: 0px;
   bottom: 0px;
   right: 0px;
-  left: 900px;
+  left: 60vw;
   background-color: white;
 }
 
@@ -942,4 +942,19 @@ g text {
   width: 100vw;
   margin-bottom: 2vh;
   visibility: hidden;
+}
+
+.snapshot {
+  max-width: 50vw;
+  object-fit: contain;
+}
+
+.snapshot-dialog {
+  max-width: 60vw;
+}
+
+.modal-body {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
 }

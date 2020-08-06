@@ -1,8 +1,9 @@
 const pool = require("./database");
 const apiSchema = require("./resources/apiSchema.json");
 const dbSchema = require("./resources/dbschema.json");
-const { DataExport, DataLayer } = require("./dataLayer");
+const { DataExport, DataLayer, progressAll } = require("./dataLayer");
 const fs = require("fs");
+const socketManager = require("./socketManager");
 const DATA_LAYER = new DataLayer();
 function generate(min, max) {
   let result = [];
@@ -618,7 +619,13 @@ const getFilteredIDs = async (req, res) => {
   }
   res.status(200).send(result);
 };
-
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
+ * This is the keyword search, this search does not incorporate rules it only applys the a single keyword search
+ * the user table ruleset id for a keyword search is -1
+ */
 const search = async function (req, res) {
   const requireInfo = {
     rule: {},
@@ -632,11 +639,13 @@ const search = async function (req, res) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
+  //check if the table was built for the other dataset
   if (
     ((await DATA_LAYER.userTable.exists(req.session.tableName)) &&
       (await DATA_LAYER.userTable.isPubmed(req.session.tableName))) !=
     sentInfo.isPubmed
   ) {
+    //check if rules and delete them if they exist
     let ruleCheck = await DATA_LAYER.ruleSets.read(req.session.tableName);
     if (ruleCheck.length) {
       await Promise.all(
@@ -646,48 +655,11 @@ const search = async function (req, res) {
       );
     }
   }
-  //checks if rules exist
-  let ruleCheck = await DATA_LAYER.ruleSets.read(req.session.tableName);
-
+  //bins is the increments from 0-100. Increments can be 1,10,25,50
   const bins = sentInfo.bins;
-  const db = sentInfo.isPubmed ? DATA_LAYER.pubmed : DATA_LAYER.erudit;
-  const rule_info = { queries: [], shortList: null };
-  if (ruleCheck.length) {
-    let rules = await db.getRuleWhereClause(
-      req.session.tableName,
-      sentInfo.term
-    );
-    rule_info.shortList = await db.getShortList(rules.where);
-    //TODO need to aggregate
-    for (let i = 0; i < rules.rules.length; ++i) {
-      let query = db.subRuleQuery(
-        rules.rules[i].rules,
-        rules.rules[i].rule_set_id
-      );
-      rule_info.queries.push(
-        `INSERT INTO ${req.session.tableName}(id, citation_location, num_ow, num_os, p_year, rule_set_id) ` +
-          query +
-          `ON CONFLICT (id) DO UPDATE SET citation_location=array_cat(${req.session.tableName}.citation_location, EXCLUDED.citation_location), rule_set_id=array_cat(${req.session.tableName}.rule_set_id, EXCLUDED.rule_set_id)`
-      );
-    }
-  }
-  if (rule_info.queries.length) {
-    let promises = [];
-    for (let i = 0; i < rule_info.queries.length; ++i) {
-      promises.push(pool.query(rule_info.queries[i], [rule_info.shortList]));
-    }
-    await Promise.all(promises);
-    let result = await db.getGridVisualization(
-      req.session.tableName,
-      bins,
-      sentInfo.years
-    );
-    res.status(HTTP_CODES.SUCCESS).send(result);
-    return;
-  }
+
   //check which dataset to search
   if (!sentInfo.isPubmed) {
-    //should check for rules
     await DATA_LAYER.erudit.search(
       sentInfo.term,
       req.session.tableName,
@@ -718,6 +690,129 @@ const search = async function (req, res) {
  *
  * @param {Request} req
  * @param {Response} res
+ * this is the rule search, it does not take into account the single keyword search rather the user defined rules.
+ * The pubmed dataset is a lot larger and therefor has a lot more code involved. The pubmed dataset search gets all the rules and does a query search per rule on the dataset. The query searches run in parrallel on individual years.
+ */
+const ruleSearch = async (req, res) => {
+  const requireInfo = {
+    bins: {},
+    years: [],
+    isPubmed: false,
+  };
+  //validation
+  let sentInfo = reqValid(requireInfo, req);
+  if (!sentInfo) {
+    res.status(HTTP_CODES.INVALID_DATA_TYPE);
+    return;
+  }
+  //checking database to see if there are rules and if they apply to the right database
+  let ruleCheck = await DATA_LAYER.ruleSets.read(req.session.tableName);
+  if (!ruleCheck.length) {
+    res
+      .status(HTTP_CODES.INVALID_DATA_TYPE)
+      .send({ error: "rules do not exists" });
+    return;
+  }
+  if (
+    ((await DATA_LAYER.userTable.exists(req.session.tableName)) &&
+      (await DATA_LAYER.userTable.isPubmed(req.session.tableName))) !=
+    sentInfo.isPubmed
+  ) {
+    if (ruleCheck.length) {
+      await Promise.all(
+        ruleCheck.map((x) => {
+          return DATA_LAYER.ruleSets.delete(x.id);
+        })
+      );
+      res
+        .status(HTTP_CODES.INVALID_DATA_TYPE)
+        .send({ error: "cross database rules do not apply." });
+      return;
+    }
+  }
+  await DATA_LAYER.userTable.truncate(req.session.tableName);
+  //searching database for the rules
+  const bins = sentInfo.bins;
+  const db = sentInfo.isPubmed ? DATA_LAYER.pubmed : DATA_LAYER.erudit;
+  const rule_info = { queries: [], shortList: null };
+  if (sentInfo.isPubmed) {
+    const minYear = 2003;
+    const maxYear = 2020;
+    for (let i = minYear; i <= maxYear; ++i) {
+      let rules = await db.getRuleWhereClause(
+        req.session.tableName,
+        sentInfo.term
+      );
+      //rule_info.shortList = await db.getShortList(rules.where, i);
+      //TODO need to aggregate
+      for (let j = 0; j < rules.rules.length; ++j) {
+        let query = db.subRuleQuery(
+          rules.rules[j].rules,
+          rules.rules[j].rule_set_id,
+          i,
+          rules.where
+        );
+        rule_info.queries.push(
+          `INSERT INTO ${req.session.tableName}(id, citation_location, num_ow, num_os, p_year, rule_set_id) ` +
+            query +
+            `ON CONFLICT (id) DO UPDATE SET citation_location=array_cat(${req.session.tableName}.citation_location, EXCLUDED.citation_location), rule_set_id=array_cat(${req.session.tableName}.rule_set_id, EXCLUDED.rule_set_id)`
+        );
+      }
+      if (rule_info.queries.length) {
+        let promises = [];
+        for (let j = 0; j < rule_info.queries.length; ++j) {
+          promises.push(pool.query(rule_info.queries[j]));
+        }
+        await Promise.all(promises);
+      }
+      rule_info.queries = [];
+      rule_info.shortList = null;
+      //update progress bar
+      const totalYears = maxYear - minYear;
+      const idx = totalYears - (maxYear - i);
+      socketManager.send(
+        "progress",
+        Math.floor((idx / totalYears) * 100),
+        req.session.socketId
+      );
+    }
+  } else {
+    let rules = await db.getRuleWhereClause(
+      req.session.tableName,
+      sentInfo.term
+    );
+    rule_info.shortList = await db.getShortList(rules.where);
+    //TODO need to aggregate
+    for (let i = 0; i < rules.rules.length; ++i) {
+      let query = db.subRuleQuery(
+        rules.rules[i].rules,
+        rules.rules[i].rule_set_id
+      );
+      rule_info.queries.push(
+        `INSERT INTO ${req.session.tableName}(id, citation_location, num_ow, num_os, p_year, rule_set_id) ` +
+          query +
+          `ON CONFLICT (id) DO UPDATE SET citation_location=array_cat(${req.session.tableName}.citation_location, EXCLUDED.citation_location), rule_set_id=array_cat(${req.session.tableName}.rule_set_id, EXCLUDED.rule_set_id)`
+      );
+    }
+  }
+  if (rule_info.queries.length) {
+    let promises = [];
+    for (let i = 0; i < rule_info.queries.length; ++i) {
+      promises.push(pool.query(rule_info.queries[i], [rule_info.shortList]));
+    }
+    await progressAll(promises, req.session.socketId);
+  }
+  let result = await db.getGridVisualization(
+    req.session.tableName,
+    bins,
+    sentInfo.years
+  );
+  res.status(HTTP_CODES.SUCCESS).send(result);
+};
+/**
+ *
+ * @param {Request} req
+ * @param {Response} res
  */
 const getOverview = async (req, res) => {
   const requiredInfo = { years: [] };
@@ -731,16 +826,21 @@ const getOverview = async (req, res) => {
     sentInfo.years
   );
   res.status(HTTP_CODES.SUCCESS).send(result);
+  return;
 };
 
 const updateGrid = async (req, res) => {
-  const requiredInfo = { years: [] };
+  const requiredInfo = { years: [], bins: {} };
   let sentInfo = reqValid(requiredInfo, { body: req.query });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-  const bins = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
+  const keys = Object.keys(sentInfo.bins);
+  keys.forEach((k) => {
+    sentInfo.bins[k] = Number(sentInfo.bins[k]);
+  });
+  const bins = sentInfo.bins;
   if (!(await DATA_LAYER.userTable.exists(req.session.tableName))) {
     const end = sentInfo.years.length - 1;
     let result = {};
@@ -754,6 +854,30 @@ const updateGrid = async (req, res) => {
   let result = await DATA_LAYER.erudit.getGridVisualization(
     req.session.tableName,
     bins,
+    sentInfo.years
+  );
+  res.status(HTTP_CODES.SUCCESS).send(result);
+};
+
+const getGridVisualization = async (req, res) => {
+  const requiredInfo = { bins: {}, years: [], isPubmed: false };
+  console.log(req.query);
+  let sentInfo = reqValid(requiredInfo, { body: req.query });
+  if (!sentInfo) {
+    res
+      .status(HTTP_CODES.INVALID_DATA_TYPE)
+      .send({ error: "invalid data type." });
+    return;
+  }
+  //ensure values are number
+  const keys = Object.keys(sentInfo.bins);
+  keys.forEach((k) => {
+    sentInfo.bins[k] = Number(sentInfo.bins[k]);
+  });
+  const db = sentInfo.isPubmed ? DATA_LAYER.pubmed : DATA_LAYER.erudit;
+  const result = await db.getGridVisualization(
+    req.session.tableName,
+    sentInfo.bins,
     sentInfo.years
   );
   res.status(HTTP_CODES.SUCCESS).send(result);
@@ -778,6 +902,8 @@ module.exports = {
   getFilterNames,
   getFilteredIDs,
   search,
+  ruleSearch,
   getOverview,
   updateGrid,
+  getGridVisualization,
 };

@@ -87,12 +87,39 @@ function seperationChange(increment) {
   currIncrement = increment;
 }
 
-function changeIncrement(increment) {
+async function changeIncrement(increment) {
   selections = [];
   currIncrement = increment;
-  searchForQuery(currSearchQuery);
+  await updateGrid(increment, years);
 }
-
+async function updateGrid(increment, years) {
+  //create bins based on increment
+  let bins = {};
+  for (let i = 0; i < Math.floor(100 / increment); ++i) {
+    bins[i] = 0;
+  }
+  disableSearchUI(true);
+  prepContainers(currIncrement);
+  $.ajax({
+    type: "GET",
+    contentType: "application/json",
+    url: currentURL + "api/get/grid",
+    data: {
+      bins,
+      years: years.map((x) => {
+        return x.articleyear;
+      }),
+      isPubmed: CURRENT_DATABASE.isPubmed,
+    },
+    success: function (result) {
+      let data = result;
+      console.log(data);
+      disableSearchUI(false);
+      drawAllYears(data);
+    },
+    async: true,
+  });
+}
 //Change the normalization, update the colors and display them
 //Could use some optimization however
 function normalizationChange(value) {
@@ -686,7 +713,7 @@ function removeAllSelections() {
   for (var i = 0; i < selectionObjects.length; i++) {
     drawBorder(selectionObjects[i], true);
   }
-  d3.selectAll(".bar-timeline").attr("fill", "#007BFF");
+  d3.selectAll(".bar-timeline").attr("fill", "#7B8389");
   selectionObjects = [];
 }
 
@@ -747,7 +774,7 @@ function multipleSelection(currSelection, column, shiftPressed, object) {
 
     drawBorder(object, false);
     const year = currSelection.split("-")[0];
-    d3.select(`#timeline-${year}`).attr("fill", "rgb(108,117,125)");
+    d3.select(`#timeline-${year}`).attr("fill", "#017BFB");
     selectionObjects.push(object);
   } else if (shiftPressed == true) {
     //If is in the array already, remove it and remove the border/object
@@ -756,7 +783,7 @@ function multipleSelection(currSelection, column, shiftPressed, object) {
     const year = currSelection.split("-")[0];
     drawBorder(selectionObjects[i], true);
     if (!isHighlighted(`#svg-${year}`)) {
-      d3.select(`#timeline-${year}`).attr("fill", "#007BFF");
+      d3.select(`#timeline-${year}`).attr("fill", "#7B8389");
     }
     selectionObjects.splice(i, 1);
   }
@@ -1347,6 +1374,63 @@ function hideToast() {
   $(".toast").toast("hide");
 }
 
+function ruleSearch() {
+  prepContainers(currIncrement);
+
+  for (var key in boundariesByPaper) {
+    delete boundariesByPaper[key];
+  }
+  var boundariesByPaper = {};
+  indexToSortPapersOn = -1;
+  // drawHome(currIncrement);
+  disableSearchUI(true); // disables the search UI to prevent another search while searching
+  let yearsToQuery = [];
+  for (let i = 2003; i < 2021; ++i) {
+    yearsToQuery.push(i);
+  }
+  const genBins = (increment) => {
+    const segments = Math.floor(100 / increment);
+    let result = {};
+    for (let i = 0; i < segments; ++i) {
+      result[i] = 0;
+    }
+    return result;
+  };
+  $("#searchQueryLabel .col-sm-3 p").text("");
+  $("#searchQueryLabel .col-sm-3 p").append(
+    `<img src="book.svg" style="width:60px; margin-right:10px" />`
+  );
+  //call api
+  $.ajax({
+    type: "POST",
+    url: "/api/rule-search",
+    contentType: "application/json",
+    data: JSON.stringify({
+      bins: genBins(currIncrement),
+      years: yearsToQuery,
+      isPubmed: CURRENT_DATABASE.isPubmed,
+    }),
+    success: function (results) {
+      let data = results;
+      $(".progress").animate({ opacity: 0 }, 700, () => {
+        $(".progress").css({ visibility: "hidden" });
+        $(".progress-bar-animated").css({ width: `0%` });
+      });
+      // loaded_articles = data["nunique"];
+      disableSearchUI(false);
+      drawAllYears(data);
+      if (!CURRENT_DATABASE.isPubmed) {
+        const min = $("#timeline-selection").attr("min-year");
+        const max = $("#timeline-selection").attr("max-year");
+        let years = [];
+        for (let i = min; i <= max; ++i) {
+          years.push(i);
+        }
+        getOverview(years, populateTimeline);
+      }
+    },
+  });
+}
 //Run the search for the desired query
 //TODO - prevent SQL injections
 function searchForQuery(query) {
@@ -1373,7 +1457,10 @@ function searchForQuery(query) {
       .select("p")
       .text(currSearchQuery.toString());
   }
-
+  d3.select("#searchQueryLabel")
+    .select(".col-sm-3")
+    .select("p")
+    .text(currSearchQuery.toString());
   for (var key in boundariesByPaper) {
     delete boundariesByPaper[key];
   }
@@ -1614,7 +1701,7 @@ function populateTimeline(data) {
     .enter()
     .append("rect")
     .attr("class", "bar-timeline")
-    .attr("fill", "#007BFF")
+    .attr("fill", "#7B8389")
     .attr("id", function (d) {
       return "timeline-" + d.p_year;
     })

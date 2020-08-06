@@ -51,6 +51,10 @@ app.use(express.static(__dirname + "/public"));
 app.use(express.static(__dirname + "/frontend/css"));
 app.use(express.static(__dirname + "/frontend/js"));
 app.use(express.static(__dirname + "/frontend/favicon"));
+app.use(
+  "/scripts",
+  express.static(__dirname + "/node_modules/html2canvas/dist")
+);
 /****************user routes ***************************/
 app.get(`/${userPath}/create-account`, (req, res) =>
   res.sendFile(__dirname + "/frontend/html/createuser.html")
@@ -79,6 +83,7 @@ app.get("/dashboard", (req, res) => {
 /*************api routes *****************************/
 app.get(`/${apiPath}/years`, apiRoutes.years);
 app.post(`/${apiPath}/search`, apiRoutes.search);
+app.post(`/${apiPath}/rule-search`, apiRoutes.ruleSearch);
 app.post(`/${apiPath}/papers`, apiRoutes.getPapers);
 app.get(`/${apiPath}/existing-work`, apiRoutes.checkExistingWork);
 app.post(`/${apiPath}/delete-existing-work`, apiRoutes.deleteExistingWork);
@@ -97,10 +102,12 @@ app.get(`/${apiPath}/paper/filter-suggestions`, apiRoutes.getFilterNames);
 app.get(`/${apiPath}/paper/filter`, apiRoutes.getFilteredIDs);
 app.get(`/${apiPath}/overview`, apiRoutes.getOverview);
 app.get(`/${apiPath}/update/grid`, apiRoutes.updateGrid);
+app.get(`/${apiPath}/get/grid`, apiRoutes.getGridVisualization);
 const credentials = { key: privateKey, cert: certificate };
 let httpsServer = https.createServer(credentials, app);
 //setup socket manager for server. this is used to communicate the progress of the complex queries.
 const socketManager = require("./backend/socketManager");
+const api = require("./backend/api");
 socketManager.setServer(httpsServer);
 socketManager.setMiddleware(
   sharedsession(sessionMiddleware, cookieParser(process.env.SECRET))

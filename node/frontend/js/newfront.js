@@ -15,6 +15,7 @@ $(document).ready((x, y, z) => {
   vh = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
   $("#load-existing-work").on("click", loadExistingWork);
   $("#delete-existing-work").on("click", deleteExistingWork);
+  $("#snapshot-icon").on("click", snapShot);
   //check if previous work is available
   checkExistingWork();
   createTimeLine();
@@ -33,6 +34,7 @@ $(window).on("load", function () {
 });
 
 function setupEventHandlers() {
+  enableVideoCapture();
   // Rules-Tab onclick
   let rulesBut = $("#pills-admin-tab");
   rulesBut.on("click", (event) => {
@@ -427,7 +429,6 @@ function createTimeLine() {
   const svgBox = d3.select("#timeline-svg").node().getBoundingClientRect();
   const width = svgBox.width - margin.left - margin.right;
   const height = svgBox.height - margin.top - margin.bottom;
-  console.log(svgBox);
   const minYearInErudit = 1945;
   const currentYear = 2020;
   //this is necessary getting the overview data
@@ -464,6 +465,14 @@ function createTimeLine() {
     for (let i = selection[0]; i <= selection[1]; ++i) {
       years.push({ articleyear: i });
     }
+    const genBins = (increment) => {
+      const segments = Math.floor(100 / increment);
+      let result = {};
+      for (let i = 0; i < segments; ++i) {
+        result[i] = 0;
+      }
+      return result;
+    };
     let result = await $.ajax({
       url: "api/update/grid",
       type: "GET",
@@ -472,9 +481,10 @@ function createTimeLine() {
         years: years.map((x) => {
           return x.articleyear;
         }),
+        bins: genBins(currIncrement),
       },
     });
-    prepContainers(10);
+    prepContainers(currIncrement);
     drawAllYears(result);
     //highlight selected
     //console.log(selectionObjects);
@@ -482,7 +492,7 @@ function createTimeLine() {
       const id = $(x._groups[0]).attr("id");
       const selector = `#${id}.minsqr`;
       if ($(selector).length) {
-        d3.select(selector).style("stroke", "rgb(108,117,125)");
+        d3.select(selector).style("stroke", "rgb(123,131,138)");
         d3.select(selector).style("stroke-width", 2);
       }
     });
@@ -512,4 +522,32 @@ function onProgress(val) {
   const progressBarId = "progress-bar";
   $(".progress").css({ visibility: "visible", opacity: "1.0" });
   $(".progress-bar-animated").css({ width: `${val}%` });
+}
+function enableVideoCapture() {
+  //const video = $("video")[0];
+  //navigator.mediaDevices
+  //  .getDisplayMedia({
+  //    displaySurface: "browser",
+  //    video: { cursor: "never" },
+  //    audio: false,
+  //  })
+  //  .then((stream) => {
+  //    console.log(stream.getVideoTracks()[0]);
+  //    video.srcObject = stream;
+  //  })
+  //  .catch((err) => {
+  //    console.error(err);
+  //  });
+}
+async function snapShot() {
+  //const video = $("video")[0];
+  //const canvas = document.createElement("canvas");
+  //canvas.width = video.videoWidth;
+  //canvas.height = video.videoHeight;
+  //canvas.getContext("2d").drawImage(video, 0, 0);
+  //const imgURL = canvas.toDataURL("capture/png");
+  html2canvas(document.body).then(function (canvas) {
+    $("#snapshot-img").attr("src", canvas.toDataURL());
+    $("#snapshot-toast").modal("toggle");
+  });
 }

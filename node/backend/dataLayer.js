@@ -392,8 +392,8 @@ class UserTable {
       } else {
         await this.truncate(tableName);
         await pool.query(
-          "UPDATE table_map_temp SET initial_search=ROW($1,$2,$3,$4)",
-          [rule.term, rule.range[0], rule.range[1], 0]
+          "UPDATE table_map_temp SET initial_search=ROW($1,$2,$3,$4) WHERE table_name=$5",
+          [rule.term, rule.range[0], rule.range[1], 0, tableName]
         );
         return;
       }
@@ -401,7 +401,7 @@ class UserTable {
 
     if (isPubmed) {
       await pool.query(
-        `CREATE TABLE ${tableName}(id int, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
+        `CREATE TABLE ${tableName}(id int primary key, citation_location int[], num_ow int, num_os int, p_year int, rule_set_id int[])`
       );
       await pool.query(
         "INSERT INTO table_map_temp(table_name, creation_date, table_owner, table_type, initial_search) VALUES($1, $2, $3, $4, ($5,$6,$7, 0)::text_rule)",
@@ -418,8 +418,12 @@ class UserTable {
       );
     }
   }
-
-  async update() {}
+  async update(tableName, term, range = [0, 0]) {
+    await pool.query(
+      "UPDATE table_map_temp SET initial_search=ROW($1,$2,$3,$4) WHERE table_name=$5",
+      [term, range[0], range[1], 0, tableName]
+    );
+  }
   /**
    * @param {string} tableName
    */
@@ -504,15 +508,8 @@ class Pubmed {
           true
         );
       } else {
-        await userTable.delete(tableName);
-        await userTable.create(
-          session.email,
-          session.userId,
-          term,
-          range[0],
-          range[1],
-          true
-        );
+        await userTable.truncate(tableName);
+        await userTable.update(session.email, term, range);
       }
       let promises = [];
       for (let i = this.minYear; i <= this.maxYear; ++i) {
@@ -536,7 +533,8 @@ class Pubmed {
    * @param {Session} session
    */
   async getGridVisualization(tableName, bins, years) {
-    const binLength = Object.keys(bins).length;
+    const keys = Object.keys(bins);
+    const binLength = keys.length;
     let tableResults = await pool.query(
       `SELECT ARRAY(SELECT floor(UNNEST(citation_location)::real / num_os::real * $1::real)::int) as cl, p_year as year FROM ${tableName}  WHERE p_year = ANY($2::int[])`,
       [binLength, years]
@@ -800,16 +798,16 @@ class Pubmed {
       return null;
     }
     //comprise a filter to create a short list
-    let column = "full_text_words";
+    let column = "full_text_sentences";
     let whereClause = "";
     for (let i = 0; i < rules.rows.length; ++i) {
       const rule = rules.rows[i].rules;
       for (let j = 0; j < rule.length; ++j) {
         const operator = rule[j].operator != null ? rule[j].operator : "OR";
-        whereClause += `${operator} ${column} ? '${rule[j].term}' `;
+        whereClause += `${operator} ${column} @> jsonb_build_object('${rule[j].term}', array[]::int[]) `;
       }
     }
-    whereClause += `OR ${column} ? '${searchTerm}'`;
+    //whereClause += `OR ${column} ? '${searchTerm}'`;
     //get rid of the initial OR
     return { where: whereClause.slice(2), rules: rules.rows };
   }
@@ -817,16 +815,18 @@ class Pubmed {
    *
    * @param {string} whereClause this should come from getRuleWhereClause
    */
-  async getShortList(whereClause) {
+  async getShortList(whereClause, year = null) {
     const result = await pool.query(
-      `SELECT id FROM pubmed_text WHERE ${whereClause}`
+      `SELECT id FROM pubmed_text${
+        !year ? "" : `_${year}`
+      } WHERE ${whereClause}`
     );
     return result.rows.map((x) => x.id);
   }
 
-  subRuleQuery(rule, ruleId) {
-    const column = "full_text_words";
-    let result = `SELECT pt.id, array_agg(ftc), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT ${column},pubmed_text.id as id, pubmed_text.full_text_citations, pubmed_meta.year as year, pubmed_data.num_of_words as num_ow, pubmed_data.num_of_sentences as num_os FROM pubmed_text INNER JOIN pubmed_data ON pubmed_text.id=pubmed_data.id INNER JOIN pubmed_meta ON pubmed_text.id=pubmed_meta.id WHERE pubmed_text.id=ANY($1::int[])) as pt, unnest(pt.full_text_citations) as ftc, `;
+  subRuleQuery(rule, ruleId, year, where) {
+    const column = "full_text_sentences";
+    let result = `SELECT pt.id, array_agg(ftc), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT ${column},pubmed_text_${year}.id as id, pubmed_text_${year}.full_text_citations, pubmed_meta_${year}.year as year, pubmed_data_${year}.num_of_words as num_ow, pubmed_data_${year}.num_of_sentences as num_os FROM pubmed_text_${year} INNER JOIN pubmed_data_${year} ON pubmed_text_${year}.id=pubmed_data_${year}.id INNER JOIN pubmed_meta_${year} ON pubmed_text_${year}.id=pubmed_meta_${year}.id WHERE ${where}) as pt, unnest(pt.full_text_citations) as ftc, `;
     //This is an example query left here to show the goal of this function.
     /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
   where (heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0) AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
@@ -860,8 +860,8 @@ class Erudit {
     if (!tableInfo) {
       await userTable.create(session.email, session.userId, term, 0, 0, false);
     } else {
-      await userTable.delete(tableName);
-      await userTable.create(session.email, session.userId, term, 0, 0, false);
+      await userTable.truncate(tableName);
+      await userTable.update(tableName, term);
     }
     const result = await pool.query(
       `INSERT INTO ${tableName} SELECT erudit_text.id, array(select jsonb_array_elements(erudit_text.sent_map->$1)::int), erudit_text.word_length, erudit_text.sent_length, erudit_meta.year, array_fill(-1, array[jsonb_array_length(erudit_text.sent_map->$1)]) FROM erudit_text INNER JOIN erudit_meta ON erudit_text.id = erudit_meta.id WHERE erudit_text.sent_map ? $1`,
@@ -1197,4 +1197,4 @@ class DataLayer {
   }
 }
 
-module.exports = { DataExport, DataLayer };
+module.exports = { DataExport, DataLayer, progressAll };
