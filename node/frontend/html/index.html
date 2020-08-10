@@ -61,12 +61,48 @@
             <img class="snapshot" id="snapshot-img" src="" />
           </div>
           <div class="form-group" style="margin-top: 30px;">
-            <label for="snapshot-annotation">Annotation</label>
-            <textarea class="form-control" id="snapshot-annotation" rows="3"></textarea>
+            <label for="snapshot-description" class="snapshot-label">Describe the situation.</label>
+            <textarea class="form-control" id="snapshot-description" rows="3"></textarea>
+            <label for="snapshot-comments" class="snapshot-label">Comments positive or negative.</label>
+            <textarea class="form-control" id="snapshot-comments" rows="3"></textarea>
+            <label for="snapshot-featurelist" class="snapshot-label">Describe how this helps or hinders your work.
+              Please elaborate.</label>
+            <textarea class="form-control" id="snapshot-featurelist" rows="3"></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" id="snapshot-download" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="warning" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header alert-danger">
+          <h5 class="modal-title">Warning</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="warning-message"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="error-warning" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header alert-danger">
+          <h5 class="modal-title">Error</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="error-message"></p>
         </div>
       </div>
     </div>

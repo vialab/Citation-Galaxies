@@ -191,6 +191,12 @@ function checkExportOptions() {
 function exportData(event) {
   event.preventDefault();
   let options = checkExportOptions();
+  //requires at least one ruleset to be selected
+  if (options.ruleSets.length === 0) {
+    $("#warning-message").text("At least one rule set must be selected.");
+    $("#warning").modal("toggle");
+    return;
+  }
   let url = new URL("https://localhost:4000/api/export");
   url.searchParams.append("query", JSON.stringify(options));
   window.open(url.toString());
@@ -247,6 +253,9 @@ function loadExistingWork() {
       disableSearchUI(false);
       drawAllYears(data);
     },
+    catch: function (err) {
+      displayError(err.message);
+    },
   });
 }
 function deleteExistingWork() {
@@ -258,21 +267,28 @@ function deleteExistingWork() {
     success: function (results) {
       disableSearchUI(false);
     },
+    catch: function (err) {
+      displayError(err.message);
+    },
   });
 }
 async function getFilterSuggestions(currentValue, filter, element) {
-  let result = await $.ajax({
-    url: "api/paper/filter-suggestions",
-    type: "GET",
-    contentType: "application/json",
-    data: {
-      currentValue,
-      filter,
-      ids: Object.keys(paper_data.papers),
-      isPubmed: CURRENT_DATABASE.isPubmed,
-    },
-  });
-  $(element).autocomplete({ source: result });
+  try {
+    let result = await $.ajax({
+      url: "api/paper/filter-suggestions",
+      type: "GET",
+      contentType: "application/json",
+      data: {
+        currentValue,
+        filter,
+        ids: Object.keys(paper_data.papers),
+        isPubmed: CURRENT_DATABASE.isPubmed,
+      },
+    });
+    $(element).autocomplete({ source: result });
+  } catch (e) {
+    displayError(e.message);
+  }
 }
 
 function addRowToFilterForm() {

@@ -62,7 +62,7 @@ class DataExport {
     this.dataSchema = {
       "abstract sentences": "abstract_sentences",
       "abstract words": "abstract_words",
-      sentences: "pubmed_data.sentences",
+      sentences: isPubmed ? "pubmed_data.sentences" : "erudit_data.sentences",
       words: "words",
       "raw abstract": "full_abstract",
       "raw text": "full_text",
@@ -172,22 +172,16 @@ class DataExport {
   }
   async eruditExport(batchSize = 100) {
     const client = await pool.connect();
-    const queryString = `SELECT ${this.buildSelection(
-      this.dataSchema
-    )}${this.buildSelection(this.metaSchema, "erudit_meta").slice(
-      0,
-      -2
-    )} FROM ${
-      this.tableName
-    } INNER JOIN (select array_agg((cl-rinfo.left, cl+rinfo.right)) as idx, utt3.id from ${
-      this.tableName
-    } as utt3 cross join unnest(utt3.citation_location) as cl cross join unnest(utt3.rule_set_id) as rsd cross join (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id group by utt3.id) as snippets ON ${
-      this.tableName
-    }.id=snippets.id INNER JOIN erudit_data ON ${
-      this.tableName
-    }.id=erudit_data.id INNER JOIN erudit_meta ON ${
-      this.tableName
-    }.id=erudit_meta.id WHERE rule_set_id && $1::int[]`;
+    let dataSelect = this.buildSelection(this.dataSchema);
+    const metaSelect = this.buildSelection(
+      this.metaSchema,
+      "erudit_meta"
+    ).slice(0, -2);
+    if (metaSelect.length === 0) {
+      //remove comma as the meta select is not part of the query
+      dataSelect = dataSelect.slice(0, -2);
+    }
+    const queryString = `SELECT ${dataSelect}${metaSelect} FROM ${this.tableName} INNER JOIN (select array_agg((cl-rinfo.left, cl+rinfo.right)) as idx, utt3.id from ${this.tableName} as utt3 cross join unnest(utt3.citation_location) as cl cross join unnest(utt3.rule_set_id) as rsd cross join (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id group by utt3.id) as snippets ON ${this.tableName}.id=snippets.id INNER JOIN erudit_data ON ${this.tableName}.id=erudit_data.id INNER JOIN erudit_meta ON ${this.tableName}.id=erudit_meta.id WHERE rule_set_id && $1::int[]`;
     //use cursor
     const cursor = await client.query(
       new Cursor(queryString, [this.suppliedRuleSets])

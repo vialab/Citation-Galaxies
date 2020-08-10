@@ -654,6 +654,7 @@ const search = async function (req, res) {
         })
       );
     }
+    await DATA_LAYER.userTable.delete(req.session.tableName);
   }
   //bins is the increments from 0-100. Increments can be 1,10,25,50
   const bins = sentInfo.bins;
@@ -729,6 +730,7 @@ const ruleSearch = async (req, res) => {
         .send({ error: "cross database rules do not apply." });
       return;
     }
+    await DATA_LAYER.userTable.delete(req.session.tableName);
   }
   await DATA_LAYER.userTable.truncate(req.session.tableName);
   //searching database for the rules
@@ -738,7 +740,8 @@ const ruleSearch = async (req, res) => {
   if (sentInfo.isPubmed) {
     const minYear = 2003;
     const maxYear = 2020;
-    for (let i = minYear; i <= maxYear; ++i) {
+    //invert year parsing due to the end years having more data
+    for (let i = maxYear; i >= minYear; --i) {
       let rules = await db.getRuleWhereClause(
         req.session.tableName,
         sentInfo.term

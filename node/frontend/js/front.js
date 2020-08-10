@@ -1734,3 +1734,12 @@ async function getOverview(years, callback) {
 
   callback(result);
 }
+
+/**
+ *
+ * @param {string} msg
+ */
+function displayError(msg) {
+  $("#error-message").text(msg);
+  $("#error-warning").modal("toggle");
+}

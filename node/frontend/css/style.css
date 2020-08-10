@@ -958,3 +958,6 @@ g text {
   justify-content: center;
   flex-direction: column;
 }
+.snapshot-label {
+  padding-top: 0.8rem;
+}
