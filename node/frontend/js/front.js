@@ -1400,6 +1400,10 @@ function ruleSearch() {
   $("#searchQueryLabel .col-sm-3 p").append(
     `<img src="book.svg" style="width:60px; margin-right:10px" />`
   );
+  $(".progress").animate({ opacity: 1 }, 700, () => {
+    $(".progress").css({ visibility: "visible" });
+    $(".progress-bar-animated").css({ width: `5%` });
+  });
   //call api
   $.ajax({
     type: "POST",

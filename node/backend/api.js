@@ -740,6 +740,7 @@ const ruleSearch = async (req, res) => {
   if (sentInfo.isPubmed) {
     const minYear = 2003;
     const maxYear = 2020;
+    let promises = [];
     //invert year parsing due to the end years having more data
     for (let i = maxYear; i >= minYear; --i) {
       let rules = await db.getRuleWhereClause(
@@ -762,23 +763,24 @@ const ruleSearch = async (req, res) => {
         );
       }
       if (rule_info.queries.length) {
-        let promises = [];
+        //let promises = [];
         for (let j = 0; j < rule_info.queries.length; ++j) {
           promises.push(pool.query(rule_info.queries[j]));
         }
-        await Promise.all(promises);
+        //await Promise.all(promises);
       }
       rule_info.queries = [];
       rule_info.shortList = null;
       //update progress bar
-      const totalYears = maxYear - minYear;
-      const idx = totalYears - (maxYear - i);
-      socketManager.send(
-        "progress",
-        Math.floor((idx / totalYears) * 100),
-        req.session.socketId
-      );
+      //const totalYears = maxYear - minYear;
+      //const idx = totalYears - (maxYear - i);
+      //socketManager.send(
+      //  "progress",
+      //  Math.floor((idx / totalYears) * 100),
+      //  req.session.socketId
+      //);
     }
+    await progressAll(promises, req.session.socketId);
   } else {
     let rules = await db.getRuleWhereClause(
       req.session.tableName,
