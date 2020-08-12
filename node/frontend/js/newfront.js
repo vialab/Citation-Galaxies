@@ -274,6 +274,11 @@ function deleteExistingWork() {
 }
 async function getFilterSuggestions(currentValue, filter, element) {
   try {
+    const currentYearTab = getCurrentYearTab();
+    if (!currentYearTab) {
+      console.error("current tab could not be found.");
+      return;
+    }
     let result = await $.ajax({
       url: "api/paper/filter-suggestions",
       type: "GET",
@@ -283,6 +288,7 @@ async function getFilterSuggestions(currentValue, filter, element) {
         filter,
         ids: Object.keys(paper_data.papers),
         isPubmed: CURRENT_DATABASE.isPubmed,
+        year: currentYearTab,
       },
     });
     $(element).autocomplete({ source: result });
@@ -371,6 +377,23 @@ function submitFilters() {
   }
   getFilteredPapers(formCollection, applyFilters);
 }
+//gets the year currently selected in the paper view page
+function getCurrentYearTab() {
+  const tabs = $("a[id^='papers-nav-tab-']");
+  let tabId = "";
+  for (const x of tabs) {
+    if ($(x).hasClass("active")) {
+      tabId = $(x).attr("id");
+      break;
+    }
+  }
+  if (tabId === "") {
+    return null;
+  }
+  const splitId = tabId.split("-");
+  const end = splitId.length - 1;
+  return Number(splitId[end]);
+}
 function applyFilters(ids) {
   let filtered_paper_data = { papers: {}, ruleHits: {}, sentenceHits: {} };
   filtered_paper_data.max = paper_data.max;
@@ -386,6 +409,11 @@ function applyFilters(ids) {
 }
 
 async function getFilteredPapers(formInfo, callback) {
+  const currentYearTab = getCurrentYearTab();
+  if (!currentYearTab) {
+    console.error("Error getting current year");
+    return;
+  }
   let result = await $.ajax({
     url: "api/paper/filter",
     type: "GET",
@@ -394,6 +422,7 @@ async function getFilteredPapers(formInfo, callback) {
       fields: formInfo,
       ids: Object.keys(paper_data.papers),
       isPubmed: CURRENT_DATABASE.isPubmed,
+      year: currentYearTab,
     },
   });
   $("#paper-filter-form-submit-btn").attr("disabled", false);
@@ -538,32 +567,19 @@ function onProgress(val) {
   const progressBarId = "progress-bar";
   $(".progress").css({ visibility: "visible", opacity: "1.0" });
   $(".progress-bar-animated").css({ width: `${val}%` });
+  if (val == 100) {
+    $(".progress").animate({ opacity: 0 }, 700, () => {
+      $(".progress").css({ visibility: "hidden" });
+      $(".progress-bar-animated").css({ width: `0%` });
+    });
+  }
 }
-function enableVideoCapture() {
-  //const video = $("video")[0];
-  //navigator.mediaDevices
-  //  .getDisplayMedia({
-  //    displaySurface: "browser",
-  //    video: { cursor: "never" },
-  //    audio: false,
-  //  })
-  //  .then((stream) => {
-  //    console.log(stream.getVideoTracks()[0]);
-  //    video.srcObject = stream;
-  //  })
-  //  .catch((err) => {
-  //    console.error(err);
-  //  });
-}
+
 async function snapShot() {
-  //const video = $("video")[0];
-  //const canvas = document.createElement("canvas");
-  //canvas.width = video.videoWidth;
-  //canvas.height = video.videoHeight;
-  //canvas.getContext("2d").drawImage(video, 0, 0);
-  //const imgURL = canvas.toDataURL("capture/png");
   html2canvas(document.body).then(function (canvas) {
     $("#snapshot-img").attr("src", canvas.toDataURL());
     $("#snapshot-toast").modal("toggle");
   });
 }
+//callback for submitting snapshots
+async function submitSnapShot() {}

@@ -103,74 +103,84 @@ class DataExport {
     }
     return selection;
   }
-  async pubmedExport(batchSize = 100) {
+  async pubmedExport(socketId, batchSize = 100) {
     //create client for this we need to use the pg cursor to stream rather than load everything into memory
     //select max(urr->'range'->>0) as left, max(urr->'range'->>1) as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id;
     //select res from (select cl-rinfo.left, cl+rinfo.right, utt3.id from pubmed_data,user_temp_table_3 as utt3,unnest(utt3.citation_location) as cl, unnest(utt3.rule_set_id) as rsd, (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id) as res
     //select pubmed_data.sentences[(select greatest(res.l,0)):(select least(res.r, array_length(pubmed_data.sentences,1)))] from pubmed_data, (select cl-rinfo.left as l, cl+rinfo.right as r, utt3.id as id from pubmed_data,user_temp_table_3 as utt3,unnest(utt3.citation_location) as cl, unnest(utt3.rule_set_id) as rsd, (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id) as res where pubmed_data.id=res.id;
     const client = await pool.connect();
-    const queryString = `SELECT ${this.buildSelection(
-      this.dataSchema
-    )}${this.buildSelection(this.metaSchema, "pubmed_meta").slice(
-      0,
-      -2
-    )} FROM ${
-      this.tableName
-    } INNER JOIN (select array_agg((cl-rinfo.left, cl+rinfo.right)) as idx, utt3.id from ${
-      this.tableName
-    } as utt3 cross join unnest(utt3.citation_location) as cl cross join unnest(utt3.rule_set_id) as rsd cross join (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id group by utt3.id) as snippets ON ${
-      this.tableName
-    }.id=snippets.id INNER JOIN pubmed_data ON ${
-      this.tableName
-    }.id=pubmed_data.id INNER JOIN pubmed_meta ON ${
-      this.tableName
-    }.id=pubmed_meta.id WHERE rule_set_id && $1::int[]`;
-    //use cursor
-    const cursor = await client.query(
-      new Cursor(queryString, [this.suppliedRuleSets])
-    );
+    const minYear = 2003;
+    const maxYear = 2020;
+
     try {
       const ws = fs.createWriteStream(this.fileName, { encoding: "utf8" });
-      let result = null;
-      if (this.isJSON) {
-        //manually writing each object into a json array
-        //as far as I am aware streaming a json array to file is not a thing
-        ws.write("[");
-        do {
-          //read the batchsize of rows
-          result = await cursor.readAsync(batchSize);
-          //write to file
-          for (let i = 0; i < result.length; ++i) {
-            const encodedData = this.encode(result[i]);
-            await ws.writeSync(encodedData + ",");
+      for (let j = maxYear; j >= minYear; --j) {
+        let dataSelect = this.buildSelection(this.dataSchema);
+        const metaSelect = this.buildSelection(
+          this.metaSchema,
+          "pubmed_meta"
+        ).slice(0, -2);
+        if (metaSelect.length === 0) {
+          //remove comma as the meta select is not part of the query
+          dataSelect = dataSelect.slice(0, -2);
+        }
+        const queryString = `SELECT ${dataSelect}${metaSelect} FROM ${this.tableName} INNER JOIN (select array_agg((cl-rinfo.left, cl+rinfo.right)) as idx, utt3.id from ${this.tableName} as utt3 cross join unnest(utt3.citation_location) as cl cross join unnest(utt3.rule_set_id) as rsd cross join (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id group by utt3.id) as snippets ON ${this.tableName}.id=snippets.id INNER JOIN pubmed_data_${j} as pubmed_data ON ${this.tableName}.id=pubmed_data.id INNER JOIN pubmed_meta_${j} as pubmed_meta ON ${this.tableName}.id=pubmed_meta.id WHERE rule_set_id && $1::int[] AND p_year=${j}`;
+        //use cursor
+        const cursor = await client.query(
+          new Cursor(queryString, [this.suppliedRuleSets])
+        );
+        let result = null;
+        if (this.isJSON) {
+          //manually writing each object into a json array
+          //as far as I am aware streaming a json array to file is not a thing
+          if (j == maxYear) {
+            ws.write("[");
           }
-        } while (result.length);
-        await ws.writeSync("]");
-      } else {
-        do {
-          //read the batchsize of rows
-          result = await cursor.readAsync(batchSize);
-          //write to file
-          for (let i = 0; i < result.length; ++i) {
-            const encodedData = await this.encode(result[i]);
-            await ws.writeSync(encodedData);
+          do {
+            //read the batchsize of rows
+            result = await cursor.readAsync(batchSize);
+            //write to file
+            for (let i = 0; i < result.length; ++i) {
+              const encodedData = this.encode(result[i]);
+              await ws.writeSync(encodedData + ",");
+            }
+          } while (result.length);
+          if (j == minYear) {
+            await ws.writeSync("]");
           }
-        } while (result.length);
+        } else {
+          do {
+            //read the batchsize of rows
+            result = await cursor.readAsync(batchSize);
+            //write to file
+            for (let i = 0; i < result.length; ++i) {
+              const encodedData = await this.encode(result[i]);
+              await ws.writeSync(encodedData);
+            }
+          } while (result.length);
+        }
+        const distanceToEnd = j - minYear;
+        const totalDistance = maxYear - minYear;
+        socketManager.send(
+          "progress",
+          100 - (distanceToEnd / totalDistance) * 100,
+          socketId
+        );
+        //clean up cursor
+        cursor.close(() => {});
       }
-      //clean up
+      //cleanup file
       ws.end();
     } catch (err) {
       console.error("Export Error:" + err.message);
       ws.end();
       fs.unlink(this.fileName);
     }
-    cursor.close(() => {
-      client.release();
-    });
+
     //return pipe to send to user
     return this.fileName;
   }
-  async eruditExport(batchSize = 100) {
+  async eruditExport(socketId, batchSize = 100) {
     const client = await pool.connect();
     let dataSelect = this.buildSelection(this.dataSchema);
     const metaSelect = this.buildSelection(
@@ -694,9 +704,12 @@ class Pubmed {
     result.max = globalMax;
     return result;
   }
-  async getPaper(paperId) {
+  async getPaper(paperId, year) {
+    if (typeof year != "number") {
+      throw new Error("year not a number. Must be a number");
+    }
     return await pool.query(
-      "SELECT * FROM pubmed_data INNER JOIN pubmed_meta ON pubmed_data.id=pubmed_meta.id INNER JOIN pubmed_text ON pubmed_data.id=pubmed_text.id WHERE pubmed_data.id=$1",
+      `SELECT * FROM pubmed_data_${year} INNER JOIN pubmed_meta_${year} ON pubmed_data_${year}.id=pubmed_meta_${year}.id INNER JOIN pubmed_text_${year} ON pubmed_data_${year}.id=pubmed_text_${year}.id WHERE pubmed_data_${year}.id=$1`,
       [paperId]
     );
   }
@@ -706,7 +719,12 @@ class Pubmed {
    * @param {string} currentValue
    * @param {Array.<int>} ids
    */
-  async getFilteredNames(filter, currentValue, ids) {
+  async getFilteredNames(filter, year, currentValue, ids, tableName) {
+    if (typeof year != "number") {
+      throw new Error(
+        "Error: Pubmed.getFilteredNames year param requires to be number"
+      );
+    }
     const LIMIT = 5;
     const filters = {
       JOURNAL: "journal",
@@ -723,10 +741,10 @@ class Pubmed {
     };
     const selectStatement = selectStatements[filter];
     const queryStatements = {
-      JOURNAL: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
-      TITLE: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
-      AUTHORS: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.authors) as authors FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
-      AFFILIATION: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta.affiliation) as affiliation FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+      JOURNAL: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta_${year} as pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+      TITLE: `SELECT DISTINCT ${select} FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) AS utt INNER JOIN pubmed_meta_${year} as pubmed_meta ON utt.id=pubmed_meta.id WHERE ${select} ~* $1 LIMIT $2`,
+      AUTHORS: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta_${year}.authors) as authors FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta_${year} ON utt.id=pubmed_meta_${year}.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
+      AFFILIATION: `SELECT ${select} FROM (SELECT UNNEST(pubmed_meta_${year}.affiliation) as affiliation FROM (SELECT * FROM ${tableName} WHERE id=ANY($3::int[])) as utt INNER JOIN pubmed_meta_${year} ON utt.id=pubmed_meta_${year}.id) as meta WHERE ${select} ~* $1 LIMIT $2`,
     };
     let query = queryStatements[filter];
     const result = await pool.query(query, ["^" + currentValue, LIMIT, ids]);
@@ -739,8 +757,14 @@ class Pubmed {
    * @param {{}} fields
    * @param {string} tableName
    * @param {Array.<number>} ids
+   * @param {number} year
    */
-  async getFilteredIDs(fields, tableName, ids) {
+  async getFilteredIDs(fields, tableName, ids, year) {
+    if (typeof year != "number") {
+      throw new Error(
+        "Error: Pubmed.getFilteredIDS param year requires to be number"
+      );
+    }
     let journals = [];
     let titles = [];
     let affiliations = [];
@@ -760,7 +784,7 @@ class Pubmed {
       }
     });
     const result = await pool.query(
-      `SELECT utt.id FROM (SELECT * FROM ${tableName} WHERE id=ANY($1::int[])) as utt INNER JOIN pubmed_meta ON utt.id=pubmed_meta.id WHERE journal=ANY($2::text[]) OR title=ANY($3::text[]) OR authors && $4::text[] OR affiliation && $5::text[]`,
+      `SELECT utt.id FROM (SELECT * FROM ${tableName} WHERE id=ANY($1::int[])) as utt INNER JOIN pubmed_meta_${year} ON utt.id=pubmed_meta_${year}.id WHERE journal=ANY($2::text[]) OR title=ANY($3::text[]) OR authors && $4::text[] OR affiliation && $5::text[]`,
       [ids, journals, titles, authors, affiliations]
     );
     return result.rows.map((x) => x.id);

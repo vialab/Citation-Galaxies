@@ -106,7 +106,7 @@ const createUser = async (req, res) => {
       subject: "Account Creation",
       text:
         process.env.BASE_URL +
-        "/verify-user?hash_key=" +
+        "/user/verify?hash_key=" +
         hashKey +
         "&email=" +
         sentInfo.email,

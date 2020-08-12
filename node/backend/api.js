@@ -259,7 +259,14 @@ const getPaper = async (req, res) => {
       articleyear: result.rows[0].year,
     });
   } else {
-    const result = await DATA_LAYER.pubmed.getPaper(sentInfo.paper_id);
+    const yearRes = await pool.query(
+      `SELECT p_year FROM ${req.session.tableName} WHERE id=$1`,
+      [sentInfo.paper_id]
+    );
+    const result = await DATA_LAYER.pubmed.getPaper(
+      sentInfo.paper_id,
+      yearRes.rows[0].p_year
+    );
     if (!result.rowCount) {
       res.status(HTTP_CODES.SUCCESS).send(null);
       return;
@@ -544,7 +551,7 @@ const exportData = async (req, res) => {
   //if delimiter assign
   data.delimiter = input.delimiter || data.delimiter;
   //returns the fileName that has the required information
-  const fileName = await data.export();
+  const fileName = await data.export(req.session.socketId);
   //send to client
   res.download(fileName, "data." + data.fileExtension, function (err) {
     if (err) {
@@ -568,13 +575,14 @@ const getFilterNames = async (req, res) => {
     currentValue: "",
     ids: [],
     isPubmed: false,
+    year: 0,
   };
   let sentInfo = reqValid(requiredInfo, { body: req.query });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
-
+  sentInfo.year = parseInt(sentInfo.year);
   if (sentInfo.isPubmed === "false") {
     let result = await DATA_LAYER.erudit.getFilteredNames(
       sentInfo.filter,
@@ -587,6 +595,7 @@ const getFilterNames = async (req, res) => {
   } else {
     let result = await DATA_LAYER.pubmed.getFilteredNames(
       sentInfo.filter,
+      sentInfo.year,
       sentInfo.currentValue,
       sentInfo.ids,
       req.session.tableName
@@ -597,18 +606,20 @@ const getFilterNames = async (req, res) => {
 };
 
 const getFilteredIDs = async (req, res) => {
-  const requiredInfo = { fields: [], ids: [], isPubmed: false };
+  const requiredInfo = { fields: [], ids: [], isPubmed: false, year: 0 };
   let sentInfo = reqValid(requiredInfo, { body: req.query });
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
   }
   let result = null;
+  sentInfo.year = parseInt(sentInfo.year);
   if (sentInfo.isPubmed === "true") {
     result = await DATA_LAYER.pubmed.getFilteredIDs(
       sentInfo.fields,
       req.session.tableName,
-      sentInfo.ids
+      sentInfo.ids,
+      sentInfo.year
     );
   } else {
     result = await DATA_LAYER.erudit.getFilteredIDs(
@@ -771,14 +782,6 @@ const ruleSearch = async (req, res) => {
       }
       rule_info.queries = [];
       rule_info.shortList = null;
-      //update progress bar
-      //const totalYears = maxYear - minYear;
-      //const idx = totalYears - (maxYear - i);
-      //socketManager.send(
-      //  "progress",
-      //  Math.floor((idx / totalYears) * 100),
-      //  req.session.socketId
-      //);
     }
     await progressAll(promises, req.session.socketId);
   } else {
