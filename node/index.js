@@ -26,7 +26,7 @@ const sessionMiddleware = session({
   secret: process.env.SECRET,
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false, expires: 6000000 },
+  cookie: { secure: false, expires: 60000000 },
 });
 app.use(
   bodyParser.urlencoded({

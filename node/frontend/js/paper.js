@@ -1194,6 +1194,13 @@ function cycleVisibility(item) {
 }
 
 function switchToPapers() {
+  if (selections.length == 0) {
+    $("#warning-message").text(
+      "At least one grid must be selected in order to view papers."
+    );
+    $("#warning").modal("toggle");
+    return;
+  }
   $("#navOptions").hide();
   $("#db-state-container").hide();
   if (!CURRENT_DATABASE.isPubmed) {
@@ -1217,9 +1224,6 @@ function switchToPapers() {
     last_query.currIncrement = currIncrement;
     last_query.currSearchQuery = currSearchQuery;
     last_query.selections = selections;
-  }
-  if (selections.length == 0) {
-    selectAllYears(); // default is to show all :)
   }
   d3.select("#pills-papers").selectAll(".row").remove(); //Remove all objects that might still be there
 

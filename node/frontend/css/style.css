@@ -940,7 +940,6 @@ g text {
 
 .progress {
   width: 100vw;
-  margin-bottom: 2vh;
   visibility: hidden;
 }
 

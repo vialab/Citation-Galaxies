@@ -518,6 +518,9 @@ function createTimeLine() {
       }
       return result;
     };
+    if (CURRENT_DATABASE.isPubmed) {
+      return;
+    }
     let result = await $.ajax({
       url: "api/update/grid",
       type: "GET",
