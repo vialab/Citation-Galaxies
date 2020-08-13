@@ -891,6 +891,36 @@ const getGridVisualization = async (req, res) => {
   res.status(HTTP_CODES.SUCCESS).send(result);
 };
 
+const submitSnapshot = async (req, res) => {
+  const requiredInfo = { selection: [], filters: [], img: "", info:{} };
+  let sentInfo = reqValid(requiredInfo, req);
+  if (!sentInfo) {
+    res
+      .status(HTTP_CODES.INVALID_VALUES)
+      .send({ err: "error invalid json input" });
+    return;
+  }
+  const isPubmed = await DATA_LAYER.userTable.isPubmed(req.session.tableName);
+  const rulesets = await DATA_LAYER.ruleSets.read(req.session.tableName);
+  let tmpRes = await pool.query(
+    "SELECT * FROM user_rules WHERE rule_set_id=ANY($1::int[])",
+    [
+      rulesets.map((x) => {
+        return x.id;
+      }),
+    ]
+  );
+  let rules = tmpRes.rows;
+  const currentTime = Date.now();
+  const userLoggedIn = req.session.loginTime;
+  const userId = req.session.userId;
+  let backendInfo = { isPubmed, currentTime, userLoggedIn, userId, rules };
+  pool.query(
+    "INSERT INTO snapshot_log(frontend_info, backend_info, user_id, time_stamp) VALUES($1,$2,$3,$4)",
+    [sentInfo, backendInfo, userId, currentTime]
+  );
+};
+
 module.exports = {
   years,
   getPapers,
@@ -914,4 +944,5 @@ module.exports = {
   getOverview,
   updateGrid,
   getGridVisualization,
+  submitSnapshot,
 };

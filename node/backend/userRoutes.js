@@ -184,6 +184,7 @@ const authUser = async (req, res) => {
     req.session.email = sentInfo.email;
     req.session.userId = result.rows[0].id;
     req.session.tableName = "user_temp_table_" + req.session.userId;
+    req.session.loginTime = Date.now();
     res.redirect("/dashboard");
     return;
   }

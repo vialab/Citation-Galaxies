@@ -28,8 +28,14 @@ const sessionMiddleware = session({
   saveUninitialized: true,
   cookie: { secure: true, expires: 6000000 },
 });
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(
+  bodyParser.urlencoded({
+    limit: "50mb",
+    extended: true,
+    parameterLimit: 100000,
+  })
+);
+app.use(bodyParser.json({ limit: "50mb" }));
 app.use(cookieParser(process.env.SECRET));
 app.use(sessionMiddleware);
 //middleware to check that user has logged in. disregards any paths that include /${userPath}/
@@ -103,6 +109,7 @@ app.get(`/${apiPath}/paper/filter`, apiRoutes.getFilteredIDs);
 app.get(`/${apiPath}/overview`, apiRoutes.getOverview);
 app.get(`/${apiPath}/update/grid`, apiRoutes.updateGrid);
 app.get(`/${apiPath}/get/grid`, apiRoutes.getGridVisualization);
+app.post(`/${apiPath}/snapshot`, apiRoutes.submitSnapshot);
 const credentials = { key: privateKey, cert: certificate };
 let httpsServer = https.createServer(credentials, app);
 //setup socket manager for server. this is used to communicate the progress of the complex queries.

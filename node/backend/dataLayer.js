@@ -1215,4 +1215,7 @@ class DataLayer {
   }
 }
 
+class Snapshot {
+  async submit() {}
+}
 module.exports = { DataExport, DataLayer, progressAll };

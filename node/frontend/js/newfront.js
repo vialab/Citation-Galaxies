@@ -34,7 +34,7 @@ $(window).on("load", function () {
 });
 
 function setupEventHandlers() {
-  enableVideoCapture();
+  $("#snapshot-download").on("click", submitSnapShot);
   // Rules-Tab onclick
   let rulesBut = $("#pills-admin-tab");
   rulesBut.on("click", (event) => {
@@ -582,4 +582,61 @@ async function snapShot() {
   });
 }
 //callback for submitting snapshots
-async function submitSnapShot() {}
+async function submitSnapShot() {
+  //filters being applied
+  //paper filter form id
+  const filterFormID = "#paper-filter-form";
+  //get all rows in the form
+  const formRows = $(filterFormID).find(".form-row");
+  //all the current field classes, add additional fields in this object
+  const formFields = {
+    journal: ".journal-field",
+    title: ".title-field",
+    author: ".authors-field",
+    affiliation: ".affiliation-field",
+  };
+  let formCollection = [];
+  //loop through each row and select the required fields
+  for (let i = 0; i < formRows.length; ++i) {
+    let formSchema = {};
+    addIfExists(
+      formSchema,
+      "journal",
+      $(formRows[i]).find(formFields.journal)[0].value
+    );
+    addIfExists(
+      formSchema,
+      "title",
+      $(formRows[i]).find(formFields.title)[0].value
+    );
+    addIfExists(
+      formSchema,
+      "author",
+      $(formRows[i]).find(formFields.author)[0].value
+    );
+    addIfExists(
+      formSchema,
+      "affiliation",
+      $(formRows[i]).find(formFields.affiliation)[0].value
+    );
+    if (Object.keys(formSchema).length) {
+      formCollection.push(formSchema);
+    }
+  }
+  const description = $("#snapshot-description").val();
+  const comments = $("#snapshot-comments").val();
+  const features = $("#snapshot-featurelist").val();
+  const imgData = $("#snapshot-img").attr("src");
+  //grid selections on the home screen
+  $.ajax({
+    url: "api/snapshot",
+    type: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({
+      selection: selections,
+      filters: formCollection,
+      img: imgData,
+      info: { description, comments, features },
+    }),
+  });
+}
