@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const app = express();
-const https = require("https");
+const http = require("http");
 const session = require("express-session");
 const sharedsession = require("express-socket.io-session");
 const cookieParser = require("cookie-parser");
@@ -10,8 +10,8 @@ const userRoutes = require("./backend/userRoutes");
 const apiRoutes = require("./backend/api");
 const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
-const privateKey = fs.readFileSync("./backend/resources/key.pem", "utf8");
-const certificate = fs.readFileSync("./backend/resources/cert.pem", "utf8");
+//const privateKey = fs.readFileSync("./backend/resources/key.pem", "utf8");
+//const certificate = fs.readFileSync("./backend/resources/cert.pem", "utf8");
 const port = 4000;
 
 /******path routes *******/
@@ -24,9 +24,9 @@ const sessionMiddleware = session({
     return id;
   },
   secret: process.env.SECRET,
-  resave: true,
+  resave: false,
   saveUninitialized: true,
-  cookie: { secure: true, expires: 6000000 },
+  cookie: { secure: false, expires: 6000000 },
 });
 app.use(
   bodyParser.urlencoded({
@@ -110,12 +110,11 @@ app.get(`/${apiPath}/overview`, apiRoutes.getOverview);
 app.get(`/${apiPath}/update/grid`, apiRoutes.updateGrid);
 app.get(`/${apiPath}/get/grid`, apiRoutes.getGridVisualization);
 app.post(`/${apiPath}/snapshot`, apiRoutes.submitSnapshot);
-const credentials = { key: privateKey, cert: certificate };
-let httpsServer = https.createServer(credentials, app);
+//const credentials = { key: privateKey, cert: certificate };
+let httpServer = http.createServer(app);
 //setup socket manager for server. this is used to communicate the progress of the complex queries.
 const socketManager = require("./backend/socketManager");
-const api = require("./backend/api");
-socketManager.setServer(httpsServer);
+socketManager.setServer(httpServer);
 socketManager.setMiddleware(
   sharedsession(sessionMiddleware, cookieParser(process.env.SECRET))
 );
@@ -124,6 +123,6 @@ socketManager.on("connection", (socket) => {
   socket.handshake.session.socketId = socket.id;
   socket.handshake.session.save();
 });
-httpsServer.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
