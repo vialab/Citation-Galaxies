@@ -6,7 +6,7 @@ import * as modal from "./modules/modal.js";
 let MOVE_BRUSH;
 $(document).ready((x, y, z) => {
   // console.log("newfront ready: ", x, y, z, modal.mode);
-  const socket = io("https://localhost:4000");
+  const socket = io(window.location.origin);
   socket.on("progress", (msg) => {
     onProgress(msg);
   });
