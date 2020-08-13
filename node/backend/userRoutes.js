@@ -85,7 +85,7 @@ const createUser = async (req, res) => {
   const key_map = {};
   if (existingKeys.rowCount) {
     for (let i = 0; i < existingKeys.rows.length; ++i) {
-      key_map[existingKeys[i].hash_key] = 0;
+      key_map[existingKeys.rows[i].hash_key] = 0;
     }
   }
   do {
