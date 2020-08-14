@@ -10,6 +10,7 @@ const userRoutes = require("./backend/userRoutes");
 const apiRoutes = require("./backend/api");
 const { v4: uuidv4 } = require("uuid");
 const fs = require("fs");
+const pgSession = require("connect-pg-simple")(session);
 //const privateKey = fs.readFileSync("./backend/resources/key.pem", "utf8");
 //const certificate = fs.readFileSync("./backend/resources/cert.pem", "utf8");
 const port = 4000;
@@ -23,6 +24,7 @@ const sessionMiddleware = session({
     const id = uuidv4();
     return id;
   },
+  store: new pgSession({ conString: process.env.DB_AUTH_STRING }),
   secret: process.env.SECRET,
   resave: false,
   saveUninitialized: true,
