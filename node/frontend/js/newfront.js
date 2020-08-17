@@ -281,15 +281,15 @@ async function getFilterSuggestions(currentValue, filter, element) {
     }
     let result = await $.ajax({
       url: "api/paper/filter-suggestions",
-      type: "GET",
+      type: "POST",
       contentType: "application/json",
-      data: {
+      data: JSON.stringify({
         currentValue,
         filter,
         ids: Object.keys(paper_data.papers),
         isPubmed: CURRENT_DATABASE.isPubmed,
         year: currentYearTab,
-      },
+      }),
     });
     $(element).autocomplete({ source: result });
   } catch (e) {
@@ -416,14 +416,14 @@ async function getFilteredPapers(formInfo, callback) {
   }
   let result = await $.ajax({
     url: "api/paper/filter",
-    type: "GET",
+    type: "POST",
     contentType: "application/json",
-    data: {
+    data: JSON.stringify({
       fields: formInfo,
       ids: Object.keys(paper_data.papers),
       isPubmed: CURRENT_DATABASE.isPubmed,
       year: currentYearTab,
-    },
+    }),
   });
   $("#paper-filter-form-submit-btn").attr("disabled", false);
   callback(result);
@@ -630,6 +630,7 @@ async function submitSnapShot() {
   const comments = $("#snapshot-comments").val();
   const features = $("#snapshot-featurelist").val();
   const imgData = $("#snapshot-img").attr("src");
+
   //grid selections on the home screen
   $.ajax({
     url: "api/snapshot",

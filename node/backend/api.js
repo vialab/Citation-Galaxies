@@ -577,7 +577,7 @@ const getFilterNames = async (req, res) => {
     isPubmed: false,
     year: 0,
   };
-  let sentInfo = reqValid(requiredInfo, { body: req.query });
+  let sentInfo = reqValid(requiredInfo, req);
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
@@ -607,7 +607,7 @@ const getFilterNames = async (req, res) => {
 
 const getFilteredIDs = async (req, res) => {
   const requiredInfo = { fields: [], ids: [], isPubmed: false, year: 0 };
-  let sentInfo = reqValid(requiredInfo, { body: req.query });
+  let sentInfo = reqValid(requiredInfo, req);
   if (!sentInfo) {
     res.status(HTTP_CODES.INVALID_DATA_TYPE);
     return;
@@ -892,7 +892,7 @@ const getGridVisualization = async (req, res) => {
 };
 
 const submitSnapshot = async (req, res) => {
-  const requiredInfo = { selection: [], filters: [], img: "", info:{} };
+  const requiredInfo = { selection: [], filters: [], img: "", info: {} };
   let sentInfo = reqValid(requiredInfo, req);
   if (!sentInfo) {
     res
