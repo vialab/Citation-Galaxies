@@ -185,47 +185,33 @@ const loadExistingWork = async (req, res) => {
     res.status(HTTP_CODES.INVALID_VALUES);
     return;
   }
-  let row = queryResult.rows[0];
-  //set the table name for the session
-  req.session.tableName = row.table_name;
-  const aggResults = await pool.query(
-    `SELECT * FROM ${req.session.tableName} WHERE p_year=ANY($1::int[])`,
-    [generate(2003, 2020)]
-  );
-  let result = {};
   const queryInfo = queryResult.rows[0].info;
-  for (let i = 2003; i <= 2020; ++i) {
-    result[i] = {
-      content: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 },
-      max: 0,
-    };
-  }
-  if (aggResults.rowCount) {
-    //move the results of the query into an object. The object is legacy format to support the frontend
-    const numOfBins = 10;
-    for (let i = 0; i < aggResults.rows.length; ++i) {
-      for (let j = 0; j < aggResults.rows[i].citation_location.length; ++j) {
-        const idx = Math.floor(
-          (aggResults.rows[i].citation_location[j] /
-            aggResults.rows[i].num_os) *
-            numOfBins
-        );
-        result[aggResults.rows[i].p_year]["content"][idx] += 1;
-      }
-    }
-    for (let i = 2003; i <= 2020; ++i) {
-      result[i].max = Object.values(result[i]["content"]).reduce(
-        (a, b) => a + b,
-        0
-      );
-    }
-    res.status(HTTP_CODES.SUCCESS).send({
-      info: queryInfo,
-      result: result,
-      db: queryResult.rows[0].table_type,
-    });
-    return;
-  }
+  const isPubmed = queryResult.rows[0].table_type;
+  const DB = isPubmed ? DATA_LAYER.pubmed : DATA_LAYER.erudit;
+  const defaultBins = {
+    0: 0,
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+    6: 0,
+    7: 0,
+    8: 0,
+    9: 0,
+  };
+
+  let result = await DB.getGridVisualization(
+    req.session.tableName,
+    defaultBins,
+    generate(2003, 2020)
+  );
+  res.status(HTTP_CODES.SUCCESS).send({
+    info: queryInfo,
+    result: result,
+    db: isPubmed,
+  });
+  return;
 };
 const deleteExistingWork = async (req, res) => {
   const result = await DATA_LAYER.ruleSets.read(req.session.tableName);

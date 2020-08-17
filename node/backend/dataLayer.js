@@ -4,6 +4,7 @@ const Cursor = require("pg-cursor");
 const { parseAsync } = require("json2csv");
 const socketManager = require("./socketManager");
 const { years } = require("./api");
+const { json } = require("express");
 Cursor.prototype.readAsync = async function (batchSize) {
   return new Promise((resolve, reject) => {
     this.read(batchSize, (err, rows) => {
@@ -544,16 +545,23 @@ class Pubmed {
       [binLength, years]
     );
     let result = {};
+    const binKeys = Object.keys(JSON.parse(JSON.stringify(bins)));
     for (let i = 0; i < years.length; ++i) {
       result[years[i]] = {
         content: JSON.parse(JSON.stringify(bins)),
         max: 0,
+        papers: { content: JSON.parse(JSON.stringify(bins)), max: 0 },
       };
     }
     for (let i = 0; i < tableResults.rows.length; ++i) {
       const row = tableResults.rows[i];
+      const tempBin = JSON.parse(JSON.stringify(bins));
       for (let j = 0; j < row.cl.length; ++j) {
         result[row.year].content[row.cl[j]] += 1;
+        tempBin[row.cl[j]] = 1;
+      }
+      for (const k of binKeys) {
+        result[row.year].papers.content[k] += tempBin[k];
       }
     }
     for (let i = 0; i < years.length; ++i) {
@@ -562,6 +570,9 @@ class Pubmed {
         (a, b) => a + b,
         0
       );
+      result[year].papers.max = Object.values(
+        result[year].papers.content
+      ).reduce((a, b) => a + b, 0);
     }
     return result;
   }
@@ -900,22 +911,30 @@ class Erudit {
    * @param {Session} session
    */
   async getGridVisualization(tableName, bins, years) {
-    const binLength = Object.keys(bins).length;
+    const keys = Object.keys(bins);
+    const binLength = keys.length;
     let tableResults = await pool.query(
       `SELECT ARRAY(SELECT floor(UNNEST(citation_location)::real / num_os::real * $1::real)::int) as cl, p_year as year FROM ${tableName}  WHERE p_year = ANY($2::int[])`,
       [binLength, years]
     );
     let result = {};
+    const binKeys = Object.keys(JSON.parse(JSON.stringify(bins)));
     for (let i = 0; i < years.length; ++i) {
       result[years[i]] = {
         content: JSON.parse(JSON.stringify(bins)),
         max: 0,
+        papers: { content: JSON.parse(JSON.stringify(bins)), max: 0 },
       };
     }
     for (let i = 0; i < tableResults.rows.length; ++i) {
       const row = tableResults.rows[i];
+      const tempBin = JSON.parse(JSON.stringify(bins));
       for (let j = 0; j < row.cl.length; ++j) {
         result[row.year].content[row.cl[j]] += 1;
+        tempBin[row.cl[j]] = 1;
+      }
+      for (const k of binKeys) {
+        result[row.year].papers.content[k] += tempBin[k];
       }
     }
     for (let i = 0; i < years.length; ++i) {
@@ -924,6 +943,9 @@ class Erudit {
         (a, b) => a + b,
         0
       );
+      result[year].papers.max = Object.values(
+        result[year].papers.content
+      ).reduce((a, b) => a + b, 0);
     }
     return result;
   }
