@@ -489,9 +489,9 @@ function drawTableRow(headers, signal, signalID, aliases) {
             }
           }
         }
-        html += `<div id="add_signal_${signal.id}" class="d-flex flex-row justify-content-center" ondragover="allowDrop(event)" ondrop="onDrop(event,this)" onclick="addToSignal('#add_signal_${signal.id}')">
-                  <h1 class="flex-fill signal-add-button">+</h1>
-                </div>`;
+        html += `<div class="d-flex flex-row" style="justify-content:space-evenly"><div id="add_signal_${signal.id}" class="justify-content-center" style="width:48%" ondragover="allowDrop(event)" ondrop="onDrop(event,this)" onclick="addToSignal('#add_signal_${signal.id}')">
+        <h1 class="signal-add-button">+</h1>
+      </div><div id="remove_signal_${signal.id}" class="justify-content-center" onclick="removeToSignal()" style="width:48%"><h1 class="signal-add-button">-</h1></div></div>`;
       } else {
         let existing = $(".edit-row").length;
         html += ` aliased signal-cell'>`;
@@ -514,9 +514,9 @@ function drawTableRow(headers, signal, signalID, aliases) {
               </div>
             </div>
           </div>`;
-        html += `<div id="add_signal_${existing}" class="d-flex flex-row justify-content-center" ondragover="allowDrop(event)" ondrop="onDrop(event,this)" onclick="addToSignal('#add_signal_${existing}')">
-          <h1 class="flex-fill signal-add-button">+</h1>
-        </div>`;
+        html += `<div class="d-flex flex-row" style="justify-content:space-evenly"><div id="add_signal_${existing}" class="justify-content-center" style="width:48%" ondragover="allowDrop(event)" ondrop="onDrop(event,this)" onclick="addToSignal('#add_signal_${existing}')">
+        <h1 class="signal-add-button">+</h1>
+      </div><div id="remove_signal_${existing}" class="justify-content-center" onclick="removeToSignal()" style="width:48%"><h1 class="signal-add-button">-</h1></div></div>`;
       }
     } else if (signal[headers[i]]) {
       html += "'>" + signal[headers[i]];
@@ -536,8 +536,18 @@ function onDrop(event, element) {
 function allowDrop(ev) {
   ev.preventDefault();
 }
+function removeToSignal() {
+  let $btn = $(event.currentTarget).parent();
+  let numSiblings = $btn.siblings().length;
+  if (numSiblings === 2) {
+    return;
+  }
+  //remove the operator and rule field
+  $btn.prev().remove();
+  $btn.prev().remove();
+}
 function addToSignal(id) {
-  let but = $(event.currentTarget);
+  let but = $(event.currentTarget).parent();
   let existing = $(".edit-row").length;
   const beforeRangeVal = Number($("#rangeBefore").val());
   const afterRangeVal = Number($("#rangeAfter").val());
