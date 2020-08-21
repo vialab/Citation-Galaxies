@@ -41,4 +41,5 @@
     ],
     "sqltools.useNodeRuntime": true,
     "debug.node.autoAttach": "on",
+    "python.languageServer": "Microsoft",
 }

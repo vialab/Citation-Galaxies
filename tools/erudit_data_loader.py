@@ -59,7 +59,17 @@ def get_analytics(data):
 async def post_file(json_data, conn):
     paper_id, authors, year, journal_string, affiliation = getValues(json_data)
     await conn.execute('''INSERT INTO erudit_meta(id, authors, year, journal, affiliation) VALUES($1,$2,$3,$4,$5) on conflict (id) do nothing''', paper_id, authors, year, journal_string, affiliation)
-
+async def post_data(json_data, paper_id, conn):
+    if not len(json_data):
+        return
+    idx=-1
+    for i in range(0, len(json_data)):
+        if "sent_data" in json_data[i]:
+            if len(json_data[i]["sent_data"]) != 0:
+                idx=i
+    if idx ==-1:
+        return
+    await conn.execute('''INSERT INTO erudit_data(id, sentences, words) VALUES($1, $2, $3) on conflict (id) do nothing''',paper_id, json_data[idx]["sent_data"], json_data[idx]["word_data"])
 async def post_text(json_data, paper_id, conn):
     if not len(json_data):
         return
@@ -69,7 +79,7 @@ async def post_text(json_data, paper_id, conn):
             idx=i
     if idx ==-1:
         return
-    await conn.execute('''INSERT INTO erudit_text(id, lang, sent_map, word_map) VALUES($1,$2,$3,$4) on conflict (id) do nothing''', paper_id, json_data[idx]["lang"], json.dumps(json_data[idx]["sent"]), json.dumps(json_data[idx]["word"]))
+    await conn.execute('''INSERT INTO erudit_text(id, lang, sent_map, word_map, sent_length, word_length) VALUES($1,$2,$3,$4,$5,$6) on conflict (id) do nothing''', paper_id, json_data[idx]["lang"], json.dumps(json_data[idx]["sent"]), json.dumps(json_data[idx]["word"]), json_data[idx]["sent_length"], json_data[idx]["word_length"])
     return
 
 async def walker(directory:str, conn):
@@ -81,7 +91,7 @@ async def walker(directory:str, conn):
             if dataValid(data):
                 #await post_file(data, conn)
                 paper_id, authors, year, journal_string, affiliation = getValues(data)
-                await post_text(get_analytics(data), paper_id, conn)
+                await post_data(get_analytics(data), paper_id, conn)
     return
 
 async def main():

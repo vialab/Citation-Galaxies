@@ -101,8 +101,9 @@ def getCitationsAnalysis(buffer: list):
         textBuffer += text + " "
     textBuffer = textBuffer[:-1]
     res = re.sub(expr, citationToken, textBuffer)
-    wordMap, sentMap = getTextAnalysis(res)
+    sentMap, wordMap = getTextAnalysis(res)
     return wordMap, sentMap, checkMap(wordMap), checkMap(sentMap)
+
 def getDataDump(buffer: list):
     expr = "\[(.*?)\]"
     citationToken = "ЉЉ"
@@ -115,8 +116,18 @@ def getDataDump(buffer: list):
         textBuffer += text + " "
     textBuffer = textBuffer[:-1]
     res = re.sub(expr, citationToken, textBuffer)
-    return  word_tokenize(res), sent_tokenize(res), res
- 
+    citationBuffer = re.findall(expr, textBuffer)
+    return  word_tokenize(res), addCitations(citationBuffer, sent_tokenize(res)), res
+
+def addCitations(citationBuffer:list, sentMap:list):
+    counter = 0
+    citationToken = "ЉЉ"
+    for sent in sentMap:
+        while citationToken in sent:
+            sent.replace(citationToken, citationBuffer[counter], 1)
+            counter +=1
+    return sentMap
+
 def getTextAnalysis(buffer: str):
     return getSentences(buffer), getWords(buffer)
 
@@ -131,24 +142,24 @@ async def vacuum():
 
 async def post_meta(pub_id, authors, title, year, journal, affiliation, conn):
     await conn.execute(
-        '''INSERT INTO pubmed_meta(id, authors, title, year,journal, affiliation) VALUES($1,$2,$3,$4,$5, $6)''',
+        f'''INSERT INTO pubmed_meta_{year}(id, authors, title, year,journal, affiliation) VALUES($1,$2,$3,$4,$5, $6)''',
         int(pub_id), authors, title, int(year), journal, affiliation)
     return
 
-async def post_text(pub_id, abs_word, abs_sent, text_word, text_sent,
+async def post_text(pub_id, date, abs_word, abs_sent, text_word, text_sent,
                     text_cit_word, text_cit_sent, conn):
     await conn.execute(
-        '''INSERT INTO pubmed_text(id, abstract_words, abstract_sentences, full_text_words, full_text_sentences, full_text_citations, citation_full_text_sentences) VALUES($1,$2,$3,$4,$5, $6,$7) on conflict do nothing''',
+        f'''INSERT INTO pubmed_text_{date}(id, abstract_words, abstract_sentences, full_text_words, full_text_sentences, full_text_citations, citation_full_text_sentences) VALUES($1,$2,$3,$4,$5, $6,$7) on conflict do nothing''',
         int(pub_id), json.dumps(abs_word), json.dumps(abs_sent),
         json.dumps(text_word), json.dumps(text_sent), text_cit_word,
         text_cit_sent)
     return
-async def post_data(pub_id, title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text, conn):
-    await conn.execute('''INSERT INTO pubmed_data(id, title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING''', int(pub_id), title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text)
+async def post_data(pub_id, date, title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text, conn):
+    await conn.execute(f'''INSERT INTO pubmed_data_{date}(id, title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING''', int(pub_id), title, words, sentences, abstract_words, abstract_sentences, full_abstract, full_text)
     return
 async def gen_index():
     conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
-    await conn.execute('''create index index_pubmed_text on pubmed_text using gin(full_text_words)''')
+    await conn.execute('''create index idx_pubmed_text_sentences on pubmed_text using gin(full_text_sentences jsonb_path_ops)''')
 async def create_word_map():
     BATCH_SIZE=100
     conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
@@ -167,33 +178,40 @@ async def create_word_map():
     return
     
 async def main():
-    conn = await asyncpg.connect(
-        'postgresql://citationdb:citationdb@localhost:5435/citationdb')
-    paths = load_directory('/scratch/zhills/pubmed_data/PubMed/')
+    conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
+    paths = load_directory('/scratch/zhills/PubMed/non_commercial')
+    end = len(paths)
+    counter=0
     for path in paths:
+        counter+=1
         try:
             meta, text = parse(path)
-            #journal = getJournal(meta)
-            #authors = getAuthors(meta)
+            journal = getJournal(meta)
+            authors = getAuthors(meta)
             title = getTitle(meta)
             pubmed_id = getPubMed_id(meta)
-            #date = getPublicationDate(meta)
-            #affiliations = getAffiliations(meta)
+            date = getPublicationDate(meta)
+            if int(date) < 2003:
+                continue
+            affiliations = getAffiliations(meta)
             abstract = getAbstract(meta)
-           # twordMap, tsentMap, tcitWord, tcitSent = getCitationsAnalysis(text)
-            words, sentences, full_text = getDataDump(text)
+            twordMap, tsentMap, tcitWord, tcitSent = getCitationsAnalysis(text)
             #await post_meta(pubmed_id, authors, title, date, journal, affiliations, conn)
-            #wordMap, sentMap = getTextAnalysis(abstract)
+            wordMap, sentMap = getTextAnalysis(abstract)
             abstract_words = word_tokenize(abstract)
             abstract_sentences = sent_tokenize(abstract)
-            #await post_text(pubmed_id, wordMap, sentMap, twordMap, tsentMap,tcitWord, tcitSent, conn)
-            #await post_meta(pubmed_id, authors, title, date, journal, affiliations, conn)
-            await post_data(pubmed_id, title, words, sentences, abstract_words, abstract_sentences, abstract, full_text, conn)
+            await post_text(pubmed_id, date, wordMap, sentMap, twordMap, tsentMap, tcitWord, tcitSent, conn)
+            await post_meta(pubmed_id, authors, title, date, journal, affiliations, conn)
+            if int(date) < 2017:
+                words, sentences, full_text = getDataDump(text)
+                await post_data(pubmed_id, date, title, words, sentences, abstract_words, abstract_sentences, abstract, full_text, conn)
+            if counter % 100 == 0:
+                print(counter + "of " + end)
         except Exception as e:
             continue
 
         #print(sentMap)
 
-asyncio.get_event_loop().run_until_complete(gen_index())
+asyncio.get_event_loop().run_until_complete(main())
 
 #testEmail()

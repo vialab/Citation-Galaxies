@@ -3,8 +3,7 @@ const pool = require("./database");
 const Cursor = require("pg-cursor");
 const { parseAsync } = require("json2csv");
 const socketManager = require("./socketManager");
-const { years } = require("./api");
-const { json } = require("express");
+
 Cursor.prototype.readAsync = async function (batchSize) {
   return new Promise((resolve, reject) => {
     this.read(batchSize, (err, rows) => {

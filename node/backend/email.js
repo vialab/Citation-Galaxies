@@ -1,4 +1,7 @@
 const nodeMailer = require("nodemailer");
+/**
+ *  This is responsible for sending emails. Currently only used for account creation.
+ */
 
 const transporter = nodeMailer.createTransport({
   host: "smtp." + process.env.SERVICE + ".com",

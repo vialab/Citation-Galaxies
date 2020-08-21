@@ -1,6 +1,10 @@
 import json
+import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
+from langdetect import detect
 import re
+
+languageConversionBuffer={"fr":"french","en":"english", "es":"spanish"}
 
 def parse_markup(data):
     buffer = json.loads(data["text"])
@@ -22,9 +26,26 @@ def parse_markup(data):
         if not lng in languageBuffer:
             continue
         buffer = remove_markup(languageBuffer[lng])
-        sentMap = sentence_analysis(buffer)
-        wordMap = word_analysis(buffer)
-        result.append({"word": wordMap, "sent": sentMap, "lang":lng})
+        buffer = buffer.lower()
+        if buffer == "":
+            result.append({"word": {}, "sent": {}, "lang":"", "sent_length":0, "word_length":0}); 
+            continue
+        try:
+            lang = detect(buffer)
+        except:
+            lang = "en"
+        if(lang != "en" and lang != "fr"):
+            result.append({"word": {}, "sent": {}, "lang":"", "sent_length":0, "word_length":0})
+            continue
+        sentMap = sentence_analysis(buffer, languageConversionBuffer[lang])
+        wordMap = word_analysis(buffer, languageConversionBuffer[lang])
+        sent_data = sent_tokenize(buffer, language=languageConversionBuffer[lang])
+        word_data = word_tokenize(buffer, language=languageConversionBuffer[lang])
+        sent_length = len(sent_data)
+        word_length = len(word_data)
+        if lng == "":
+            lng = lang
+        result.append({"word": wordMap, "sent": sentMap, "lang":lng, "sent_length":sent_length, "word_length":word_length, "sent_data":sent_data, "word_data":word_data})
     return result
     
 def remove_markup(data):
@@ -36,19 +57,19 @@ def remove_markup(data):
         buffer += temp + " "
     return buffer
         
-def sentence_analysis(data):
-    buffer = sent_tokenize(data)
+def sentence_analysis(data, language):
+    buffer = sent_tokenize(data, language=language)
     sentence_map={}
     for i in range(0, len(buffer)):
-        result = word_tokenize(buffer[i])
+        result = word_tokenize(buffer[i], language=language)
         for word in result:
             if not word in sentence_map:
                 sentence_map[word] = []
             sentence_map[word].append(i)
     return sentence_map
 
-def word_analysis(data):
-    buffer = word_tokenize(data)
+def word_analysis(data, language):
+    buffer = word_tokenize(data, language=language)
     word_map={}
     for i in range(0, len(buffer)):
         if not buffer[i] in word_map:

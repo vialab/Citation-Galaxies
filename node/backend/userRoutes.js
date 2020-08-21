@@ -12,20 +12,6 @@ const HTTP_CODES = {
 };
 
 /**
- * @param {Request} req
- */
-const saveSession = async (req) => {
-  return new Promise((res, rej) => {
-    req.session.save((err) => {
-      if (err) {
-        console.error(err);
-        return rej(err);
-      }
-      res(true);
-    });
-  });
-};
-/**
  *
  * @param {JSON} expectedKeys
  * @param {Request} req

@@ -3,7 +3,6 @@ const apiSchema = require("./resources/apiSchema.json");
 const dbSchema = require("./resources/dbschema.json");
 const { DataExport, DataLayer, progressAll } = require("./dataLayer");
 const fs = require("fs");
-const socketManager = require("./socketManager");
 const DATA_LAYER = new DataLayer();
 function generate(min, max) {
   let result = [];
