@@ -41,7 +41,8 @@
       "request": "launch",
       "cwd": "${workspaceFolder}",
       "program": "${file}",
-      "console": "internalConsole"
+      "console": "internalConsole",
+      "justMyCode": false
     },
     {
       "name": "Py: Backend",

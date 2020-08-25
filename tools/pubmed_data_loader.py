@@ -85,12 +85,12 @@ def getSentences(buffer: str):
 
 def checkMap(textMap):
     citationToken = "ЉЉ"
-    if not citationToken in textMap:
+    if not (citationToken in textMap):
         return None
     return textMap[citationToken]
 
 def getCitationsAnalysis(buffer: list):
-    expr = "\[(.*?)\]"
+    #expr = "\[(.*?)\]"
     citationToken = "ЉЉ"
     textBuffer = ""
     for section in buffer:
@@ -98,33 +98,40 @@ def getCitationsAnalysis(buffer: list):
         text = section["text"]
         if citationToken in text:
             exit(-2)
+        for ref_text in section["reference_text"]:
+            idx = text.find(ref_text[0]+ref_text[1])
+            text = text[0:idx] + citationToken + text[idx+len(ref_text[0]):]
+            #text = text.replace(ref_text, citationToken)
         textBuffer += text + " "
     textBuffer = textBuffer[:-1]
-    res = re.sub(expr, citationToken, textBuffer)
-    sentMap, wordMap = getTextAnalysis(res)
+    #res = re.sub(expr, citationToken, textBuffer)
+    sentMap, wordMap = getTextAnalysis(textBuffer)
     return wordMap, sentMap, checkMap(wordMap), checkMap(sentMap)
 
 def getDataDump(buffer: list):
-    expr = "\[(.*?)\]"
     citationToken = "ЉЉ"
     textBuffer = ""
+    citationBuffer=[]
     for section in buffer:
         ids = section["reference_ids"]
         text = section["text"]
+        citationBuffer += map(lambda x: x[0] ,section["reference_text"])
         if citationToken in text:
             exit(-2)
+        for ref_text in section["reference_text"]:
+            idx = text.find(ref_text[0]+ref_text[1])
+            text = text[0:idx] + citationToken + text[idx+len(ref_text[0]):]
+            #text = text.replace(ref_text, citationToken)
         textBuffer += text + " "
     textBuffer = textBuffer[:-1]
-    res = re.sub(expr, citationToken, textBuffer)
-    citationBuffer = re.findall(expr, textBuffer)
-    return  word_tokenize(res), addCitations(citationBuffer, sent_tokenize(res)), res
+    return  word_tokenize(textBuffer), addCitations(citationBuffer, sent_tokenize(textBuffer)), textBuffer
 
 def addCitations(citationBuffer:list, sentMap:list):
     counter = 0
     citationToken = "ЉЉ"
-    for sent in sentMap:
-        while citationToken in sent:
-            sent.replace(citationToken, citationBuffer[counter], 1)
+    for i in range(0, len(sentMap)):
+        while citationToken in sentMap[i]:
+            sentMap[i] = sentMap[i].replace(citationToken, citationBuffer[counter], 1)
             counter +=1
     return sentMap
 
@@ -202,12 +209,12 @@ async def main():
             abstract_sentences = sent_tokenize(abstract)
             await post_text(pubmed_id, date, wordMap, sentMap, twordMap, tsentMap, tcitWord, tcitSent, conn)
             await post_meta(pubmed_id, authors, title, date, journal, affiliations, conn)
-            if int(date) < 2017:
-                words, sentences, full_text = getDataDump(text)
-                await post_data(pubmed_id, date, title, words, sentences, abstract_words, abstract_sentences, abstract, full_text, conn)
+            words, sentences, full_text = getDataDump(text)
+            await post_data(pubmed_id, date, title, words, sentences, abstract_words, abstract_sentences, abstract, full_text, conn)
             if counter % 100 == 0:
                 print(counter + "of " + end)
         except Exception as e:
+            print(e)
             continue
 
         #print(sentMap)

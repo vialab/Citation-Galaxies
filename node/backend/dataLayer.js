@@ -854,9 +854,9 @@ class Pubmed {
 
   subRuleQuery(rule, ruleId, year, where) {
     const column = "full_text_sentences";
-    let result = `SELECT pt.id, array_agg(ftc), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT ${column},pubmed_text_${year}.id as id, pubmed_text_${year}.full_text_citations, pubmed_meta_${year}.year as year, pubmed_data_${year}.num_of_words as num_ow, pubmed_data_${year}.num_of_sentences as num_os FROM pubmed_text_${year} INNER JOIN pubmed_data_${year} ON pubmed_text_${year}.id=pubmed_data_${year}.id INNER JOIN pubmed_meta_${year} ON pubmed_text_${year}.id=pubmed_meta_${year}.id WHERE ${where}) as pt, unnest(pt.full_text_citations) as ftc, `;
+    let result = `SELECT pt.id, array_agg(ftc), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT ${column},pubmed_text_${year}.id as id, pubmed_text_${year}.citation_full_text_sentences, pubmed_meta_${year}.year as year, pubmed_data_${year}.num_of_words as num_ow, pubmed_data_${year}.num_of_sentences as num_os FROM pubmed_text_${year} INNER JOIN pubmed_data_${year} ON pubmed_text_${year}.id=pubmed_data_${year}.id INNER JOIN pubmed_meta_${year} ON pubmed_text_${year}.id=pubmed_meta_${year}.id WHERE ${where}) as pt, unnest(pt.citation_full_text_sentences) as ftc, `;
     //This is an example query left here to show the goal of this function.
-    /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
+    /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.citation_full_text_sentences) as ftc \
   where (heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0) AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
   */
     for (let i = 0; i < rule.length; ++i) {
@@ -1197,7 +1197,7 @@ class Erudit {
   subRuleQuery(rule, ruleId) {
     let result = `SELECT pt.id, array_agg(rule_0::int), pt.num_ow, pt.num_os, pt.year, array_agg(${ruleId}) FROM (SELECT sent_map, erudit_text.id as id, erudit_meta.year as year, erudit_text.word_length as num_ow, erudit_text.sent_length as num_os FROM erudit_text INNER JOIN erudit_meta ON erudit_text.id=erudit_meta.id WHERE erudit_text.id=ANY($1)) as pt, `;
     //This is an example query left here to show the goal of this function.
-    /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.full_text_citations) as ftc \
+    /*  "select pt.id, 'rule_name' from (select * from pubmed_text where id=any()) as pt, jsonb_array_elements(pt.full_text_words->'heart') as heart,jsonb_array_elements(pt.full_text_words->'cancer') as cancer, unnest(pt.citation_full_text_sentences) as ftc \
     where (heart::int-ftc>=0 and heart::int-ftc<=0 or heart::int-ftc<=0 and heart::int-ftc>=0) AND cancer::int-ftc>=0 and cancer::int-ftc<=0 or cancer::int-ftc<=0 and cancer::int-ftc>=0;";
     */
     for (let i = 0; i < rule.length; ++i) {
