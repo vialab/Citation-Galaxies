@@ -3,6 +3,7 @@ const apiSchema = require("./resources/apiSchema.json");
 const dbSchema = require("./resources/dbschema.json");
 const { DataExport, DataLayer, progressAll } = require("./dataLayer");
 const fs = require("fs");
+const STATICS = require("./statics");
 const DATA_LAYER = new DataLayer();
 function generate(min, max) {
   let result = [];
@@ -23,6 +24,7 @@ const RULE_OPERATORS = {
   AND: 2,
   NOT: 3,
 };
+
 /**********************On restart clear temporary table map **************************/
 //pool.query("SELECT clean_up_user_result_tables()"); //function is a user defined function stored in db
 // 3 different types of queries [sentences, words, [sentences relative to citation, words relative to citation]]
@@ -203,7 +205,7 @@ const loadExistingWork = async (req, res) => {
   let result = await DB.getGridVisualization(
     req.session.tableName,
     defaultBins,
-    generate(2003, 2020)
+    generate(STATICS.YEAR_SPAN.min_year, STATICS.YEAR_SPAN.max_year)
   );
   res.status(HTTP_CODES.SUCCESS).send({
     info: queryInfo,
@@ -496,7 +498,11 @@ const deleteRuleSet = async (req, res) => {
  */
 const years = (req, res) => {
   const result = [];
-  for (let i = 2005; i <= 2020; ++i) {
+  for (
+    let i = STATICS.YEAR_SPAN.min_year;
+    i <= STATICS.YEAR_SPAN.max_year;
+    ++i
+  ) {
     result.push({ articleyear: i });
   }
   res.send(result);
@@ -734,8 +740,8 @@ const ruleSearch = async (req, res) => {
   const db = sentInfo.isPubmed ? DATA_LAYER.pubmed : DATA_LAYER.erudit;
   const rule_info = { queries: [], shortList: null };
   if (sentInfo.isPubmed) {
-    const minYear = 2003;
-    const maxYear = 2020;
+    const minYear = STATICS.YEAR_SPAN.min_year;
+    const maxYear = STATICS.YEAR_SPAN.max_year;
     let promises = [];
     //invert year parsing due to the end years having more data
     for (let i = maxYear; i >= minYear; --i) {

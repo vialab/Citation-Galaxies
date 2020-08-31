@@ -3,6 +3,7 @@ const pool = require("./database");
 const Cursor = require("pg-cursor");
 const { parseAsync } = require("json2csv");
 const socketManager = require("./socketManager");
+const STATICS = require("./statics");
 
 Cursor.prototype.readAsync = async function (batchSize) {
   return new Promise((resolve, reject) => {
@@ -109,8 +110,8 @@ class DataExport {
     //select res from (select cl-rinfo.left, cl+rinfo.right, utt3.id from pubmed_data,user_temp_table_3 as utt3,unnest(utt3.citation_location) as cl, unnest(utt3.rule_set_id) as rsd, (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id) as res
     //select pubmed_data.sentences[(select greatest(res.l,0)):(select least(res.r, array_length(pubmed_data.sentences,1)))] from pubmed_data, (select cl-rinfo.left as l, cl+rinfo.right as r, utt3.id as id from pubmed_data,user_temp_table_3 as utt3,unnest(utt3.citation_location) as cl, unnest(utt3.rule_set_id) as rsd, (select max(urr->'range'->>0)::int as left, max(urr->'range'->>1)::int as right, user_rules.rule_set_id from user_rules, jsonb_array_elements(user_rules.rules) as urr group by user_rules.rule_set_id) as rinfo where rsd=rinfo.rule_set_id) as res where pubmed_data.id=res.id;
     const client = await pool.connect();
-    const minYear = 2003;
-    const maxYear = 2020;
+    const minYear = STATICS.YEAR_SPAN.min_year;
+    const maxYear = STATICS.YEAR_SPAN.max_year;
 
     try {
       const ws = fs.createWriteStream(this.fileName, { encoding: "utf8" });
@@ -491,8 +492,8 @@ class UserTable {
 //handles pubmed data layer
 class Pubmed {
   constructor() {
-    this.minYear = 2003;
-    this.maxYear = 2020;
+    this.minYear = STATICS.YEAR_SPAN.min_year;
+    this.maxYear = STATICS.YEAR_SPAN.max_year;
   }
   /**
    * @param {string} term
@@ -637,16 +638,16 @@ class Pubmed {
     });
     for (let i = 0; i < tableResults.rows.length; ++i) {
       let content = {
-        "0": 0,
-        "1": 0,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 0,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0,
+        0: 0,
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+        6: 0,
+        7: 0,
+        8: 0,
+        9: 0,
       };
       let row = tableResults.rows[i];
       let citationRuleMap = {};
@@ -984,16 +985,16 @@ class Erudit {
     });
     for (let i = 0; i < tableResults.rows.length; ++i) {
       let content = {
-        "0": 0,
-        "1": 0,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 0,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0,
+        0: 0,
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+        6: 0,
+        7: 0,
+        8: 0,
+        9: 0,
       };
       let row = tableResults.rows[i];
       let citationRuleMap = {};
