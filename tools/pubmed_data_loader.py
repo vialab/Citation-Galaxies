@@ -189,7 +189,7 @@ async def main():
     if len(sys.argv) < 2:
         print("Requires a path name to be passed in as a second paramater")
         exit(-1)
-    conn = await asyncpg.connect('postgresql://citationdb:citationdb@localhost:5435/citationdb')
+    conn = await asyncpg.connect('postgresql://citationdb:citationdb@rtr.science.uoit.ca:5435/citationdb')
     paths = load_directory(sys.argv[1])
     end = len(paths)
     counter=0
